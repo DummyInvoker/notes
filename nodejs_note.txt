@@ -20,7 +20,6 @@ app.listen(port, function (err) {
 
 ==================== 3.4 gulp规范js代码及风格： jshint, jscs ====================
 
-
 # 安装gulp
 npm install gulp --save-dev
 --save-dev 会生成
@@ -48,7 +47,6 @@ npm install --save-dev gulp-jshint gulp-jscs jshint-stylish
 var gulp = require('gulp');
 var jshint = require('gulp-jshint');
 
-
 var jsFiles = ['*.js', 'src/**/*.js'];
 
 gulp.task('style', function () {
@@ -56,8 +54,8 @@ gulp.task('style', function () {
         .pipe(jshint())
         .pipe(jshint.reporter('jshint-stylish',{
             verbose:true
-        }))
-})
+        }))；
+})；
 
 # 执行gulp任务
 gulp style
@@ -79,19 +77,44 @@ gulp.task('style', function () {
         .pipe(jscs());
 });
 
+==================== 3.5 gulp向页面注入前端包： wiredep 1:js ====================
 
-==================== 3.5 ====================
+# 安装wiredep
+npm install --save-dev wiredep
+
+# 配置gulp任务
+gulp.task('inject', function () {
+    var wiredep = require('wiredep').stream;
+    var options = {
+        bowerJson: require('./bower.json'),     // get frontend packages from bower setting
+        directory: './public/lib'           	// 以后更加新的wiredep会自动查用.bowerrc文件
+    };
+
+    return gulp.src('./src/views/*.html')
+        .pipe(wiredep(options))
+        .pipe(gulp.dest('./src/views'));
+});
+
+# 在html文件需要注入js的地方添加：
+<!--bower:js-->
+<!--endbower-->
+
+# 执行gulp任务
+gulp inject
+可以发现在上面两行注释之间, 注入了js文件. 并且bootstrap依赖的jquery位于bootstrap前面. 多次执行gulp任务只会执行一次
+<!--bower:js-->
+<script src="../../public/lib/jquery/dist/jquery.js"></script>
+<script src="../../public/lib/bootstrap/dist/js/bootstrap.js"></script>
+<!--endbower-->
 
 
+==================== 3.6 gulp向页面注入前端包： wiredep 2:css ====================
 
+# html页面中添加css的注入:
+<!--bower:css-->
+<!--endbower-->
 
-
-
-
-
-
-
-
+# 执行gulp任务
 
 
 
