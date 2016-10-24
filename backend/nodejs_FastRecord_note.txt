@@ -1,0 +1,2369 @@
+============ 5 project1 nodejs自制静态http服务器 ============
+
+# module大全网站: www.npmjs.com
+# npm: nodejs package manager
+# Lorem ipsum: http://www.lipsum.com/
+
+# file >> new >> project >> empty project >> 起名例如: fastrecord_p1
+Terminal项目路径中(用webStrom自带的更好): npm init
+按照需要填写, 确定. 成功后会在项目中多出一个package.json文件
+注意到其中有一项entry point, 默认值为 main.js, 建立该文件
+
+# main.js
+var http = require('http');
+var url = require('url');
+var path = require('path');
+var fs = require('fs');
+
+// mime types
+var mimeTypes = {		// 用于之后将扩展名转为mime类型
+    "html":"text/html",
+    "jpeg":"image/jpeg",
+    "jpg":"image/jpeg",
+    "png":"imgage/png",
+    "js":"text/javascript",
+    "css":"text/css"
+};
+
+// create server
+http.createServer(function(req, res){
+    var uri = url.parse(req.url).pathname;
+    var fileName = path.join(process.cwd(), unescape(uri));     // process.cwd(): current working directory path
+    console.log("loading ", uri);
+
+    var stats;
+    try{
+        stats = fs.lstatSync(fileName);
+    } catch(e) {
+        res.writeHead(404, {"Content-Type": "text/plain"});		// 可以同下设置跳转: "Location":"404.html"
+        res.write("Error 404: page not found!");
+        res.end();
+        return;
+    }
+
+    // check if stats is file/directory
+    if(stats.isFile()){
+        var mimeType = mimeTypes[path.extname(fileName).split(".").reverse()[0]];   // 取扩展名后转mime类型
+        res.writeHead(200, {"Content-Type": mimeType});
+        var fileStream = fs.createReadStream(fileName);
+        fileStream.pipe(res);
+    } else if (stats.isDirectory()){
+        res.writeHead(302,{
+            "Location":"index.html"
+        });
+        res.end();
+    } else {
+        res.writeHead(500, {"Content-Type":"text/plain"});
+        res.write("500 internal error");
+        res.end();
+    }
+}).listen(3000);
+console.log("server on...");
+
+# 在package.json中配置启动文件:
+{
+  "name": "fastrecord_p1",
+  "version": "1.0.0",
+  "description": "project1",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "ricky",
+  "license": "GPL"
+}
+
+# 添加默认页面和需要的测试页面: index.html; page1.html; page2.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<div>
+<h2>Lorem ipsum</h2>
+<div></div><a href="page1.html">page1</a> | <a href="page2.html">page2</a></div>
+
+<p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod sem at eros tempus, ac interdum augue volutpat. Mauris pretium dui et purus tincidunt tincidunt. Vivamus nec laoreet quam. Nulla ultrices et lectus eget consectetur. Sed nec erat mi. Aenean quis lectus est. Donec ornare dui lectus, vel venenatis turpis feugiat quis. Vestibulum egestas nulla nec sagittis venenatis. Etiam a lorem eros. Morbi pretium condimentum hendrerit. Sed vel sollicitudin justo. Phasellus pulvinar at eros vel porta. Vestibulum sodales leo sed eros rhoncus, vitae vestibulum turpis pretium. Cras condimentum ut odio sed faucibus. Duis auctor lectus lorem, in tempor ante facilisis nec.</p>
+
+</body>
+</html>
+
+# 启动服务器并访问
+npm start
+
+============ 7 project2 express ============
+
+# 全局环境准备: 在所有项目路径, 例如 WebstormProjects\ 下, 运行:
+npm install -g express
+npm install -g express-generator
+express fastrecord_p2
+完成后可以看到WebstormProjects\fastrecord_p2目录结构, 注意: 不要先建fastrecord_p2目录再在其中进行操作
+也可以进入fastrecord_p2目录后, 执行 express
+
+# 管理项目的library: 在项目结构中可以看到package.json. 另外添加"nodemailer":"*":
+{
+  "name": "fastrecord_p2",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "body-parser": "~1.15.1",
+    "cookie-parser": "~1.4.3",
+    "debug": "~2.2.0",
+    "express": "~4.13.4",
+    "jade": "~1.11.0",
+    "morgan": "~1.7.0",
+    "serve-favicon": "~2.3.0",
+    "nodemailer":"*"
+  }
+}
+
+terminal中进入项目目录 WebstormProjects\fastrecord_p2, 运行: npm install
+或 package.json 右键 "Run npm update"
+完成后可以在node_module目录中看到下载的库
+
+# 运行
+npm start
+ctrl+c 停止
+配置成功后应该可访问 http://127.0.0.1:3000/
+
+# request '/' 的处理流程:
+app.js中: app.use('/', routes);
+app.js中: var routes = require('./routes/index');
+./routes/index.js 中指定使用页面模板及参数: res.render('index', { title: 'Express' });
+./views/index.jade 中发现 extends layout, 转而先加载 layout.jade
+./views/layout.jade 加载, 其中block content部分由index.jade内容替换
+index.jade中表达式#{title}内容从index.js中读取
+
+
+# 下载bootstrap模板, 按需修改细节后得到一份html版本的页面. 使用任意在线工具转换为jade页面layout.jade, 例如: http://html2jade.org/
+doctype html
+html(lang='en')
+  head
+    meta(charset='utf-8')
+    meta(http-equiv='X-UA-Compatible', content='IE=edge')
+    meta(name='viewport', content='width=device-width, initial-scale=1')
+    title #{title}: Sweet Home
+    link(href='/stylesheets/bootstrap.css', rel='stylesheet')
+    link(href='/stylesheets/style.css', rel='stylesheet')
+    script(src='/javascripts/jquery-3.1.0.js')
+    script(src='/javascripts/bootstrap.js')
+  body
+    nav.navbar.navbar-inverse.navbar-fixed-top
+      .container
+        .navbar-header
+          button.navbar-toggle.collapsed(type='button', data-toggle='collapse', data-target='#navbar')
+            span.icon-bar
+            span.icon-bar
+            span.icon-bar
+          a.navbar-brand(href='#') Project name
+        #navbar.collapse.navbar-collapse
+          ul.nav.navbar-nav
+            // title变量来自于controller文件, 例如: index.js; about.js
+            li(class = (title === 'Home' ? 'active':''))
+              a(href='/') Home
+            li(class = (title === 'About' ? 'active':''))
+              a(href='about') About
+            li(class = (title === 'Contact' ? 'active':''))
+              a(href='contact') Contact
+    block content
+
+    footer
+      p &copy; 2016, All right Reserved
+	  
+# 使用页面组装: index.jade. 本文件内容将替换layout.jade中block content部分
+extends layout
+
+block content
+  .jumbotron
+    .container
+      .h1 How may I help you?
+      p Mauris in dui nec urna cursus iaculis. Sed sagittis lacus non venenatis iaculis. Ut eros dolor, tincidunt eget turpis tincidunt, aliquet fringilla velit. Suspendisse ut finibus sapien. Praesent sagittis faucibus mauris, nec consequat mauris mattis sed. Phasellus hendrerit imperdiet lorem, semper aliquet eros vehicula sed. Sed posuere a enim at feugiat. Nulla in molestie enim. Mauris ultricies lacus vel ligula dictum condimentum quis vitae quam. Cras vitae sapien dui.
+      a.btn.btn-primary.btn-lg(href="#") Learn more &raquo;
+
+  .container
+    .row
+      .col-md-4
+        h2 About us
+        p Donec ut nulla nec mauris fringilla semper ut id ipsum. Sed malesuada eleifend augue sed convallis. Aenean vel lorem eget urna volutpat finibus. Ut lobortis mollis nibh, vel convallis massa. Sed venenatis scelerisque felis, at tincidunt mauris. Donec viverra feugiat lacus eget aliquam. Aliquam libero lectus, sagittis nec neque a, egestas finibus mi. Nulla facilisi. Aliquam vitae dolor et massa congue dictum. Aenean eget mi vitae tellus dictum porttitor eget eu metus. Ut consectetur consequat sapien, sit amet fringilla neque laoreet at. Donec pharetra maximus nisl et aliquet. Donec accumsan tellus orci. Suspendisse potenti. Pellentesque rutrum nisi eget dolor vestibulum, id commodo sem condimentum. Donec dictum turpis at ipsum volutpat luctus.
+        a.btn.btn-default(href="#") View Details
+      .col-md-4
+        h2 About you
+        p Nullam lobortis, est nec suscipit pharetra, neque massa condimentum turpis, sed pellentesque urna leo eget augue. Maecenas volutpat nisl purus, ac egestas dolor accumsan a. Quisque nec ornare ex, at bibendum neque. Quisque turpis leo, fringilla sed lorem ac, hendrerit lacinia justo. Nullam rhoncus mi quis vulputate euismod. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Nunc nibh eros, imperdiet a dui sed, egestas mattis justo. Nullam dapibus neque eget urna suscipit volutpat.
+        a.btn.btn-default(href="#") View Details
+      .col-md-4
+        h2 About them
+        p Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus sagittis aliquet mauris, ac dictum sapien sollicitudin tincidunt. Donec ultricies purus sit amet dolor tincidunt pretium. Nunc condimentum sed quam non dapibus. Integer sed neque enim. Suspendisse vitae cursus massa, sit amet pharetra lectus. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. In lobortis metus et gravida laoreet. Duis velit lacus, commodo sed convallis sit amet, congue vitae nibh.
+        a.btn.btn-default(href="#") View Details
+
+# 使用css修饰效果 (bootstrap相关lib放在public中相应位置, fonts目录直接放在public目录下)
+body {
+  position: relative;
+  top: 200px;
+}
+
+.jumbotron{
+  background: url(../images/bg.jpg) no-repeat;
+  background-size: cover;
+}
+
+footer{
+  height: 60px;
+  background-color: #f5f5f5;
+  text-align: center;
+  margin-top: 50px;
+  padding-top: 20px;
+}
+
+============ 8 project2 添加一个 contact 页面 ============
+
+# app.js 中相应位置添加route
+var contact = require('./routes/contact');
+
+app.use('/contact', contact);
+
+# contact.js controller
+var nodemailer = require('nodemailer');
+var express = require('express');
+
+var router = express.Router();
+router.get('/', function(req, res, next) {
+  res.render('contact', { title: 'Contact' });
+});
+
+module.exports = router;
+
+# 建立contact.jade视图文件
+extends layout
+
+block content
+  .container
+    h1 #{title}
+    form(method='post', action='contact/send')
+      .form-group
+        label(for="name") Name
+        input.form-control#name(type="text", name="name", placeholder="Enter Name")
+      .form-group
+        label Email
+        input.form-control(type="email", name="email", placeholder="Enter Email")
+      .form-group
+        label Message
+        textarea.form-control(type="text", name="message", placeholder="Enter Message ...")
+      button.btn.btn-default(type="submit") Submit
+	  
+# 修改js文件需要重启服务, 修改jade不需要
+
+	  
+============ 9 project2 实现form的提交; 发送mail ============
+
+# 在contact.js 中添加对post访问 'contact/send' 的响应
+var nodemailer = require('nodemailer');
+var express = require('express');
+
+var router = express.Router();
+router.get('/', function(req, res, next) {
+  res.render('contact', { title: 'Contact' });
+});
+
+router.post('/send', function (req, res, next) {	// app.js中已经窄化到'/contact'路径了, 这里对应/contact/send路径
+  var transporter = nodemailer.createTransport({
+    service:'Gmail',
+    auth: {
+      user:'mydataorta@gmail.com',
+      pass:'xurunpei@gmail.com'
+    }
+  });
+
+  var mailCont = "<b>You have a new message from: </b>" + req.body.name +
+      "<br/><b>About: </b>" + req.body.message +
+      "<br/><b>You can reply to: </b>" + req.body.email;
+  var mailOptions = {
+    from: 'datAorta <mydataorta@gmail.com>',
+    to: 'mydataorta@gmail.com',
+    subject: 'website submission',
+//  text: "you have a new submission",
+    html: mailCont
+  }
+
+  transporter.sendMail(mailOptions, function(err, info) {
+    if (err) {
+      console.log (err);
+      res.redirect('/');
+    } else {
+      console.log ('message sent to: ', info.response);
+      res.redirect('/');
+    }
+  })
+})
+
+module.exports = router;
+
+
+============ 11 project3 mongodb ============
+
+# 建立mongodb文件夹结构
+	\mongodb
+	\mongodb\data
+	\mongodb\data\db
+	\mongodb\data\log
+
+# 安装mongodb到 \mongodb 下, 以便找到bin下的可执行文件
+
+# 以管理员运行cmd进行设置
+	cd \mongodb\bin
+	mongod --directoryperdb --dbpath c:\mongodb\data\db --logpath c:\mongodb\data\log\mongodb.log --logappend -rest --install
+
+# 开始服务
+net start MongoDB
+
+# 开启客户端, 也可使用gui客户端MongoChef
+mongo
+
+# 建db: 建立和使用都是一个指令
+use nodeauth
+show dbs
+
+# 建table
+db.createCollection('users')
+show collections
+
+# 添数据 (没有schema, 以json格式存储一切)
+db.users.insert({name:"james",email:"james@xxx.com",username:"devuser1",password:"123"})
+db.users.insert({name:"brad",email:"brad@xxx.com",username:"devuser2",password:"456"})
+
+# 查数据
+db.users.find()
+db.users.find().pretty()
+
+# 改数据
+db.users.update(
+	{username:"devuser1"}, 
+	{$set:{name:'john'}}
+)
+
+# 删数据
+db.users.remove({username:"devuser1"})
+db.users.remove({})
+
+
+============ 12 project3 配置middleware ============
+
+# 建立项目fastrecord_p3, 进入目录后 express 初始化项目结构
+
+# package.json中配置需要的lib
+{
+  "name": "fastrecord_p3",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "body-parser": "~1.13.2",
+    "cookie-parser": "~1.3.5",
+    "debug": "~2.2.0",
+    "express": "~4.13.1",
+    "jade": "~1.11.0",
+    "morgan": "~1.6.1",
+    "serve-favicon": "~2.3.0",
+
+    "mongodb":"*",
+    "mongoose":"*",
+    "connect-flash":"*",
+    "express-validator":"*",
+    "express-session":"*",
+    "express-messages":"*",
+    "passport":"*",
+    "passport-local":"*",
+    "passport-http":"*",
+    "multer":"*"
+  }
+}
+完成后terminal中 npm install 或者右键"run npm update"
+在node_modules中应该可以看到下载的库文件夹
+
+
+
+
+# 在app.js中添加大量middleware
+var express = require('express');
+var path = require('path');
+var favicon = require('serve-favicon');
+var logger = require('morgan');
+var cookieParser = require('cookie-parser');
+
+// >> added libraries
+var expressValidator = require('express-validator');
+
+var session = require('express-session');		// 需在passport.session()前
+var passport = require('passport');
+var localStrategy = require('passport-local').Strategy;
+var bodyParser = require('body-parser');
+
+var flash = require('connect-flash');
+
+var mongo = require('mongodb');
+var mongoose = require('mongoose');
+var db = mongoose.connection;
+
+
+var routes = require('./routes/index');
+var users = require('./routes/users');
+
+var app = express();
+
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'jade');
+
+// uncomment after placing your favicon in /public
+//app.use(favicon(path.join(__dirname, 'public', 'favicon.ico')));
+app.use(logger('dev'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false }));
+
+// >> added express session middle ware
+app.use(session({
+  secret:'secret',
+  saveUninitialized: true,
+  resave: true
+}));
+// >> added passport middle ware (after session middle ware)
+app.use(passport.initialize());
+app.use(passport.session());
+// >> added validator middle ware
+app.use(expressValidator({
+  errorFormatter: function(param, msg, value) {
+    var namespace = param.split('.')
+        , root    = namespace.shift()
+        , formParam = root;
+
+    while(namespace.length) {
+      formParam += '[' + namespace.shift() + ']';
+    }
+    return {
+      param : formParam,
+      msg   : msg,
+      value : value
+    };
+  }
+}));
+// >> added flash middle ware
+app.use(flash());
+app.use(function (req, res, next) {
+  res.locals.messages = require('express-messages')(req, res);
+  next();
+});
+
+app.use(cookieParser());
+app.use(express.static(path.join(__dirname, 'public')));
+
+
+app.use('/', routes);
+app.use('/users', users);
+
+// catch 404 and forward to error handler
+app.use(function(req, res, next) {
+  var err = new Error('Not Found');
+  err.status = 404;
+  next(err);
+});
+
+// error handlers
+
+// development error handler
+// will print stacktrace
+if (app.get('env') === 'development') {
+  app.use(function(err, req, res, next) {
+    res.status(err.status || 500);
+    res.render('error', {
+      message: err.message,
+      error: err
+    });
+  });
+}
+
+// production error handler
+// no stacktraces leaked to user
+app.use(function(err, req, res, next) {
+  res.status(err.status || 500);
+  res.render('error', {
+    message: err.message,
+    error: {}
+  });
+});
+
+module.exports = app;
+
+============ 13-14 project3 界面原型 ============
+
+# 如之前准备layout.jade
+doctype html
+html(lang='en')
+  head
+    meta(charset='utf-8')
+    meta(http-equiv='X-UA-Compatible', content='IE=edge')
+    meta(name='viewport', content='width=device-width, initial-scale=1')
+    title #{title}: Sweet Home
+    link(href='/stylesheets/bootstrap.css', rel='stylesheet')
+    link(href='/stylesheets/style.css', rel='stylesheet')
+    script(src='/javascripts/jquery-3.1.0.js')
+    script(src='/javascripts/bootstrap.js')
+  body
+    nav.navbar.navbar-inverse.navbar-fixed-top
+      .container
+        .navbar-header
+          button.navbar-toggle.collapsed(type='button', data-toggle='collapse', data-target='#navbar', aria-expanded='false', aria-controls='navbar')
+            span.icon-bar
+            span.icon-bar
+            span.icon-bar
+          a.navbar-brand(href='#') Project name
+        #navbar.collapse.navbar-collapse
+          ul.nav.navbar-nav
+            li(class = (title === 'Members' ? 'active':''))
+              a(href='/') Members
+            li(class = (title === 'Register' ? 'active':''))
+              a(href='/users/register') Register
+            li(class = (title === 'Log In' ? 'active':''))
+              a(href='/users/login') Log In
+          ul.nav.navbar-nav.navbar-right
+            li
+              a(href='/users/logout') Logout
+    block content
+
+    footer
+      p &copy; 2016, All right Reserved
+	  
+# users.js中添加/register 和/login的route
+var express = require('express');
+var router = express.Router();
+
+router.get('/', function(req, res, next) {
+  res.send('respond with a resource');
+});
+
+router.get('/register', function(req, res, next) {
+  res.render('register', { title: 'Register' });
+});
+router.get('/login', function(req, res, next) {
+  res.render('login', { title: 'Log In' });
+});
+
+module.exports = router;
+
+# 添加register.jade 和login.jade 模板  
+extends layout
+
+block content
+  .container
+    h1 #{title} Area
+    p Nulla sed condimentum mi. Mauris nec tincidunt leo, in gravida lacus.
+    form(method="post", action="/users/register", enctype="multipart/form-data")
+      .form-group
+        label Name
+        input.form-control(name="name", type="text", placeholder="Enter Name")
+      .form-group
+        label Email
+        input.form-control(name="email", type="email", placeholder="Enter Email")
+      .form-group
+        label Username
+        input.form-control(name="username", type="text", placeholder="Enter Username")
+      .form-group
+        label Password
+        input.form-control(name="password", type="password", placeholder="Enter Password")
+      .form-group
+        label Confirm Password
+        input.form-control(name="password2", type="password", placeholder="Confirm Password")
+      .form-group
+        label Profile Image
+        input.form-control(name="profileImage", type="file")
+       input.btn.btn-primary(type="submit" value="Register")
+	   
+	   
+extends layout
+
+block content
+  .container
+    h1 #{title} Area
+    p Nulla sed condimentum mi. Mauris nec tincidunt leo, in gravida lacus.
+    form(method="post", action="/users/login", enctype="multipart/form-data")
+      .form-group
+        label Username
+        input.form-control(name="username", type="text", placeholder="Enter Username")
+      .form-group
+        label Password
+        input.form-control(name="password", type="password", placeholder="Enter Password")
+      input.btn.btn-primary(type="submit" value="Log In")
+
+
+============ 15 project3. validation ============
+
+# 修改users.js, 添加点击响应事件对应的router
+var multer = require('multer');
+var upload = multer({ dest: 'uploads/'});	// multer usage ref: https://github.com/expressjs/multer
+
+// var User = require('../models/user');	// User 是起名惯例, 代表单例
+
+router.post('/register', upload.single('avatar'), function(req, res, next) {
+  // get form values
+  var name = req.body.name;
+  var email = req.body.email;
+  var username = req.body.username;
+  var password = req.body.password;
+  var password2 = req.body.password2;
+
+  // check for image field
+  if(req.hasOwnProperty('avatar')){
+    console.log('uploading file ...');
+    var profileImageOriginalName = req.file.originalname;
+    var profileImageName = req.file.name;
+    var profileImageMime = req.file.mimetype;
+    var profileImagePath = req.file.path;
+    var profileImageExt = req.file.extension;
+    var profileImageSize = req.file.size;
+  } else {
+    // set a default avatar
+    var profileImageName = 'noAvatar.png';
+  }
+
+  // express-validator: form validation
+  req.checkBody('name','Name filed is required').notEmpty();
+  req.checkBody('email','Email is not valid').isEmail();
+  req.checkBody('username','Username filed is required').notEmpty();
+  req.checkBody('password','Password filed is required').notEmpty();
+  req.checkBody('password2','Passwords do not match').equals(password);
+
+  // check for errors
+  var errors = req.validationErrors();
+  if(errors){
+    res.render('register', {
+      title: 'Register',
+      errors: errors,		// 错误信息列表, 之后修改模板显示: each error, i in errors
+      name:name,   			// 以免用户提交时候有错误所有项都需要重新输入
+      email:email,
+      username:username
+    })
+  } else {					// User对象还未实现, 这里暂时不要测试输入正确的情况
+    var newUser = new User({
+      name:name,
+      email:email,
+      username:username,
+      password:password,
+      profileImage: profileImageName
+    })
+
+    User.createUser(newUser, function(err, user){
+      if(err) throw err;
+      console.log(user);
+    });
+
+    // success flash message
+    req.flash('success', 'You are now registered.');
+    res.redirect('/');
+  }
+});
+
+
+# 修改register.jade, 实现错误信息显示 
+extends layout
+
+block content
+  .container
+    h1 #{title} Area
+    p Nulla sed condimentum mi. Mauris nec tincidunt leo, in gravida lacus.
+    if errors
+      ul
+        each error, i in errors
+          li.alert.alert-danger #{i+1}: #{error.msg}
+
+    form(method="post", action="/users/register", enctype="multipart/form-data")
+      .form-group
+        label Name
+        input.form-control(name="name", type="text", placeholder="Enter Name")
+      .form-group
+        label Email
+        input.form-control(name="email", type="email", placeholder="Enter Email")
+      .form-group
+        label Username
+        input.form-control(name="username", type="text", placeholder="Enter Username")
+      .form-group
+        label Password
+        input.form-control(name="password", type="password", placeholder="Enter Password")
+      .form-group
+        label Confirm Password
+        input.form-control(name="password2", type="password", placeholder="Confirm Password")
+      .form-group
+        label Profile Image
+        input.form-control(name="avatar", type="file")
+      input.btn.btn-primary(type="submit" value="Register")
+
+# 测试
+访问: http://localhost:3000/users/register
+保证validation失败, 无附件的输入, 点击提交后观察出错信息是否完整
+	  
+============ 16 project3.register组件:提交内容存储到mongodb ============
+
+# 保存到db的过程
+routes/users.js中, 创建符合UserSchema的newUser对象:  var newUser = new User({ name:name, email:email...})
+routes/users.js中, 调用User的createUser方法: User.createUser(newUser, function(err, user){...})
+由于newUser符合UserSchema, 其具有save()方法: newUser.save(callback);
+完成save后, 调用callback, 其内容在routes/users.js中定义
+
+# 实现users.js中用到的/models/user.js文件, 也就是User对象
+var mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/nodeauth')
+var db = mongoose.connection;
+
+// User Schema, 用在: new User({})
+var UserSchema = mongoose.Schema({
+    username:{type: String},
+    password:{type: String},
+    email:{type:String},
+    name:{type:String},
+    profileImage:{type:String}
+});
+
+module.exports = mongoose.model('User', UserSchema);
+
+module.exports.createUser = function(newUser, callback){
+    newUser.save(callback);
+}
+
+# 查看mongodb中数据
+c:\mongodb\bin\mongo
+use nodeauth
+db.users.find().pretty()
+
+
+============ 17 project3.register组件:bcrypt密码加密 ============
+
+# 安装bcryptjs: 视频使用bcrypt, 需要安装大量组件, 麻烦. 以后导入bcryptjs而不是bcrypt即可, 其api都一样
+npm install --save bcryptjs
+或者配置package.json
+
+# 修改user.js, 添加密码加密功能
+var mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/nodeauth')
+var db = mongoose.connection;
+
+var bcrypt = require('bcryptjs');
+
+// User Schema
+var UserSchema = mongoose.Schema({
+    username:{type: String, index: true},
+    password:{type: String, required: true, bcrypt: true},
+    email:{type:String},
+    name:{type:String},
+    profileImage:{type:String}
+});
+module.exports = mongoose.model('User', UserSchema);
+
+module.exports.createUser = function(newUser, callback){
+    bcrypt.hash(newUser.password, 10, function (err, result) {	// 第二个参数是salt, 参考:https://www.npmjs.com/package/bcryptjs
+       if(err) throw err;
+       // set hashed password
+       newUser.password = result;
+       // create user
+       newUser.save(callback);      // nodejs非阻断性特征, 如果放耗时任务后面将不等待直接执行, 所以放bcrypt的callback中
+    });
+}
+
+============ 18 project3.login组件: passport ============
+
+
+https://scotch.io/tutorials/easy-node-authentication-setup-and-local
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+============ 22 project4 配置middleware ============
+
+# 建立数据库, 注意这里输入当前日期的方式: ISODate()
+use nodeblog
+db.createCollection('posts')
+db.createCollection('categories')
+db.posts.remove({})
+db.posts.insert({title:"blog post 1", category:"tech", author:"jone", body:"blog post 1 body", date:ISODate()})
+db.posts.insert({title:"blog post 2", category:"fashion", author:"doe", body:"blog post 2 body", date:ISODate()})
+db.categories.insert({title:"tech"})
+db.categories.insert({title:"fashion"})
+
+db.posts.find().pretty()
+db.categories.find().pretty()
+
+# 建立项目fastrecord_p4, 进入目录后 express 初始化项目结构
+
+# package.json中配置需要的middleware
+{
+  "name": "fastrecord_p4",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "node ./bin/www"
+  },
+  "dependencies": {
+    "body-parser": "~1.15.1",
+    "cookie-parser": "~1.4.3",
+    "debug": "~2.2.0",
+    "express": "~4.13.4",
+    "jade": "~1.11.0",
+    "morgan": "~1.7.0",
+    "serve-favicon": "~2.3.0",
+
+    "mongodb":"*",
+    "monk":"*",
+    "connect-flash":"*",
+    "express-validator":"*",
+    "express-session":"*",
+    "express-messages":"*",
+    "multer":"*",
+    "moment":"*"
+  }
+}
+完成后terminal中 npm install 或者右键"run npm update"
+在node_modules中应该可以看到下载的库文件夹
+
+
+
+# 在app.js中导入以上middleware, 并进行配置
+// >> added middleware
+var expressValidator = require("express-validator");
+var session = require("express-session");
+var mongo = require("mongodb");
+var db = require("monk")("localhost/nodeblog");
+var multer = require("multer");
+var flash = require("connect-flash");
+
+
+var routes = require('./routes/index');
+var posts = require('./routes/posts');
+
+// >> config added middleware
+var upload = multer({dest:'./public/images/uploads'});    // 注意配置方法和视频中不同: https://github.com/expressjs/multer
+app.use(session({secret:'secret', saveUninitialized:true, resave:true}));
+app.use(expressValidator({
+  errorFormatter: function(param, msg, value) {
+    var namespace = param.split('.')
+        , root    = namespace.shift()
+        , formParam = root;
+
+    while(namespace.length) {
+      formParam += '[' + namespace.shift() + ']';
+    }
+    return {
+      param : formParam,
+      msg   : msg,
+      value : value
+    };
+  }
+}));
+app.use(flash());
+app.use(function (req, res, next) {
+  res.locals.messages = require('express-messages')(req, res);
+  next();
+});
+app.use(function (req, res, next) {
+  req.db = db;
+  next();
+});
+app.locals.moment = require("moment");  // 用locals代表global var
+app.locals.truncateText = function (text, length) {		// 用以截取一定长度文字显示在列表中
+  var result = text.substring(0, length);
+  return result;
+}
+
+# 测试
+npm start 后:
+访问: http://localhost:3000/
+
+
+============ 23-25 project4 界面原型/列表模块 ============
+
+# 配置index.js
+var express = require('express');
+var router = express.Router();
+var mongo = require("mongodb");
+var db = require("monk")("localhost/nodeblog");
+
+/* GET home page. */
+router.get('/', function(req, res, next) {
+  var posts = db.get('posts');
+  posts.find({},{},function (err, posts) {
+    res.render('index', { posts: posts });
+  });
+});
+
+module.exports = router;
+
+# index.jade, 注意这里使用moment格式化日期: #{moment(post.date).format("YYYY-MMM-DD")}
+extends layout
+
+block content
+  if posts
+    each post, i in posts
+      .post
+        h1
+          a(href="/posts/show/#{post._id}") #{post.title}
+        p.meta Posted in #{post.category} by #{post.author} on #{moment(post.date).format("YYYY-MMM-DD")}
+        !=truncateText(post.body, 300)
+        p
+		  img(src='/images/uploads/#{post.mainImage}')
+        p
+          a.more(href="/posts/show/#{post._id}") Read More
+  else
+    p.noposts There are no posts to display.
+
+如果内容那使用p #{post.body}方式, 将以文字方式显示内容, 用 !=post.body 方式, 将渲染内容效果
+
+# layout.jade
+doctype html
+html
+  head
+    title= nodeblog
+    link(rel='stylesheet', href='/stylesheets/style.css')
+  body
+    .container
+      img.logo(src='./images/logo.png')
+      nav
+        ul
+          li
+            a(href='/') Home
+          li
+            a(href='/posts/add') Add Post
+          li
+            a(href='/categories/add') Add Category
+      != messages()
+      block content
+      footer
+        p NodeBlog &copy; 2016
+		
+# style.css
+body {font: 15px Arial;background: #f4f4f4;color: #666;}
+.logo {text-align: center;margin: auto;display: block;}
+.container {width: 750px;border: 1px solid #ccc;margin: 20px auto;padding: 20px;border-top: #83cd39 3px solid;}
+.clear {clear: both;}
+ul {padding: 0; margin: 0;}
+h1, h2, h3, p {padding: 5px 0;margin-bottom: 0;}
+p {margin: 0;}
+a {color: #404137;text-decoration: none;}
+nav {background: #404137;color: #fff;overflow: auto;height: 40px;padding: 20px 0 0 10px;font-size: 18px;margin-top: 20px;}
+nav li {float: left;list-style: none;}
+nav a {padding: 10px; margin: 0 10px;color: #fff;}
+nav a.current, nav a:hover {background: #83cd29;color: #000;}
+.meta {padding: 7px;border: 1px solid #ccc;background: #ccc;}
+a.more {display: inline-block;background: steelblue;color: #fff;padding: 10px;margin-top: 10px;border-radius: 5px;}
+.post {border-bottom: 1px solid #ccc;padding-bottom: 20px;}
+footer{margin-top:40px; text-align: center;height: 30px;border-top: solid 1px #ccc}
+/*.post img{width:100%}*/
+
+# 测试
+访问: http://localhost:3000 看到db中内容被展示, 并且日期被格式化
+
+
+============ 26-27 project4 add post 模块 ============
+
+# app.js中添加post的router
+var routes = require('./routes/index');
+var posts = require('./routes/posts');
+
+app.use('/', routes);
+app.use('/posts', posts);
+
+# posts.js中添加get访问add地址的方法
+var express = require('express');
+var router = express.Router();
+var mongo = require("mongodb");
+var db = require("monk")("localhost/nodeblog");
+var multer = require("multer");
+var upload = multer({dest:'./public/images/uploads'}).single('mainImage');
+
+router.get('/add', function(req, res, next) {   // 对应layout中navibar上的add post的地址: posts/add
+  var categories = db.get('categories');
+  categories.find({},{}, function (err, categories) {
+    res.render('addpost', {
+      'title':'Add Post',
+      'categories':categories
+    });
+  })
+});
+
+module.exports = router;
+
+# 实现get方法需要访问的addpost.jade页面, 这里使用ckeditor作为richtexteditor, 需要复制相应文件
+extends layout
+
+block content
+  h1=title
+  ul.errors
+    if errors
+      each error, i in errors
+        li.alert.alert-danger #{error.msg}
+  form(method='post',action='/posts/add',enctype='multipart/form-data')
+    .form-group
+      label Title:
+      input.form-control(name='title',type='text')
+    .form-group
+      label Category:
+      select.form-control(name='category')
+        each category, i in categories
+          option(value='#{category.title}') #{category.title}
+    .form-group
+      label Body:
+      textarea.form-control(name='body',id='body')
+    .form-group
+      label Author:
+      select.form-control(name='author')
+        option(value='john') John
+        option(value='doe') Doe
+        option(value='jane') Jane
+    .form-group
+      label Main Image:
+      input.form-control(name='mainImage',type='file')
+    input.btn.btn-default(name='submit', type='submit', value='save')
+
+  script(src='/ckeditor/ckeditor.js')
+  script
+    | CKEDITOR.replace('body');		// '|' 是escape符号, 指明第一个词不是关键词
+
+# style.css 中添加新页面的效果控制
+label{display: inline-block; width: 180px}
+input[type="text"], input[type='email'], select, textarea{padding: 3px; height:20px; width: 200px; border: 1px #ccc solid; margin-bottom: 15px}
+select{height:28px}
+textarea{height:70px; width:400px}
+
+# post.js中添加post访问add地址的方法
+router.post('/add', upload, function(req, res, next) {
+  // get form values
+  var title = req.body.title;
+  var category = req.body.category;
+  var body = req.body.body;
+  var author = req.body.author;
+  var date = new Date();
+
+  // get image
+  if(req.file){
+    var mainImageOriginalName = req.file.originalname;
+    var mainImageName = req.file.filename;
+    var mainImageMime = req.file.mimetype;
+    var mainImagePath = req.file.path;
+    var mainImageExt = req.file.extension;
+    var mainImageSize = req.file.size;
+  } else {
+    var mainImageName = 'noImage.png';
+  }
+
+  // form validation
+  req.checkBody('title','title field is required').notEmpty();
+  req.checkBody('body','body field is required').notEmpty();
+
+  // check errors
+  var errors = req.validationErrors();
+  if (errors){
+    var categories = db.get('categories');
+    categories.find({},{}, function (err, categories) {
+      res.render('addpost', {
+        'errors':errors,
+        'title':title,
+        'categories':categories,
+        'body':body
+      })
+    })
+  }
+
+  // save post
+  else {
+    var posts = db.get('posts');
+    posts.insert({
+      'title':title,
+      'body':body,
+      'category':category,
+      'date':date,
+      'author':author,
+      'mainImage':mainImageName
+    }, function (err, post) {
+      if (err) res.send('there was an issue submitting the post');
+      else {
+        req.flash('success', 'Post submitted');
+        res.location('/');
+        res.redirect('/');
+      }
+    })
+  }
+})
+
+============ 28 project4 add category 模块 ============
+
+# app.js中添加category的router
+var categories = require('./routes/categories');
+app.use('/categories', categories);
+
+# 实现 categories.js 的get方法
+var express = require('express');
+var router = express.Router();
+var mongo = require("mongodb");
+var db = require("monk")("localhost/nodeblog");
+
+router.get('/add', function(req, res, next) {
+  res.render('addcategory', {'title':'Add Category'});
+});
+
+module.exports = router;
+
+# 实现 addcategory.jade
+extends layout
+
+block content
+  h1=title
+  ul.errors
+    if errors
+      each error, i in errors
+        li.alert.alert-danger #{error.msg}
+  form(method='post',action='/categories/add')
+    .form-group
+      label Category:
+      input.form-control(name='category',type='text')
+    input.btn.btn-default(name='submit', type='submit', value='save')
+
+# 实现 categories.js 的post方法
+router.post('/add', function(req, res, next) {
+  // get form values
+  var category = req.body.category;
+
+  // form validation
+  req.checkBody('category','category field is required').notEmpty();
+
+  // check errors
+  var errors = req.validationErrors();
+  if (errors){
+    res.render('addcategory', {
+      'errors':errors,
+      'title':req.body.title
+    });
+  }
+
+  // save post
+  else {
+    var categories = db.get('categories');
+    categories.insert({
+      'title':category
+    }, function (err, category) {
+      if (err) res.send('there was an issue submitting the category');
+      else {
+        req.flash('success', 'Category submitted');
+        res.location('/');
+        res.redirect('/');
+      }
+    })
+  }
+})
+
+# 美化验证失败消息css
+.alert{padding:15px; margin-bottom: 20px;bordre:1px solid transparent; border-radius: 5px; list-style: none}
+.alert-danger{color:#a94442;background-color: #f2dede;border-color: #ebccd1}
+ul.success li {padding:15px;margin-top: 10px;margin-bottom: 20px;border:1px solid transparent;border-radius: 5px;color:#3c763d; background-color: #dff0d8;border-color: #d6e9c6;list-style: none}
+
+# 测试
+在add categories中添加条目后, 在add post中下拉菜单中能看到; 在add categories中添加空条目, 会有验证失败提示
+
+============ 29 project4 显示某category的所有post 传参, 带参的查询 ============
+
+# 修改 index.jade 中关于 category 的链接
+extends layout
+
+block content
+  if posts
+    each post, i in posts
+      .post
+        h1
+          a(href="/posts/show/#{post._id}") #{post.title}
+        p.meta Posted in&nbsp;
+          a(href='/categories/show/#{post.category}') #{post.category}&nbsp;
+          |by #{post.author} on #{moment(post.date).format("YYYY-MMM-DD")}
+        !=truncateText(post.body, 300)
+        p
+          img(src='/images/uploads/#{post.mainImage}')
+        p
+          a.more(href="/posts/show/#{post._id}") Read More
+  else
+    p.noposts There are no posts to display.
+
+
+# 在categories.js 中添加查询逻辑, 注意地址传参和查询传参的写法
+router.get('/show/:category', function (req, res, next) {
+  var posts = db.get('posts');
+  posts.find({category:req.params.category},{},function (err, posts) {
+    res.render('index', {
+      'title':req.params.category,
+      'posts':posts
+    });
+  })
+})
+
+============ 30-31 project4 显示某post内容, comment模块 ============
+
+# 在 posts.js 中添加查询逻辑, 这里搜索关键字是 findOne
+router.get('/show/:id', function (req, res, next) {
+  var posts = db.get('posts');
+  posts.findById(req.params.id,function (err, post) {
+    res.render('show', {
+      'title':req.params.id,
+      'post':post
+    });
+  })
+})
+
+# 实现 show.jade
+extends layout
+
+block content
+  .show
+    h1=post.title
+    p.meta Posted in&nbsp;
+      a(href='/categories/show/#{post.category}') #{post.category}&nbsp;
+      | by #{post.author} on #{moment(post.date).format("YYYY-MMM-DD")}
+    !=post.body
+    p
+      img(src='/images/uploads/#{post.mainImage}')
+
+
+# 在 show.jade 中添加评论列表和发表评论功能
+    // start comment
+    if post.comments
+      h3 Comments
+      each comment, i in post.comments
+        .comment
+          p.comment-name #{comment.name}
+          p.comment-body #{comment.body}
+      br
+    h3 Add Comment
+    if errors
+      ul.errors
+        each error, i in errors
+          li.alert.alert-danger #{error.msg}
+    form.comment-form(method='post',action='/posts/addcomment')
+      input(name='postid', type='hidden', value='#{post._id}')
+      .form-group
+        label Name
+        input.form-contrl(type='text', name='name')
+      .form-group
+        label Email
+        input.form-contrl(type='email', name='email')
+      .form-group
+        label Body
+        textarea.form-contrl(name='body', id='body')
+      br
+      input.btn.btn-default(name='submit', type='submit', value='Add Comment')
+
+# 在 posts.js 中实现表单提交, 注意update时用到的参数和关键字
+router.post('/addcomment', function(req, res, next) {
+  // get form values
+  var postid = req.body.postid;
+  var name = req.body.name;
+  var email = req.body.email;
+  var body = req.body.body;
+  var commentDate = new Date();
+
+  // form validation
+  req.checkBody('name','name field is required').notEmpty();
+  req.checkBody('email','email field is not formatted correctly').isEmail();
+  req.checkBody('body','body field is required').notEmpty();
+
+  // check errors
+  var errors = req.validationErrors();
+  if (errors){
+    var posts = db.get('posts');
+    posts.findOne(postid, function (err, post) {
+      res.render('addpost', {
+        'errors':errors,
+        'post':post
+      })
+    })
+  }
+
+  // save comment
+  else {
+    var comment = {name:name, email:email, body:body, commentDate:commentDate}
+    var posts = db.get('posts');
+    posts.update(
+      {'_id':postid},
+      {$push:{comments:comment}},
+      function (err, doc) {
+        if (err) throw err;
+        else {
+          req.flash('success', 'comment added');
+          res.location('/posts/show/'+postid);
+          res.redirect('/posts/show/'+postid);
+        }
+      }
+    )
+  }
+})
+
+# 美化comment效果
+.comment-form{margin:30px 0}
+.comment{background-color: #ccc; padding:5px;border:#666 solid 1px;margin:15px 0 20px}
+.comment-name{font-weight:bold}
+
+
+============ 33-34 project5 mLab Drywall Setup ============
+
+# 在mLab.com 建立云端数据库
+mLab账号: xurunpei:zu*******
+Create new
+Cloud provider: 用默认值
+Plan: Single-node 里面的免费Sandbox
+Database name: comevents
+
+# 点击该数据库后可以得到如何连接数据库的说明:
+To connect using the mongo shell:
+  mongo ds031835.mlab.com:31835/comevents -u <dbuser> -p <dbpassword>
+To connect using a driver via the standard MongoDB URI:
+  mongodb://<dbuser>:<dbpassword>@ds031835.mlab.com:31835/comevents
+  
+# 添加一个数据库的账号
+点击Users标签
+点击Add database user按钮
+ricky:0577
+
+# 添加drywall对应的collections https://github.com/jedireza/drywall
+use comevents
+db.admingroups.insert({ _id: 'root', name: 'Root' });
+db.admins.insert({ name: {first: 'Root', last: 'Admin', full: 'Root Admin'}, groups: ['root'] });
+var rootAdmin = db.admins.findOne();
+db.users.save({ username: 'root', isActive: 'yes', email: 'mydataorta@gmail.com', roles: {admin: rootAdmin._id} });
+var rootUser = db.users.findOne();
+rootAdmin.user = { id: rootUser._id, name: rootUser.username };
+db.admins.save(rootAdmin);
+
+
+# 克隆 drywall 项目
+ssh-keygen -t rsa -b 4096 -C "xurp@hotmail.com"
+全部默认设置
+秘钥文件生成在/c/users/xurp/.ssh/id_rsa.pub
+
+登陆github账号 >> settings >> SSH and GPG keys >> 按照需要添加秘钥文件
+
+git clone git@github.com:jedireza/drywall.git fastrecord_p5
+在当前目录下会发现fastrecord_p5目录. 可以挪到任意需要的地方. 目录里有完整的项目结构
+
+# package.json
+修改 bcrypt -> bcryptjs
+添加 'connect-flash': '*', 
+修改完成后运行 npm install
+
+# /schema/User.js
+47, 59 行改: var bcrypt = require('bcryptjs');
+
+# 修改/复制config.example.js 为 config.js, 并进行设置
+exports.port = process.env.PORT || 3000;
+exports.mongodb = {
+  uri: process.env.MONGOLAB_URI || process.env.MONGOHQ_URL || 'mongodb://ricky:0577@ds031835.mlab.com:31835/comevents'
+};
+exports.companyName = 'Community Events';
+exports.projectName = 'Community Events';
+exports.systemEmail = 'mydataorta@gmail.com';
+exports.cryptoKey = 'k3yb0ardc4t';
+exports.loginAttempts = {
+  forIp: 50,
+  forIpAndUser: 7,
+  logExpiration: '20m'
+};
+exports.requireAccountVerification = false;
+exports.smtp = {
+  from: {
+    name: process.env.SMTP_FROM_NAME || exports.projectName +' Community Events',
+    address: process.env.SMTP_FROM_ADDRESS || 'mydataorta@gmail.com'
+  },
+  credentials: {
+    user: process.env.SMTP_USERNAME || 'mydataorta@gmail.com',
+    password: process.env.SMTP_PASSWORD || 'xurunpei@gmail.com',
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    ssl: true
+  }
+};
+
+# 安装并使用grunt启动项目
+npm install grunt -cli -g
+grunt
+在 http://localhost:3000/ 应该可以看到已经成型的项目效果
+
+关闭项目, 使用 node app 启动  // TODO: 为啥?
+
+点击页面 reset your password
+Enter Your Email >> mydataorta@gmail.com >> send reset
+检查邮箱mydataorta@gmail.com, 点击链接
+页面输入新密码: 1234
+点击login to confirm
+用 mydataorta@gmail.com:1234 登陆, 到处看看, 此时是root账号.
+登出后首页 create account, 注册后直接登陆了.
+xurunpei:1234
+
+============ 35-36 project5 添加event模块 ============
+
+# 创建 schema/Event.js 实体类
+'use strict';
+
+exports = module.exports = function(app, mongoose) {
+  var eventSchema = new mongoose.Schema({
+    name: { type: String, required:true },
+    description: { type: String },
+    venu: { type: String },
+    date: { type: Date },
+    startTime: { type: String },
+    endTime: { type: String },
+    username: { type: String, required:true },
+    search: [String]
+  });
+  eventSchema.plugin(require('./plugins/pagedFind'));
+  eventSchema.index({ name: 1 });
+  eventSchema.index({ date: 1 });
+  eventSchema.index({ venu: 1 });
+  eventSchema.index({ startTime: 1 });
+  eventSchema.index({ endTime: 1 });
+  eventSchema.index({ username: 1 });
+  eventSchema.index({ search: 1 });
+  eventSchema.set('autoIndex', (app.get('env') === 'development'));
+  app.db.model('Event', eventSchema);
+};
+
+# 在数据库中按schema添加条目
+db.createCollection('events')
+db.events.insert({
+	name: 'name1',
+	description: 'description1',
+	date: new Date('july 4, 2016'), 
+	venu: 'venu1',
+	startTime: '2:00 PM',
+	endTime: '5:00 PM',
+	username: 'ricky'
+})
+
+# 在models.js 中添加 Event.js
+'use strict';
+
+exports = module.exports = function(app, mongoose) {
+  //embeddable docs first
+  require('./schema/Note')(app, mongoose);
+  require('./schema/Status')(app, mongoose);
+  require('./schema/StatusLog')(app, mongoose);
+  require('./schema/Category')(app, mongoose);
+
+  //then regular docs
+  require('./schema/User')(app, mongoose);
+  require('./schema/Admin')(app, mongoose);
+  require('./schema/AdminGroup')(app, mongoose);
+  require('./schema/Account')(app, mongoose);
+  require('./schema/LoginAttempt')(app, mongoose);
+
+  require('./schema/Event')(app, mongoose);
+};
+
+# 修改 layouts/default.jade 添加event的页面入口
+        div.navbar-collapse.my-navbar-collapse.collapse
+          ul.nav.navbar-nav
+            li: a(href='/') Home
+            li: a(href='/about/') About
+            li: a(href='/events/') Events
+            if !user || !user.username
+              li: a(href='/signup/') Sign Up
+            li: a(href='/contact/') Contact
+			
+# 修改 routes.js, 添加/events的响应
+exports = module.exports = function(app, passport) {
+  //front end
+  app.get('/', require('./views/index').init);
+  app.get('/about/', require('./views/about/index').init);
+  app.get('/contact/', require('./views/contact/index').init);
+  app.post('/contact/', require('./views/contact/index').sendMessage);
+  
+  // >> event routes
+  app.get('/events/', require('./views/events/index').find);
+  // ...  
+}	
+
+# 添加 views/events/index.js文件, 实现find方法
+'use strict';
+
+exports.find = function(req, res, next){
+	// 取得查询参数
+    req.query.name = req.query.name ? req.query.name : '';
+    req.query.limit = req.query.limit ? parseInt(req.query.limit, null) : 20;
+    req.query.page = req.query.page ? parseInt(req.query.page, null) : 1;
+    req.query.sort = req.query.sort ? req.query.sort : '_id';
+	
+	// 建立过滤条件
+    var filters = {};
+    if (req.query.username) {
+        filters.username = new RegExp('^.*?'+ req.query.username +'.*$', 'i');
+    }
+	
+	// 调用pageFind插件进行查询, 底层调用了mongoose
+    req.app.db.models.Event.pagedFind({     // 这里Event从之前models.js中调用, 不是直接调用
+        filters: filters,
+        keys: 'name username description',
+        limit: req.query.limit,
+        page: req.query.page,
+        sort: req.query.sort
+    }, function(err, results) {
+        if (err) {
+            return next(err);
+        }
+        if (req.xhr) {
+            res.header("Cache-Control", "no-cache, no-store, must-revalidate");
+            results.filters = req.query;
+            res.send(results);
+        }
+        else {
+            results.filters = req.query;
+            res.render('events/index', { data: results.data } );
+        }
+    });
+};
+
+# 添加 views/events/index.jade 视图文件
+extends ../../layouts/default
+
+block head
+  title View Events
+
+block body
+  .row
+    .col-xs-8
+      .page-header
+        h1 View Events
+      ul.events
+        each event, i in data
+          li
+            Strong #{event.name} -
+            | Posted by #{event.username}
+            p #{event.description}
+            a.btn.btn-default(href='/events/show/#{event._id}') Read More
+    .col-xs-4
+      .page-header
+        h1 Sidebar
+		
+# 美化, 去除event前的点
+建立 public/layouts/style.css
+.events li {list-style: none; margin: 20px 0; line-height: 1.9em}
+
+在layouts/default.jade中添加该css
+link(rel='stylesheet', href='/layouts/style.css')
+
+============ 37-38 project5 show events detail 模块 ============
+
+# 修改 routes.js, 添加/events的get响应
+  // >> event routes
+  app.get('/events/', require('./views/events/index').find);
+  app.get('/events/show/:id', require('./views/events/index').read);
+  
+# 修改 views/events/index.js文件, 实现read方法
+exports.read = function(req, res, next){
+    req.app.db.models.Event.findById(req.params.id).exec(function(err, event) {
+        if (err) return next(err);
+        if (req.xhr) res.send(event);
+        else res.render('events/details', { event: event.data });
+    });
+};
+
+# 添加 views/events/details.jade 视图文件
+extends ../../layouts/default
+
+block head
+  title #{event.name}
+
+block body
+  .row
+    .col-xs-8
+      .page-header
+        h1 #{event.name}
+          small &nbsp; Posted by #{event.username}
+      ul.event-list
+        li
+          strong Venu:
+          | #{event.venu}
+        li
+          strong Date:
+          | #{event.date}
+        li
+          strong Start Time:
+          | #{event.startTime}
+        li
+          strong End Time:
+          | #{event.endTime}
+      p #{event.description}
+      p
+        i.fa.fa-arrow-circle-left
+        a(href='/events') Go back
+
+    .col-xs-4
+      .page-header
+        h1 Sidebar
+
+============ 37-38 project5 Add Event 模块 ============
+
+# 修改 default.jade, 添加'My Events'和'Add Event'的页面入口
+          ul.nav.navbar-nav.navbar-right
+            if user && user.username
+              li: a(href='/myevents')
+                i.fa.fa-calendar
+                |  My Events
+              li: a(href='/events/add')
+                i.fa.fa-plus
+                |  Add Event
+              li: a(href='#{user.defaultReturnUrl}')
+                i.fa.fa-user
+                |  #{user.username}
+            else
+              li: a(href='/login/')
+                i.fa.fa-user
+                |  Sign In
+
+# 修改 routes.js, 添加/events/add的get响应
+  // >> event routes
+  app.get('/events/', require('./views/events/index').find);
+  app.get('/events/show/:id', require('./views/events/index').read);
+  app.get('/events/add', require('./views/events/index').add);
+
+# 修改 views/events/index.js文件, 实现add方法
+exports.add = function(req, res, next){
+    if (!req.isAuthenticated()){			// TODO: trace: isAuthenticated()
+        req.flash('error', "you are not logged in");
+        res.location('/events');
+        res.redirect('/events');
+    }
+    res.render('events/add');
+};
+
+# 添加 views/events/add.jade 视图文件
+extends ../../layouts/default
+
+block head
+  title Add Event
+
+block body
+  .row
+    .col-xs-8
+      .page-header
+        h1 Add Event
+        form(method='post', action='/events')
+          .form-group
+            label Event Name:
+            input.form-control(type='text', name='name')
+          .form-group
+            label Event Description:
+            textarea.form-control(type='text', name='description')
+          .form-group
+            label Event Venu:
+            input.form-control(type='text', name='venu')
+          .form-group
+            label Event Date:
+            input.form-control(type='date', name='date')
+          .form-group
+            label Start Time:
+            input.form-control(type='time', name='startTime')
+          .form-group
+            label End Time:
+            input.form-control(type='time', name='endTime')
+          .form-group
+            button.btn.btn-primary.btn-signup(type='submit') Create Event
+    .col-xs-4
+      .page-header
+        h1 Sidebar
+
+		
+# 修改 routes.js, 添加/events的post响应
+  // >> event routes
+  app.get('/events/', require('./views/events/index').find);
+  app.get('/events/show/:id', require('./views/events/index').read);
+  app.get('/events/add', require('./views/events/index').add);
+  app.post('/events', require('./views/events/index').create);
+  
+# 修改 views/events/index.js文件, 实现create方法
+exports.create = function(req, res, next){
+    var workflow = req.app.utility.workflow(req, res); // utility helping post information to server
+
+    workflow.on('validate', function() {
+        if (!req.body.name) {
+            workflow.outcome.errors.push('Please enter a event name.');
+            return workflow.emit('response');
+        }
+        workflow.emit('createEvent');
+    });
+
+    workflow.on('createEvent', function() {
+        var fieldsToSet = {
+            name: req.body.name,
+            description: req.body.description,
+            venu: req.body.venu,
+            date: req.body.date,
+            startTime: req.body.startTime,
+            endTime: req.body.endTime,
+            username: req.user.username,    // 注意, username不从表格中获取, 不能用body
+            search: [
+                req.body.name
+            ]
+        };
+        req.app.db.models.Event.create(fieldsToSet, function(err, event) {
+            if (err) {
+                return workflow.emit('exception', err);
+            }
+            workflow.outcome.record = event;
+            req.flash('sucess', 'Event added');
+            res.location('/events');
+            res.redirect('/events');
+        });
+    });
+
+    workflow.emit('validate');
+};
+
+# 修改 app.js 配置, 去除csrf, 默认在58, 63 行
+app.use(passport.initialize());
+app.use(passport.session());
+// app.use(csrf({ cookie: { signed: true } }));
+helmet(app);
+
+//response locals
+app.use(function(req, res, next) {
+  // res.cookie('_csrfToken', req.csrfToken());
+  res.locals.user = {};
+  res.locals.user.defaultReturnUrl = req.user && req.user.defaultReturnUrl();
+  res.locals.user.username = req.user && req.user.username;
+  next();
+});
+
+# 修改 app.js 配置, 添加connect-flash和express-messages
+// >> added dependencies
+var flash = require('connect-flash');
+
+//>> added middleware
+app.use(flash());
+app.use(function (req, res, next) {
+  res.locals.messages = require('express-messages')(req, res);
+  next();
+});
+
+# 修改 layout/default.jade, 添加flash信息提示区
+    div.page
+      div.container
+        !=messages()
+        block body
+
+# 美化 public/layouts/style.css
+ul.error li, ul.info li, ul.success li{margin:20px 0;padding:15px;border:1px solid transparent; border-radius: 4px; list-style: none}
+ul.error li{color:#9a4442; background-color: #f2dede; border-color: #ebccd1}
+ul.info li{color:#31708f; background-color: #d9edf7}
+ul.success li{color:#3c773d;background-color: #dff0d8;border-color: #d6e9c6}
+
+============ 39 project5 My Events list 模块 ============
+
+# 修改 routes.js, 添加/events/myevents的get响应
+  // >> event routes
+  app.get('/events/', require('./views/events/index').find);
+  app.get('/events/show/:id', require('./views/events/index').read);
+  app.get('/events/add', require('./views/events/index').add);
+  app.post('/events', require('./views/events/index').create);
+  app.get('/myevents/', require('./views/myevents/index').find);
+
+# 添加 views/myevents/index.js文件, 实现find方法. 基本复制了events/index.js
+'use strict';
+
+exports.find = function(req, res, next){
+    req.query.name = req.query.name ? req.query.name : '';
+    req.query.limit = req.query.limit ? parseInt(req.query.limit, null) : 20;
+    req.query.page = req.query.page ? parseInt(req.query.page, null) : 1;
+    req.query.sort = req.query.sort ? req.query.sort : '_id';
+
+    var filters = {username:req.user.username};     // 添加了过滤条件
+    if (req.query.username) {
+        filters.username = new RegExp('^.*?'+ req.query.username +'.*$', 'i');
+    }
+
+    req.app.db.models.Event.pagedFind({
+        filters: filters,
+        keys: 'name username description',
+        limit: req.query.limit,
+        page: req.query.page,
+        sort: req.query.sort
+    }, function(err, results) {
+        if (err) {
+            return next(err);
+        }
+        if (req.xhr) {
+            res.header("Cache-Control", "no-cache, no-store, must-revalidate");
+            results.filters = req.query;
+            res.send(results);
+        }
+        else {
+            results.filters = req.query;
+            res.render('myevents/index', { events: results.data } );
+        }
+    });
+};
+
+# 添加 views/myevents/index.jade 视图文件
+extends ../../layouts/default
+
+block head
+  title View Events
+
+block body
+  .row
+    .col-xs-8
+      .page-header
+        h1 My Events
+      if events
+        ul.events
+          each event, i in events
+            li
+              Strong #{event.name}
+              |&nbsp;&nbsp;
+              i.fa.fa-pencil
+              a(href='/events/edit/#{event._id}') Edit
+              |&nbsp;&nbsp;
+              i.fa.fa-trash
+              a(href='javascript:;', id='deleteEvent', data-delete='#{event._id}') Delete
+      else
+        p You have no events.
+    .col-xs-4
+      .page-header
+        h1 Sidebar
+		
+
+============ 39-40 project5 My Events edit 模块 ============
+
+# 修改 routes.js, 添加/events/edit/:id的get响应
+  // >> event routes
+  app.get('/events/', require('./views/events/index').find);
+  app.get('/events/show/:id', require('./views/events/index').read);
+  app.get('/events/add', require('./views/events/index').add);
+  app.post('/events', require('./views/events/index').create);
+  app.get('/events/edit/:id', require('./views/events/index').edit);
+
+# 修改 views/events/index.js文件, 实现edit方法
+exports.edit = function(req, res, next){
+    req.app.db.models.Event.findById(req.params.id).exec(function(err, event) {
+        if (err) return next(err);
+        if (req.xhr) res.send(event);
+        else res.render('events/edit', { event: event });
+    });
+};
+
+# 添加 views/events/edit.jade 视图文件
+extends ../../layouts/default
+
+block head
+  title Edit Event
+
+block body
+  .row
+    .col-xs-8
+      .page-header
+        h1 Edit Event
+        form(method='post', action='/events/update/#{event._id}')
+          .form-group
+            label Event Name:
+            input.form-control(type='text', name='name', value='#{event.name}')
+          .form-group
+            label Event Description:
+            textarea.form-control(type='text', name='description', value='#{event.description}')
+          .form-group
+            label Event Venu:
+            input.form-control(type='text', name='venu', value='#{event.venu}')
+          .form-group
+            label Event Date:
+            input.form-control(type='date', name='date', value='#{event.date}')
+          .form-group
+            label Start Time:
+            input.form-control(type='time', name='startTime')
+          .form-group
+            label End Time:
+            input.form-control(type='time', name='endTime')
+          .form-group
+            button.btn.btn-primary.btn-signup(type='submit') Update Event
+    .col-xs-4
+      .page-header
+        h1 Sidebar
+
+# 修改 routes.js, 添加/events/update/:id的post响应
+  // >> event routes
+  app.get('/events/', require('./views/events/index').find);
+  app.get('/events/show/:id', require('./views/events/index').read);
+  app.get('/events/add', require('./views/events/index').add);
+  app.post('/events', require('./views/events/index').create);
+  app.get('/myevents/', require('./views/myevents/index').find);
+  app.get('/events/edit/:id', require('./views/events/index').edit);
+  app.post('/events/update/:id', require('./views/events/index').update);
+
+# 修改 views/events/index.js文件, 实现update方法
+exports.update = function(req, res, next){
+    var workflow = req.app.utility.workflow(req, res);
+
+    workflow.on('validate', function() {
+        if (!req.body.name) {
+            workflow.outcome.errors.push('Please enter a event name.');
+            return workflow.emit('response');
+        }
+        workflow.emit('updateEvent');
+    });
+
+    workflow.on('updateEvent', function() {
+        var fieldsToSet = {
+            name: req.body.name,
+            description: req.body.description,
+            venu: req.body.venu,
+            date: req.body.date,
+            startTime: req.body.startTime,
+            endTime: req.body.endTime,
+            username: req.user.username
+        };
+        req.app.db.models.Event.findByIdAndUpdate(req.params.id, fieldsToSet, function(err, event) {   // 注意改变了方法
+            if (err) {
+                return workflow.emit('exception', err);
+            }
+            workflow.outcome.record = event;
+            req.flash('sucess', 'Event updated');
+            res.location('/events/show/'+req.params.id);
+            res.redirect('/events/show/'+req.params.id);
+        });
+    });
+
+    workflow.emit('validate');
+};
+
+============ 40 project5 My Events delete 模块 ============
+
+# 修改 routes.js, 添加/events/delete/:id的delete响应
+  // >> event routes
+  app.get('/myevents/', require('./views/myevents/index').find);
+  app.get('/events/edit/:id', require('./views/events/index').edit);
+  app.post('/events/update/:id', require('./views/events/index').update);
+  app.delete('/events/delete/:id', require('./views/events/index').delete);
+  
+# 修改 views/events/index.js文件, 实现delete方法
+exports.delete = function(req, res, next){
+    var workflow = req.app.utility.workflow(req, res);
+
+    workflow.on('validate', function() {
+        if (!req.body.name) {
+            workflow.outcome.errors.push('Please enter a event name.');
+            return workflow.emit('response');
+        }
+        workflow.emit('deleteEvent');
+    });
+
+    workflow.on('deleteEvent', function() {
+        req.app.db.models.Event.findByIdAndRemove(req.params.id, function(err, event) {   // 注意改变了方法
+            if (err) {
+                return workflow.emit('exception', err);
+            }
+            req.flash('sucess', 'Event deleted');
+            res.location('/events');
+            res.redirect('/events');
+        });
+    });
+
+    workflow.emit('validate');
+};
+
+# 修改 default.jade, 添加jquery和 /layouts/main.js
+    script(src='https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js')
+    script(src='/layouts/main.js')
+
+# 添加 public/layouts/main.js 文件, 实现删除效果
+$(document).ready(function(){
+    $('#deleteEvent').on('click', function(e){
+        deleteId = $('#deleteEvent').data('delete');
+        $.ajax({
+            url:'/events/delete/'+deleteId,
+            type:'DELETE',
+            success:function (result) {
+            }
+        });
+        window.location = '/events';        // hmm...
+    })
+})
+
+
+
+============ 42 project6 Kraken, foundation ============
+
+# 在项目根目录下(不是项目目录里)
+npm install -g npm
+npm install -g yo generator-kraken bower grunt-cli
+yo kraken
+	项目名用 fastrecord_p6, 其余按需填写或用默认设置 
+
+# 在项目目录中, 添加dependencies. 会自动修改package.json
+npm install mongodb -save
+npm install mongoose -save
+npm install connect-flash -save
+npm install express-messages -save
+
+# 启动: npm start
+http://localhost:8000
+
+
+# 下载安装foundation.(一个类似bootstrap的框架)
+http://foundation.zurb.com/sites/docs/ >> Download CSS Version >> complete
+解压js和css文件到public中相应的位置
+
+
+============ 43 project6 界面原型/列表模块 ============
+
+# 修改 public/templates/layouts/master.dust 布局文件
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>{+title /}</title>
+
+        <link rel="stylesheet" href="/css/app.css">
+        <link rel="stylesheet" href="/css/foundation.css">
+        <link rel="stylesheet" href="/css/style.css">
+    </head>
+    <body>
+        <div class="row">
+            <div class="large-12 columns">
+                <h1>TekBooks</h1>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="large-12 columns">
+                <nav class="top-bar" data-topbar role="navigation">
+                    <section class="top-bar-section">
+                        <ul class="left">
+                            <li><a href="/">Home</a></li>
+                            <li><a href="/pages/about">About</a></li>
+                            <li><a href="/cart">Cart</a></li>
+                        </ul>
+                    </section>
+                </nav>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="large-12 columns">
+                {+body /}
+            </div>
+        </div>
+
+        <footer>
+            <div class="row">
+                <div class="large-12 columns">
+                    <p>TekBooks &copy; 2016 | <a href="/manage">Manage</a></p>
+                </div>
+            </div>
+        </footer>
+        <script src="/js/vendor/jquery.js"></script>
+        <script src="/js/foundation.min.js"></script>
+        <script src="/js/main.js"></script>
+        <script>
+            $(document).foundation();
+        </script>
+    </body>
+</html>
+
+# 修改 public/templates/index.dust 视图文件
+{>"layouts/master" /}
+
+{<body}
+    <div class="large-3 columns book">
+        <img src="/img/1.jpg">
+        <h4>book1</h4>
+        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Ut laoreet convallis ante. Integer suscipit nisl luctus commodo malesuada.</p>
+        <div class="price">Buy it for <span>$19.99</span></div>
+        <br/>
+        <a class="button small" href="/books/details/1">Book Details</a>
+    </div>
+    <div class="large-3 columns book">
+        <img src="/img/2.jpg">
+        <h4>book2</h4>
+        <p>Integer porta a velit et blandit. Nullam consectetur tincidunt lacus, vitae pretium ipsum finibus tincidunt. Etiam tincidunt vel ex vitae dapibus. Proin eleifend vehicula purus faucibus bibendum. Morbi ut tristique mauris, at euismod massa.</p>
+        <div class="price">Buy it for <span>$29.99</span></div>
+        <br/>
+        <a class="button small" href="/books/details/2">Book Details</a>
+    </div>
+    <div class="large-3 columns book">
+        <img src="/img/3.jpg">
+        <h4>book3</h4>
+        <p>Vestibulum egestas vitae odio porttitor consectetur. Curabitur mattis bibendum turpis at dignissim. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos.</p>
+        <div class="price">Buy it for <span>$39.99</span></div>
+        <br/>
+        <a class="button small" href="/books/details/3">Book Details</a>
+    </div>
+    <div class="large-3 columns book">
+        <img src="/img/4.jpg">
+        <h4>book4</h4>
+        <p>Donec id diam faucibus lorem tincidunt placerat quis quis odio. Maecenas eleifend leo et odio egestas vestibulum.</p>
+        <div class="price">Buy it for <span>$49.99</span></div>
+        <br/>
+        <a class="button small" href="/books/details/4">Book Details</a>
+    </div>
+{/body}
+
+# 修改 public/css/style.css 美化效果
+.top-bar {margin-bottom: 20px}
+ul{list-style: none; margin: 0}
+.book{text-align: center}
+.book h4{margin-top: 15px}
+.price{margin: 5px;font-size: 18px}
+.price span {color:green; background: #f4f4f4; padding:10px; border: solid 1px #ccc; border-radius:  50%}
+footer{margin-top: 40px; padding:10px; text-align: center}
+
+============ 44 project6 books详情模块 ============
+
+# 建立 controllers/books.js 文件, 提供列表页面中点击图书的响应
+'use strict';
+
+module.exports = function (router) {
+    router.get('/', function (req, res) {    // 已在books.js controller中, 地址不用加books/
+        res.render('index');
+    });
+
+    router.get('/details/:id', function (req, res) {
+        res.render('books/details');
+    });
+};
+
+# 建立 public/templates/books/details.dust 文件, 提供'/details/:id'用到的视图
+{>"layouts/master" /}
+
+{<body}
+    <div class="row">
+        <div class="large-4 columns">
+            <img src="/img/1.jpg">
+        </div>
+        <div class="large-8 columns">
+            <h2>book title placeholder</h2>
+            <ul class="bookInfo">
+                <li>Category: Node.js</li>
+                <li>Author: John Doe</li>
+                <li>Publisher: publisher placeholder</li>
+            </ul>
+            <br/>
+            <div class="price"><span>$123</span></div>
+            <br/>
+            <p>Nam eu justo mattis, aliquam neque eu, auctor tortor. Etiam in mauris id orci lobortis egestas. Maecenas a maximus dui. Donec vulputate risus eget ante eleifend, vel hendrerit lacus commodo. In sed eros quis sem hendrerit finibus. Maecenas ac rhoncus sem. Mauris diam eros, fermentum at neque non, luctus rutrum felis.</p>
+            <a class="button success">Add To Cart</a>
+        </div>
+    </div>
+{/body}
+
+# 如果运行报错(在某locale目录中没有找到property文件):
+  方法1: 添加locale/US/en/books/details.properties文件, 内容可为空
+  方法2: 配置 config/config.json, 标注掉所有makara, i18n相关内容: 默认line 12-37; line 46-58. 推荐!
+
+============ 44-45 project6 manage模块 ============
+
+# 建立 controllers/manage.js 文件, 提供点击"/manage/*"的响应
+'use strict';
+
+module.exports = function (router) {
+    router.get('/', function (req, res) {
+        res.render('manage/index');
+    });
+
+    router.get('/books', function (req, res) {
+        res.render('manage/books/index');
+    });
+
+    router.get('/categories', function (req, res) {
+        res.render('manage/categories/index');
+    });
+};
+
+# 建立 public/templates/layouts/manage.dust 文件, 提供不同于master.dust layout的抬头
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>{+title /}</title>
+
+    <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="/css/foundation.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+<div class="row">
+    <div class="large-12 columns">
+        <h1>TekBooks</h1>
+    </div>
+</div>
+
+<div class="row">
+    <div class="large-12 columns">
+        <nav class="top-bar" data-topbar role="navigation">
+            <section class="top-bar-section">
+                <ul class="left">
+                    <li><a href="/manage">Dashboard</a></li>
+                    <li><a href="/manage/books">Books</a></li>
+                    <li><a href="/manage/categories">Categories</a></li>
+                    <li><a href="/" target="_blank">View Website</a></li>
+                </ul>
+            </section>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="large-12 columns">
+        {+body /}
+    </div>
+</div>
+
+<footer>
+    <div class="row">
+        <div class="large-12 columns">
+            <p>TekBooks &copy; 2016 | <a href="/manage">Manage</a></p>
+        </div>
+    </div>
+</footer>
+<script src="/js/vendor/jquery.js"></script>
+<script src="/js/foundation.min.js"></script>
+<script src="/js/main.js"></script>
+<script>
+    $(document).foundation();
+</script>
+</body>
+</html>
+
+
+# 建立 public/templates/manage/index.dust, 实现manage.js中 "/" router对应的视图
+{>"layouts/manage" /}
+
+{<body}
+    <h2>Manager</h2>
+    <p>This is the manager area</p>
+{/body}
+
+
+# 建立 public/templates/manage/books/index.dust, 实现manage.js中 "/books" router对应的视图
+{>"layouts/manage" /}
+
+{<body}
+    <h2>Books</h2>
+    <p><a href="/manage/books/add">Add Book</a></p>
+    <table>
+        <thead>
+        <tr>
+            <th width="200">ID</th>
+            <th width="200">Title</th>
+            <th width="200">Category</th>
+            <th width="180"></th> <!-- edit  -->
+            <th width="180"></th> <!-- delete  -->
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>123</td>
+            <td>Book Title placeholder</td>
+            <td>category placeholder</td>
+            <td><a class="button tiny" href="/manage/books/edit/1">Edit</a></td>
+            <td><a class="button tiny alert removeBook" href="javascript:;">Delete</a></td>
+        </tr>
+        <tr>
+            <td>123</td>
+            <td>Book Title placeholder</td>
+            <td>category placeholder</td>
+            <td><a class="button tiny" href="/manage/books/edit/1">Edit</a></td>
+            <td><a class="button tiny alert removeBook" href="javascript:;">Delete</a></td>
+        </tr>
+        <tr>
+            <td>123</td>
+            <td>Book Title placeholder</td>
+            <td>category placeholder</td>
+            <td><a class="button tiny" href="/manage/books/edit/1">Edit</a></td>
+            <td><a class="button tiny alert removeBook" href="javascript:;">Delete</a></td>
+        </tr>
+        </tbody>
+    </table>
+{/body}
+
+
+
+# 建立 public/templates/manage/categories/index.dust, 实现manage.js中 "/categories" router对应的视图
+{>"layouts/manage" /}
+
+{<body}
+    <h2>Categories</h2>
+    <p><a href="/manage/categories/add">Add Category</a></p>
+    <table>
+        <thead>
+        <tr>
+            <th width="200">ID</th>
+            <th width="200">Category Name</th>
+            <th width="180"></th> <!-- edit  -->
+            <th width="180"></th> <!-- delete  -->
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>123</td>
+            <td>category placeholder</td>
+            <td><a class="button tiny" href="/manage/categories/edit/1">Edit</a></td>
+            <td><a class="button tiny alert removeCategory" href="javascript:;">Delete</a></td>
+        </tr>
+        <tr>
+            <td>123</td>
+            <td>category placeholder</td>
+            <td><a class="button tiny" href="/manage/categories/edit/1">Edit</a></td>
+            <td><a class="button tiny alert removeCategory" href="javascript:;">Delete</a></td>
+        </tr>
+        <tr>
+            <td>123</td>
+            <td>category placeholder</td>
+            <td><a class="button tiny" href="/manage/categories/edit/1">Edit</a></td>
+            <td><a class="button tiny alert removeCategory" href="javascript:;">Delete</a></td>
+        </tr>
+        </tbody>
+    </table>
+{/body}
+
+
+============ 46 project6  ============
+
+# 准备数据库
+use tekbooks
+db.createCollection('books') 
+db.createCollection('categories') 
+db.books.insert({
+  title:'book1title', 
+  description:'book1description', 
+  category:'nodejs', 
+  author:'book1author', 
+  publisher:'book1publisher',
+  cover:'1.jpg',
+  price:123
+})
+db.books.insert({
+  title:'book2title', 
+  description:'book2description', 
+  category:'nodejs', 
+  author:'book1author', 
+  publisher:'book2publisher',
+  cover:'2.jpg',
+  price:234
+})
+
+
+
+
+
+
+

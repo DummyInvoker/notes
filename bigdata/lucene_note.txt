@@ -1,0 +1,713 @@
+============ 3 ============
+
+项目中建立lib目录, 复制jar包并导入:
+lucene-core.jar
+建立源数据文件夹并复制文件: luceneDatasource
+建立索引文档文件夹: luceneIndex
+
+------------ 建立索引文档 ------------
+package cn.itcast.lucene;
+
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriter.MaxFieldLength;
+import org.junit.Test;
+
+import cn.itcast.lucene.utils.File2DocumentUtils;
+
+public class HelloWorld {
+	String filePath = "D:\\workspace\\mars\\LuceneDemo\\luceneDatasource\\IndexWriter addDocument's a javadoc .txt";		//train index的数据来源
+	String indexPath = "D:\\workspace\\mars\\LuceneDemo\\luceneIndex";		// 使用刚才建立的项目里的那个luceneIndex目录
+	
+	Analyzer analyzer = new StandardAnalyzer();		// 暂时使用默认分词器, 对中文支持不好
+	
+	@Test
+	public void createIndex() throws Exception{
+		Document document = File2DocumentUtils.file2Document(filePath);
+		// index是document容器, 一个document对应一个实际文档. document是接收field的容器, 一个field对应文档的某用于查询的属性
+		
+		IndexWriter indexWriter = new IndexWriter(indexPath, analyzer, true, MaxFieldLength.LIMITED);	//true代表删除之前index directory, 建立新的
+		indexWriter.addDocument(document);
+		
+		indexWriter.close();
+	}
+}
+
+
+package cn.itcast.lucene.utils;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+
+import org.apache.lucene.document.Document;
+import org.apache.lucene.document.Field;
+import org.apache.lucene.document.Field.Index;
+import org.apache.lucene.document.Field.Store;
+
+public class File2DocumentUtils {
+	public static Document file2Document(String path) throws Exception {
+		File file = new File(path);
+		Document document = new Document();
+		document.add(new Field("name", file.getName(), Store.YES, Index.ANALYZED));
+		//每个field都是一个键值对
+		//Store:???API???是否保存被索引对象
+		//Index: NO:不做索引; NOT_ANALYZED:整条信息(比如完整日期)直接作为索引; ANALYZED:分词后索引
+		document.add(new Field("content", readFileContent(file), Store.YES, Index.ANALYZED));
+		document.add(new Field("size", String.valueOf(file.length()), Store.YES, Index.NOT_ANALYZED));
+		document.add(new Field("path", file.getAbsolutePath(), Store.YES, Index.NO));		//假设我们对这4种信息建index, 之后就能按这些信息进行搜索
+	
+		return document;
+	}
+
+	private static String readFileContent(File file) throws Exception {
+		BufferedReader reader = new BufferedReader(new FileReader(file));
+		StringBuffer content = new StringBuffer();
+		String line;
+		while((line = reader.readLine())!=null){
+			content.append(line).append('\n');
+		}
+		reader.close();
+		return content.toString();
+	}
+}
+
+运行后看到在luceneIndex生成了索引文件(需刷新文件夹)
+
+------------ 建立搜索 ------------
+
+import org.apache.lucene.queryParser.MultiFieldQueryParser;
+import org.apache.lucene.queryParser.QueryParser;
+import org.apache.lucene.search.Filter;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TopDocs;
+
+public class HelloWorld {
+	//之前field及createIndex()
+	
+	@Test
+	public void search() throws Exception{
+		String[] fields = {"name", "content"};
+		QueryParser queryParser = new MultiFieldQueryParser(fields, analyzer);		//配置query解析器, 使用和建索引同一个分词器
+		String queryString = "document";
+		Query query = queryParser.parse(queryString);		//产生一个query实例
+		
+		Filter filter = null;		//可以设置query结果再次过滤
+		
+		IndexSearcher indexSearcher = new IndexSearcher(indexPath);
+		TopDocs topDocs = indexSearcher.search(query, filter, 10000);		//第三个参数: 一次在index中查询多少个document
+		
+		System.out.println("总共有["+topDocs.totalHits+"]条匹配结果");			//TopDoc类似于ScoreDocList和totalHits容器概念
+		ScoreDoc[] scoreDocs = topDocs.scoreDocs;
+		for (ScoreDoc scoreDoc: scoreDocs){
+			int docNum = scoreDoc.doc;			//提供文档编号, 而不是文档本身
+			Document document = indexSearcher.doc(docNum);			//同样使用indexSearcher根据编号取document
+			File2DocumentUtils.printFileDocInfo(document);
+		}
+	}
+}
+
+public class File2DocumentUtils {
+	//之前file2Document(); readFileContent()
+	
+	public static void printFileDocInfo(Document document) {
+//		Field field = document.getField("name");		//方法1
+//		System.out.println(field.stringValue());
+		
+		System.out.println("name = " + document.get("name"));
+		System.out.println("content = " + document.get("content"));
+		System.out.println("size = " + document.get("size"));
+		System.out.println("path = " + document.get("path"));
+	}
+}
+
+============ 4 ram fs directory 配合 ============
+
+package cn.itcast.lucene.directory;
+
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.document.Document;
+import org.apache.lucene.index.IndexWriter;
+import org.apache.lucene.index.IndexWriter.MaxFieldLength;
+import org.apache.lucene.store.Directory;
+import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.RAMDirectory;
+import org.junit.Test;
+
+import cn.itcast.lucene.utils.File2DocumentUtils;
+
+public class DirectoryTest {
+	String filePath = "D:\\workspace\\mars\\LuceneDemo\\luceneDatasource\\IndexWriter addDocument's a javadoc .txt";		//train index的数据来源
+	String indexPath = "D:\\workspace\\mars\\LuceneDemo\\luceneIndex";
+	
+	Analyzer analyzer = new StandardAnalyzer();
+	
+	@Test
+	public void test1() throws Exception{
+		Document document = File2DocumentUtils.file2Document(filePath);
+		
+		Directory directory = FSDirectory.getDirectory(indexPath);	// ctrl+t可以看到Direcotory Interface的实现类: FSDirectory和RAMDirectory
+		IndexWriter indexWriter = new IndexWriter(directory, analyzer, MaxFieldLength.LIMITED);	//使用不同的IndexWriter重载方法
+		indexWriter.addDocument(document);
+		
+		indexWriter.close();
+	}
+	
+	@Test
+	public void test2() throws Exception{
+		Document document = File2DocumentUtils.file2Document(filePath);
+		
+		Directory directory = new RAMDirectory();
+		IndexWriter indexWriter = new IndexWriter(directory, analyzer, MaxFieldLength.LIMITED);
+		indexWriter.addDocument(document);
+		
+		indexWriter.close();
+	}
+	
+	@Test
+	public void test3() throws Exception{
+		Directory fsDirectory = FSDirectory.getDirectory(indexPath);
+		
+		// 启动时从fs读directory到ram
+		Directory ramDirectory = new RAMDirectory(fsDirectory);
+		
+		// 启动后使用ramIndexWriter
+		IndexWriter ramIndexWriter = new IndexWriter(ramDirectory, analyzer, MaxFieldLength.LIMITED);
+		Document document = File2DocumentUtils.file2Document(filePath);
+		ramIndexWriter.addDocument(document);
+		ramIndexWriter.close();
+		
+		// 退出时保存ram到fs
+		IndexWriter fsIndexWriter = new IndexWriter(fsDirectory, analyzer, true, MaxFieldLength.LIMITED);	//这里的true参数很重要, 否则之前fs上记录会被多次重复
+		fsIndexWriter.addIndexesNoOptimize(new Directory[]{ramDirectory});
+		fsIndexWriter.close();
+	}
+	
+	@Test
+	public void test4() throws Exception{
+		Directory fsDirectory = FSDirectory.getDirectory(indexPath);
+		IndexWriter fsIndexWriter = new IndexWriter(fsDirectory, analyzer, MaxFieldLength.LIMITED);
+		fsIndexWriter.optimize();		// 合并重复的index
+		fsIndexWriter.close();
+	}
+	
+//============ 5 index directory的优化 ============
+	@Test
+	public void test4() throws Exception{
+		Directory fsDirectory = FSDirectory.getDirectory(indexPath);
+		IndexWriter fsIndexWriter = new IndexWriter(fsDirectory, analyzer, MaxFieldLength.LIMITED);
+		fsIndexWriter.optimize();
+		fsIndexWriter.close();
+	}
+}
+
+============ 5 分词器 ============
+
+英文分词器: 切分关键词 -> 去除停用词 -> 形态还原 -> 转为小写
+package cn.itcast.lucene.analyzer;
+
+import java.io.StringReader;
+
+import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.Token;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.junit.Test;
+
+public class AnalyzerTest {
+	Analyzer en1 = new StandardAnalyzer();	//在Analyzer这个interface上ctrl+t可以看到所有实现类, 实现不同效果
+	String enText ="IndexWriter addDocument's a javadoc .txt";
+	
+	Analyzer zh1 = new CJKAnalyzer();
+	Analyzer zh2 = new MMAnalyzer();
+	String zhText ="我们是中国人";
+
+	@Test
+	public void test() throws Exception{
+		analyze(zh1, zhText);
+	}
+	
+	public void analyze(Analyzer analyzer, String text) throws Exception{
+		TokenStream tokenStream = analyzer.tokenStream("content", new StringReader(text));
+		System.out.println("使用: " + analyzer.getClass());
+		Token token = new Token();
+		while ((token=tokenStream.next(token)) != null){
+			System.out.println(token);
+		}
+	}
+}
+运行结果:
+使用:class org.apache.lucene.analysis.standard.StandardAnalyzer
+(indexwriter,0,11,type=<ALPHANUM>)
+(adddocument,12,25,type=<APOSTROPHE>)
+(javadoc,28,35,type=<ALPHANUM>)
+(txt,37,40,type=<ALPHANUM>)
+
+============ 6 关键字高亮, 摘要信息 ============
+
+//------------ DAO save ------------
+package cn.itcast.lucene;
+public class IndexDaoTest {
+	String filePath = "D:\\workspace\\mars\\LuceneDemo\\luceneDatasource\\IndexWriter addDocument's a javadoc.txt";
+	IndexDao indexDao = new IndexDao();
+
+	@Test
+	public void testSave() {
+		Document doc = File2DocumentUtils.file2Document(filePath);
+		doc.setBoost(3f);		// 增加该doc的查询指数权重
+		indexDao.save(doc);
+	}
+}
+
+package cn.itcast.lucene;
+public class IndexDao {
+	String indexPath = "D:\\workspace\\mars\\LuceneDemo\\luceneIndex";
+	Analyzer analyzer = new StandardAnalyzer();
+
+	public void save(Document doc) {
+		IndexWriter indexWriter = null;
+		try {
+			indexWriter = new IndexWriter(indexPath, analyzer, MaxFieldLength.LIMITED);
+			indexWriter.addDocument(doc);		// CRUD操作以document为单位
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			try {
+				indexWriter.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+}
+
+//------------ DAO delete ------------
+public class IndexDaoTest {
+	@Test
+	public void testDelete() {
+		Term term = new Term("path", filePath);	//Term是搜索的最小单位. 代表某个Field及其内容, 只能小写: <title, lucene>; <id, 5>
+		indexDao.delete(term);
+	}
+}
+
+public class IndexDao {
+	public void delete(Term term) {
+		IndexWriter indexWriter = null;
+		try {
+			indexWriter = new IndexWriter(indexPath, analyzer, MaxFieldLength.LIMITED);
+			indexWriter.deleteDocuments(term);		//删除含有<path, filePath>的整个document. 此后即使按name查也查不到该doc
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			try {
+				indexWriter.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+}
+
+//------------ DAO update ------------
+public class IndexDaoTest {
+	@Test
+	public void testUpdate() {
+		Term term = new Term("path", filePath);
+		Document doc = File2DocumentUtils.file2Document(filePath);
+		doc.getField("content").setValue("这是更新后的文件内容");
+		indexDao.update(term, doc);
+	}	
+}
+
+public class IndexDao {
+	public void update(Term term, Document doc) {
+		IndexWriter indexWriter = null;
+		try {
+			indexWriter = new IndexWriter(indexPath, analyzer, MaxFieldLength.LIMITED);
+			indexWriter.updateDocument(term, doc);	//先按term删除对应的document, 然后按照doc添加新的document
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			try {
+				indexWriter.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+}
+
+//------------ DAO query ------------
+public class IndexDaoTest {
+	@Test
+	public void testSearch() {
+		String queryString = "绅士";
+		QueryResult qr = indexDao.search(queryString, 0, 10);
+
+		System.out.println("总共有[" + qr.getRecordCount() + "]条匹配结果");
+		for (Document doc : qr.getRecordList()) {
+			File2DocumentUtils.printDocumentInfo(doc);
+		}
+	}
+}
+	
+public class IndexDao {
+	public QueryResult search(String queryString, int firstResult, int maxResults) {	//firstResult: 分页的起始条; maxResults: 每页条目数
+		IndexSearcher indexSearcher = null;
+		try {
+			String[] fields = {"name", "content"};
+			QueryParser queryParser = new MultiFieldQueryParser(fields, analyzer);
+			Query query = queryParser.parse(queryString);
+			
+			indexSearcher = new IndexSearcher(indexPath);
+			Filter filter = null;
+			TopDocs topDocs = indexSearcher.search(query, filter, 10000);
+
+			int recordCount = topDocs.totalHits;
+			List<Document> recordList = new ArrayList<Document>();
+
+//------------ 6 准备高亮器 ------------
+			Formatter formatter = new SimpleHTMLFormatter("<font color='red'>", "</font>");
+			Scorer scorer = new QueryScorer(query);				//设定highlight的对象, 包装成query对象
+			Highlighter highlighter = new Highlighter(formatter, scorer);
+
+			Fragmenter fragmenter = new SimpleFragmenter(50);		//设定摘要字符数, 默认100
+			highlighter.setTextFragmenter(fragmenter);
+			
+			// 分页功能
+			int end = Math.min(firstResult + maxResults, recordCount);
+			for (int i = firstResult; i < end; i++) {
+				ScoreDoc scoreDoc = topDocs.scoreDocs[i];
+				int docSn = scoreDoc.doc;
+				Document doc = indexSearcher.doc(docSn);
+
+				// 应用高亮器
+				String hc = highlighter.getBestFragment(analyzer, "content", doc.get("content"));	//第二个参数: 指定高亮的field
+				if (hc == null) {		// query的范围是{"name", "content"}), 可能在"content"中没有可以highlight关键字的情况
+					String content = doc.get("content");
+					int endIndex = Math.min(50, content.length());
+					hc = content.substring(0, endIndex);
+				}
+				doc.getField("content").setValue(hc);	// 将highlight处理后的信息设置到doc里
+				
+				recordList.add(doc);
+			}
+			return new QueryResult(recordCount, recordList);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			try {
+				indexSearcher.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+}
+
+============ 7-8 各种query对象方式对比 ============
+
+------------ TermQuery 关键词查询 ------------
+
+分离QueryResult功能, 使用重载接收多种参数
+public class IndexDao {
+	public QueryResult search(String queryString, int firstResult, int maxResults) {
+		try {
+			String[] fields = {"name", "content"};
+			QueryParser queryParser = new MultiFieldQueryParser(fields, analyzer);
+			Query query = queryParser.parse(queryString);
+
+			return search(query, firstResult, maxResults);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+
+	public QueryResult search(Query query, int firstResult, int maxResults) {
+		IndexSearcher indexSearcher = null;
+
+		try {
+			indexSearcher = new IndexSearcher(indexPath);
+			Filter filter = null;
+			TopDocs topDocs = indexSearcher.search(query, filter, 10000);
+
+			int recordCount = topDocs.totalHits;
+			List<Document> recordList = new ArrayList<Document>();
+
+			// 准备高亮器
+			Formatter formatter = new SimpleHTMLFormatter("<font color='red'>", "</font>");
+			Scorer scorer = new QueryScorer(query);
+			Highlighter highlighter = new Highlighter(formatter, scorer);
+
+			Fragmenter fragmenter = new SimpleFragmenter(50);
+			highlighter.setTextFragmenter(fragmenter);
+			
+			// 分页功能
+			int end = Math.min(firstResult + maxResults, recordCount);
+			for (int i = firstResult; i < end; i++) {
+				ScoreDoc scoreDoc = topDocs.scoreDocs[i];
+				int docSn = scoreDoc.doc;
+				Document doc = indexSearcher.doc(docSn);
+
+				// 应用高亮器
+				String hc = highlighter.getBestFragment(analyzer, "content", doc.get("content"));
+				if (hc == null) {
+					String content = doc.get("content");
+					int endIndex = Math.min(50, content.length());
+					hc = content.substring(0, endIndex);
+				}
+				doc.getField("content").setValue(hc);
+				recordList.add(doc);
+			}
+			return new QueryResult(recordCount, recordList);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		} finally {
+			try {
+				indexSearcher.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+}
+
+public class QueryTest {
+	IndexDao indexDao = new IndexDao();
+	@Test
+	public void testTermQuery(){
+		Term term = new Term("name", "room");		// Term中的查询关键词只能小写
+		Query query = new TermQuery(term);			// 从field和queryString直接生成query, 不用queryParser
+		
+		QueryResult qr = indexDao.search(query, 0, 100);
+		
+		System.out.println("总共有[" + qr.getRecordCount() + "]条匹配结果");
+		for (Document doc : qr.getRecordList()) {
+			File2DocumentUtils.printDocumentInfo(doc);
+		}
+	}
+}
+
+------------ WildcardQuery 通配符查询 ------------
+
+public class QueryTest {
+	@Test
+	public void WildcardQuery(){
+		Term term = new Term("name", "roo?");		//'?'代表一个字符, '*'代表任意个字符
+		Query query = new WildcardQuery(term);
+		queryAndPrintResult(query);
+	}
+}		
+
+------------ RangeQuery 区间查询 ------------
+
+public class IndexDaoTest {	//建立两个文档的index
+	String filePath = "D:\\workspace\\mars\\LuceneDemo\\luceneDatasource\\IndexWriter addDocument's a javadoc .txt";
+	String filePath2 = "D:\\workspace\\mars\\LuceneDemo\\luceneDatasource\\小笑话_总统的房间 Room .txt";
+	IndexDao indexDao = new IndexDao();
+	@Test
+	public void testSave() {
+		Document doc = File2DocumentUtils.file2Document(filePath);
+		indexDao.save(doc);
+		Document doc2 = File2DocumentUtils.file2Document(filePath2);
+		indexDao.save(doc2);
+	}
+}
+
+public class QueryTest {
+	@Test
+	public void testRangeQuery(){
+		Term lowerTerm = new Term("size", "200");	// 注意: 在util中对size的存储方式: String.valueOf(file.length()) 是String
+		Term upperTerm = new Term("size", "500");	// 实际是字符串进行比较, 200大于1000=> 0200, 1000 也不行, index里3位, 使用很麻烦
+		Query query = new RangeQuery(lowerTerm, upperTerm, true);
+		
+		queryAndPrintResult(query);
+	}
+}
+
+// 使用lucene工具, 在建立index时转换数字为 36进制数字高位补0的String 方案
+public class File2DocumentUtils {
+	public static Document file2Document(String path) {
+		File file = new File(path);
+		Document doc = new Document();
+		doc.add(new Field("name", file.getName(), Store.YES, Index.ANALYZED));
+		doc.add(new Field("content", readFileContent(file), Store.YES, Index.ANALYZED));
+		doc.add(new Field("size", NumberTools.longToString(file.length()), Store.YES, Index.NOT_ANALYZED));
+		doc.add(new Field("path", file.getAbsolutePath(), Store.YES, Index.NOT_ANALYZED));
+		return doc;
+	}
+}
+
+public class QueryTest {
+	@Test
+	public void testRangeQuery(){
+		Term lowerTerm = new Term("size", NumberTools.longToString(200));	// 同样在设置查询时候也使用工具
+		Term upperTerm = new Term("size", NumberTools.longToString(1000));
+		Query query = new RangeQuery(lowerTerm, upperTerm, true);
+		
+		queryAndPrintResult(query);
+	}
+}
+
+public class File2DocumentUtils {
+	public static void printDocumentInfo(Document doc) {
+		System.out.println("name     = " + doc.get("name"));
+		System.out.println("content  = " + doc.get("content"));
+		System.out.println("size     = " + NumberTools.stringToLong(doc.get("size")));	// 同样在打印数字时, 将36进制String转回
+		System.out.println("path     = " + doc.get("path"));
+	}
+}
+// 同理处理日期时候: 
+// DateTools.dateToString(new Date, Resolution.MINUTE);
+// DateTools.stringToDate("200909230242")
+
+------------ PhraseQuery 短语查询 ------------
+
+public class QueryTest {
+	@Test
+	public void testPhraseQuery(){
+		PhraseQuery query = new PhraseQuery();
+		query.add(new Term("content", "绅士"));
+		query.add(new Term("content", "饭店"));
+		
+		query.setSlop(5);	// 设定每两个关键词之间允许的最大其他词的数量. 默认为0, 也就是精确匹配
+		queryAndPrintResult(query);
+	}
+}
+
+------------ BoolanQuery 布尔查询 ------------
+
+public class QueryTest {
+	@Test
+	public void testBoolanQuery(){
+		PhraseQuery query1 = new PhraseQuery();
+		query1.add(new Term("content", "绅士"));
+		query1.add(new Term("content", "饭店"));
+		query1.setSlop(5);
+		
+		Term lowerTerm = new Term("size", NumberTools.longToString(200));
+		Term upperTerm = new Term("size", NumberTools.longToString(1000));
+		Query query2 = new RangeQuery(lowerTerm, upperTerm, true);
+		
+		BooleanQuery query = new BooleanQuery();
+		query.add(query1, Occur.MUST);	//组合上述两种搜索条件, query1设置为必须出现
+		query.add(query2, Occur.SHOULD);	//query2设置为皆可
+		
+		queryAndPrintResult(query);
+	}
+}
+//MUST+MUST: 取交集
+//MUST+MUST_NOT: MUST集去除MUST_NOT数据
+
+//SHOULD+SHOULD: 取并集
+//MUST+SHOULD: SHOULD无意义
+//MUST_NOT+MUST_NOT: 无意义
+//MUST_NOT+SHOULD: SHOULD相当于MUST
+
+//SHOULD: 相当于用了MUST
+//MUST_NOT: 无意义 (不是取反)
+
+============ 8 查询语句方法 ============
+
+对应于query对象的查询语句, 可以打印相应的query对象得知
+
+public class IndexDaoTest {
+	@Test
+	public void testSearch() {
+		String queryString = null;
+		queryString = "content:绅?";									// TermQuery; WildcardQuery
+		queryString = "size:[0000000000005k TO 000000000000rs]";		// RangeQuery 包含边界
+		queryString = "size:{0000000000005k TO 000000000000rs}";		// RangeQuery 不包含边界
+		queryString = "content:\"? 绅士 ? ? 饭店\"";						// PhraseQuery 使用位值: 绅士,1; 饭店,4
+		queryString = "content:\"绅士 饭店\"~5";							// PhraseQuery 使用setslop
+		queryString = "+content:\"绅士 饭店\"~5 size:[0000000000005k TO 000000000000rs]";	// BoolanQuery +MUST;SHOULD;-MUST_NOT
+		queryString = "content:\"绅士 饭店\"~5 AND size:[0000000000005k TO 000000000000rs]";	// BoolanQuery 使用关键字方法: AND, OR, NOT, () 必须大写
+		
+		QueryResult qr = indexDao.search(queryString, 0, 10);
+		System.out.println("总共有[" + qr.getRecordCount() + "]条匹配结果");
+		for (Document doc : qr.getRecordList()) {
+			File2DocumentUtils.printDocumentInfo(doc);
+		}
+	}
+}
+
+============ 9 权重设置 ============
+
+------------ save, update index时对整个document设置权重 ------------
+
+public class IndexDaoTest {
+	@Test
+	public void testSave() {
+		Document doc = File2DocumentUtils.file2Document(filePath);
+		doc.setBoost(3f);			//给这个document全体field设置权重
+		indexDao.save(doc);
+
+		Document doc2 = File2DocumentUtils.file2Document(filePath2);
+		doc2.setBoost(1.0f);
+		indexDao.save(doc2);
+	}
+}
+
+------------ query时对document的某个field敏感度设置 ------------
+
+public class IndexDao {
+	public QueryResult search(String queryString, int firstResult, int maxResults) {
+		try {
+			String[] fields = {"name", "content"};
+						
+			Map<String, Float> boosts = new HashMap<String, Float>();	// 设置不同field权重Map
+			boosts.put("name", 3f);
+			boosts.put("content", 1.0f);
+			
+			QueryParser queryParser = new MultiFieldQueryParser(fields, analyzer, boosts);	//使用带boosts的重载方法
+			Query query = queryParser.parse(queryString);
+
+			return search(query, firstResult, maxResults);
+		} catch (Exception e) {
+			throw new RuntimeException(e);
+		}
+	}
+}
+
+------------ query时按某field sort ------------
+
+public class IndexDao {
+	public QueryResult search(Query query, int firstResult, int maxResults) {
+		IndexSearcher indexSearcher = null;
+		try {
+			indexSearcher = new IndexSearcher(indexPath);
+			Sort sort = new Sort();
+			sort.setSort(new SortField("size"));	// 设置按哪个field排序, 默认为升序
+			// sort.setSort(new SortField("size", true));		// 降序写法
+			
+			TopDocs topDocs = indexSearcher.search(query, null, 10000, sort);	//使用带sort的重载方法, 此时相关度排序无效
+			
+			//...
+		} 
+	}
+}
+
+------------ query时按某field filter(效率很低! 一般不要用) ------------
+
+public class IndexDao {
+	public QueryResult search(Query query, int firstResult, int maxResults) {
+		IndexSearcher indexSearcher = null;
+		try {
+			indexSearcher = new IndexSearcher(indexPath);
+			
+			Filter filter = new RangeFilter("size", NumberTools.longToString(200), NumberTools.longToString(1000), true, true);	// 设置过滤器
+			
+			Sort sort = new Sort();
+			sort.setSort(new SortField("size"));
+			
+			TopDocs topDocs = indexSearcher.search(query, filter, 10000, sort);	//之前filter都是用null, 现在改为实际filter
+			
+			//...
+		} 
+	}
+}

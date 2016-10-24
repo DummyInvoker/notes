@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video18</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+        
+		<style>		
+			.axis text {
+			  font: 15px sans-serif;
+			}
+
+			.axis path,
+			.axis line {
+			  fill: none;
+			  stroke: #000;
+			  shape-rendering: crispEdges;
+			}
+		</style>
+    </head>
+    
+    
+    <body>
+    	<p>The Histogram Layout (2-2)</p>
+    </body>
+    
+    
+    <script>
+    	var width = 500, 
+	    	height = 500, 
+	    	padding = 50
+    	
+		var canvas = d3.select("body").append("svg")
+			.attr("width", width+padding)
+			.attr("height", height+padding)
+			.append("g")
+				.attr("transform", "translate(" + padding/2 + "," + padding/2 + ")")
+			
+			
+		d3.csv("video17ages.csv", function(resp){
+			var map = resp.map(function(r){return parseInt(r.age)})	// 取出需要的attribute
+			var histogram = d3.layout.histogram()		//将map变量中所有数据分成7组
+				.bins(7)
+				(map)		//x:该组开始位置, dx:组宽度, y:组内样本数量
+console.log(histogram)				
+			var heightscale = d3.scale.linear()
+				.domain([0, d3.max(histogram, function(h){return h.length})])
+					//d3.max(histogram.data(function(i){return i.length}))
+				.range([0, height])
+			var widthscale = d3.scale.linear()
+				.domain([0, histogram.length*histogram[0].dx])
+					//d3.max(map)
+				.range([0, width])
+				
+			var bars = canvas.selectAll(".bar")
+				.data(histogram)
+				.enter()
+				.append("g")
+					
+	/* 倒置bar: 从 (scale(h.x),0)开始绘图, 宽为scale(h.dx), 高为scale(h.y)
+			bars.append("rect")
+			.attr("x", function(h){return widthscale(h.x)})
+			.attr("y", 0)
+			.attr("width", function(h){return widthscale(h.dx)-1})
+			.attr("height", function(h){return heightscale(h.y)})
+			.attr("fill", "steelblue") 
+	*/
+			
+	/* 依然使用显示器坐标系, 修改绘图的起始点, 将顶对齐变为底对齐
+		x' = scale(h.x) 不变
+		width' = scale(h.dx) 不变
+		y' = height - scale(h.y) 绘图起始点下移
+		height' = scale(h.y) 不变
+	*/
+			bars.append("rect")
+				.attr("x", function(h){return widthscale(h.x)})
+				.attr("height",  function(h){return heightscale(h.y)})
+				.attr("width", function(h){return widthscale(h.dx)-1})
+				.attr("y", function(h){return height-heightscale(h.y)})
+				.attr("fill", "steelblue")
+				
+				
+			var xAxis = d3.svg.axis()
+				.scale(widthscale)
+				.ticks(7)
+				.orient("bottom")
+				
+			canvas.append("g")
+				.attr("transform", "translate("+widthscale(1)+","+height+")")
+				.attr("class", "axis")
+				.call(xAxis)
+				
+			bars.append("text")
+				.text(function(h){return h.y})
+				.attr("x", function(h){return widthscale(h.x)})
+				.attr("y", function(h){return height-heightscale(h.y)})
+				.attr("dx", widthscale(0.5*histogram[0].dx))
+				.attr("dy", "2em")
+				.attr("text-anchor", "middle")
+				.attr("fill", "#000")
+    	})
+    </script>
+</html>

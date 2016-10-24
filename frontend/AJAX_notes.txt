@@ -1,0 +1,63 @@
+﻿=============== 3 ===============
+
+<!-- AJAX无刷新验证用户名 -->
+<body>
+	<form action="???" method="post">
+		用户名字:<input type="text" name="username1" id="username"><input type="button" onkeyup="sendRequest();" value="验证用户名">
+		<input style="border-width: 0" type="text" id="myres"><br/>
+		
+		用户密码:<input type="password" name="password"><br>
+		电子邮件:<input type="text" name="email"><br/>
+		<input type="submit" value="用户注册">
+	</form>
+	
+	<form action="???" method="post">
+		用户名字:<input type="text" name="username2"><br/>
+		用户密码:<input type="password" name="password"><br>
+		电子邮件:<input type="text" name="email"><br/>
+		<input type="submit" value="用户注册">
+	</form>
+</body>
+
+<script type="text/javascript">
+var xmlhttp;
+function sendRequest(){
+	// 1. 为不同浏览器创建 XMLHttpRequest 对象
+	if (window.XMLHttpRequest){// code for IE7+, Firefox, Chrome, Opera, Safari
+		xmlhttp=new XMLHttpRequest();
+	} else {// code for IE6, IE5
+		xmlhttp=new ActiveXObject("Microsoft.XMLHTTP");
+	}
+	
+	// 2. XMLHttpRequest 向服务器发送请求
+	if(xmlhttp){
+		var u = document.getElementById("username").value;	//得到用户输入的用户名
+		var url = "UserCheck.php?username=" + u + "&t=" + (new Date()).valueOf();	//Math.random()
+		//open(method, url, async); method = GET||POST, async = true||false
+		xmlhttp.open("GET", url, true);		//使用POST的情况:不希望使用缓存文件, 向服务器发送大量数据, 发送包含未知字符的用户输入时
+		//xmlhttp.open("POST", url, true);	
+		//xmlhttp.setRequestHeader("Content-type","application/x-www-form-urlencoded");		//POST方法需手动添加HTTP头
+		
+	// 3. onreadystatechange 事件监听器(回调函数)
+		xmlhttp.onreadystatechange=callback;
+		//这里直接写回调函数的名字, 不是调用该方法. 否则会将函数的return值传给xmlhttp.onreadystatechange
+		
+		xmlhttp.send();	//get方法不需要传值. post方法用send(string)
+		//xmlhttp.send("fname=Bill&lname=Gates");
+	}
+}
+	
+function callback(){
+	// 4. 接收服务器响应. 如果响应非XML，需使用responseText属性
+	if (xmlhttp.readyState==4 && xmlhttp.status==200){
+		var res=http_request.responseText;
+		if(res=="err"){
+			document.body.all.myres.value="该用户不可用";
+		} else {
+			document.body.all.myres.value="恭喜，你可使用该用户名";
+		}
+	}
+}
+</script>
+
+

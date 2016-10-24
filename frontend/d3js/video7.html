@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video7</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+    </head>
+    
+    
+    <body>
+    	<p>Enter, Update, Exit</p>
+    </body>
+    
+    
+    <script>
+	/*
+		DOM < data  (enter: data()选中data数量,进行处理; 多出的data部分用enter()的逻辑进行插入)
+		DOM > data  (update: data()选中data数量,进行处理; 其余多出的dom不处理)
+		DOM > data  (exit: 针对update情况, 多出的dom用exit()逻辑处理)
+	*/
+		var data = [25];
+					
+		var canvas = d3.select("body")
+			.append("svg")
+			.attr("width", 500)
+			.attr("height", 500)
+		
+		var circle1 = canvas.append("circle")
+			.attr("cx", 50)
+			.attr("cy", 50)
+			.attr("r", 25)
+
+		var circle2 = canvas.append("circle")
+			.attr("cx", 50)
+			.attr("cy", 100)
+			.attr("r", 25)
+/*					
+		canvas.selectAll("circle")	// update: DOM > data, 前data个元素被处理, 多出的DOM不处理. 一红一黑圆
+			.data(data)
+			.attr("fill", "red")
+			.enter()
+			.append("circle")
+				.attr("cx", 50)
+				.attr("cy", function(d,i){return (i+2)*50})
+				.attr("r", function(d){return d})
+				.attr("fill", "blue")
+*/						
+		canvas.selectAll("circle")	// exit: DOM > data, 前data个元素被处理, 多出的DOM要处理. 一红一蓝圆
+			.data(data)
+			.attr("fill", "red")
+			.exit()
+			.attr("fill", "steelblue")
+			
+    </script>
+</html>

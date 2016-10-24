@@ -1,0 +1,309 @@
+=================== 01 介绍===================
+用到的类:
+java.lang.String
+java.util.regex.Pattern
+java.util.regex.Matcher
+
+boolean resultBoolean = "ab".matches("..."); 
+//一个点代表一个字符
+
+=================== 02 语法===================
+
+String resultStr = "a8729a".replaceAll("\\d", "-");
+//一位数字:"\d", 第一个'\'是java的转义字符
+//replaceAll 将所有数字替换为"-"
+
+API doc: java.util.regex >> Pattern
+Characters
+x	The character x
+\\	The backslash character
+\t	The tab character ('\u0009')
+\n	The newline (line feed) character ('\u000A')
+\r	The carriage-return character ('\u000D')
+\f	The form-feed character ('\u000C')
+ 
+import java.util.regex.Pattern;
+import java.util.regex.Pattern;
+//建立一个pattern
+Pattern p = Pattern.compile("[a-z]{3}");	//每个字符需要在a-z之间, 字符串长度为3位字符 的pattern
+//进行匹配
+Matcher m = p.matcher("fgh");		//匹配结果是一个Matcher对象
+System.out.println(m.matches());		//输出匹配的判断方法结果, TRUE. 具体各种方法见后
+
+//简写, 但现场编译,慢
+"fgh".matches("[a-z]{3}")
+
+=================== 03 {,} 数量范围 ===================
+
+"aa".matches("aa");		//第一个字符是a, 第二个字符也是a					TRUE
+"aaaa".matches("a*");	//*代表0个或多个, 这里意思是字符串是任意个a			TRUE
+"aaaa".matches("a+");	//+代表一个及以上, 这里意思是字符串至少有一个a		TRUE
+"aaaa".matches("a?");	//?代表一个及以下, 这里意思是字符串只能是0个或1个a	FALSE
+
+API doc:
+Greedy quantifiers
+X?	X, once or not at all
+X*	X, zero or more times
+X+	X, one or more times
+
+"214523145234532".matches("\\d{3,100}");	//\d, 数字, 出现了3~100次之间. 代表数字3~100位之间
+"192.168.0.aaa".matches("\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}");	//\.代表'.'
+"192".matches("[0-2][0-9][0-9]");
+
+API doc:
+X{n}	X, exactly n times
+X{n,}	X, at least n times
+X{n,m}	X, at least n but not more than m times
+
+=================== 04 [-]允许范围及逻辑关系 ===================
+
+"a".matches("[abc]");			//字符串中的每个字符进行检测, 是否在abc这些字符中, []内为对一个字符的检测标准
+"a".matches("[^abc]");			//字符串中每个字符都不能在abc中, 注意, '^'必须位于[]内第一个字符
+"A".matches("[a-zA-Z]")			//'-'代表范围
+"A".matches("[a-z]|[A-Z]")		//'|'代表或
+"A".matches("[a-z[A-Z]]")		//也是或, 最外边必须是[]
+"R".matches("[A-Z&&[RFG]]"		//代表大写字母并且是RGF三者之一
+
+API doc:
+Character classes
+[abc]	a, b, or c (simple class)
+[^abc]	Any character except a, b, or c (negation)
+[a-zA-Z]	a through z or A through Z, inclusive (range)
+[a-d[m-p]]	a through d, or m through p: [a-dm-p] (union)
+[a-z&&[def]]	d, e, or f (intersection)
+[a-z&&[^bc]]	a through z, except for b and c: [ad-z] (subtraction)
+[a-z&&[^m-p]]	a through z, and not m through p: [a-lq-z](subtraction)
+
+=================== 05 [-] 字符类(预定义字符组) ===================
+
+" \n\r\t".matches("\\s{4}");		//这里检查字符串是否是精确4个空格符类字符, TRUE
+" ".matches("\\S");
+"a_8".matches("\\w{3}");			//这里检查是否是精确3个字符, 每个字符在a-zA-Z_0-9范围内
+"abc888&^%".matches("[a-z]{1,3}\\d+[&^#%]+")	//字符串需要有1-3个字母, 1次以上数字, 一次以上&^#%之一
+"\\".matches("\\\\")
+//"\\".matches("\\")		想匹配一个\, 但这里只注意到了java的转义, 还需要对每个正则的'\'进行正则转义
+
+API doc:
+Predefined character classes
+.	Any character (may or may not match line terminators)
+\d	A digit: [0-9]
+\D	A non-digit: [^0-9]
+\s	A whitespace character: [ \t\n\x0B\f\r]
+\S	A non-whitespace character: [^\s]
+\w	A word character: [a-zA-Z_0-9]
+\W	A non-word character: [^\w]
+
+=================== 06 POSIX标准字符类, 边界匹配 ===================
+
+POSIX: Portable Operating System Interface
+"a".matches("\\p{Lower}")		//就是[a-z]. 不常用这种写法
+
+API doc:
+POSIX character classes (US-ASCII only)
+\p{Lower}	A lower-case alphabetic character: [a-z]
+\p{Upper}	An upper-case alphabetic character:[A-Z]
+\p{ASCII}	All ASCII:[\x00-\x7F]
+\p{Alpha}	An alphabetic character:[\p{Lower}\p{Upper}]
+\p{Digit}	A decimal digit: [0-9]
+\p{Alnum}	An alphanumeric character:[\p{Alpha}\p{Digit}]
+\p{Punct}	Punctuation: One of !"#$%&'()*+,-./:;<=>?@[\]^_`{|}~
+\p{Graph}	A visible character: [\p{Alnum}\p{Punct}]
+\p{Print}	A printable character: [\p{Graph}\x20]
+\p{Blank}	A space or a tab: [ \t]
+\p{Cntrl}	A control character: [\x00-\x1F\x7F]
+\p{XDigit}	A hexadecimal digit: [0-9a-fA-F]
+\p{Space}	A whitespace character: [ \t\n\x0B\f\r]
+
+
+"hello sir".matches("^h.*")		//字符串必须是以h开头, 然后接0个或多个'*'字符'.'
+"hello sir".matches(".*ir$")	//字符串必须是以ir结尾, 之前0个或多个'*'字符'.'
+"hello sir".matches("^h[a-z]{1,3}o\\b.*")	//字符串以h开头, 接1-3个小写字符, 接o, 接单词边界(空白符), 接任意
+
+//空白行的pattern
+^[\\s&&[^\\n]]*\\n$			//以空白字符开头, 且不是回车符. 接任意次空白(共享了对空白的描述). 接回车结尾
+
+Boundary matchers
+^	The beginning of a line
+$	The end of a line
+\b	A word boundary
+\B	A non-word boundary
+
+=================== 08 查找是否匹配 matches(), find(), lookingAt() ===================
+
+//email的pattern
+[\\w[.-]]+@[\\w[.-]]+\\.[\\w]+
+//邮箱名由word字符或.-构成, 出现一次或多次. 接@. 接服务商名由word字符或.-构成. 接'.', 接服务商扩展名
+
+//boolean Matcher.find()
+//Attempts to find the next subsequence of the input sequence that matches the pattern.
+//每次调用时, 第一次找到的子串将被去除, 然后在剩下的字符串中寻找第一个
+Pattern p = Pattern.compile("\\d{3,5}");
+String s = "123-34345-234-00";
+Matcher m = p.matcher(s);
+
+m.find();	//TRUE, 去除了123
+m.find();	//TRUE, 去除了34345
+m.find();	//TRUE, 去除了234
+m.find();	//FALSE, 00长度短于3
+
+//matches() 与 find() 的工作原理
+Pattern p = Pattern.compile("\\d{3,5}");
+String s = "123-34345-234-00";
+Matcher m = p.matcher(s);
+m.matches();	//FALSE, 正则引擎分析到第4个字符, 发现不匹配. 已分析的内容123-同时被去除
+
+m.find();	//TRUE, 去除了34345
+m.find();	//TRUE, 去除了234
+m.find();	//FALSE, 00长度短于3
+m.find();	//FALSE
+
+//Matcher Matcher.reset()
+//恢复字符串到初始状态
+m.matches();	//FALSE, 去除123-
+m.reset();		//恢复完整字符串
+
+//boolean lookingAt()
+//同find()寻找匹配子串, 但是每次都是从头开始. 也就是无论被调用几次, 结果都是一样的.
+
+=================== 09 返回匹配内容的开始和结束位置 start() end() ===================
+
+Pattern p = Pattern.compile("\\d{3,5}");
+String s = "123-34345-234-00";
+Matcher m = p.matcher(s);
+
+m.find();	//TRUE, 去除了123
+System.out.println(m.start() + "-" + m.end());	//打印当前匹配的开始和结束位置, 0-3. 0开始, 3之前
+m.find();	//TRUE, 去除了34345
+System.out.println(m.start() + "-" + m.end());	//打印当前匹配的开始和结束位置, 4-9
+
+=================== 10 字符串的替换 replaceAll(), appendReplacement(), appendTail() ===================
+
+//将字符串中所有java无论大小写都转换为大写
+Pattern p = Pattern.compile("java" ,Pattern.CASE_INSENSITIVE);
+Matcher m = p.matcher("java Java JAVa JaVa IloveJAVA you hateJava afasdfasdf");
+System.out.println(m.replaceAll("JAVA"));	//JAVA JAVA JAVA JAVA IloveJAVA you hateJAVA afasdfasdf
+
+//将单数java替换为大写, 双数的替换为小写
+Pattern p = Pattern.compile("java" ,Pattern.CASE_INSENSITIVE);
+//Pattern p = Pattern.compile("(?!)(java)");		//上行的简写
+Matcher m = p.matcher("java Java JAVa JaVa IloveJAVA you hateJava afasdfasdf");
+
+StringBuffer buf = new StringBuffer();		//用于存储替换完成后的字符串
+int i=0;
+
+while (m.find()){
+	i++;
+	if(i%2 == 0){		//偶数
+		m.appendReplacement(buf, "java");
+		// Matcher.appendReplacement(StringBuffer arg0, String arg1), 用arg1替换, 完成结果存在arg0中
+	} else {
+		m.appendReplacement(buf, "JAVA");
+	}
+}
+m.appendTail(buf);			//将其余部分添加到最后
+System.out.println(buf);
+
+=================== 11 分组, group() ===================
+
+//找出符合pattern的字符串 (不分组)
+Pattern p = Pattern.compile("\\d{3,5}[a-z]{2}");		//3-5个数字接2个小写字母
+String s = "123aa-34345bb-234cc-00";
+Matcher m = p.matcher(s);
+
+while(m.find()) {
+	System.out.println(m.group());
+	//String group() 返回匹配的字符串内容
+	//Returns the input subsequence matched by the previous match.
+	//m.group() and s.substring(m.start(), m.end()) are equivalent.
+}
+
+//找出上例中的子串中的数字字符串
+Pattern p = Pattern.compile("(\\d{3,5})([a-z]{2})");		//3-5个数字及2个小写字母分组
+String s = "123aa-34345bb-234cc-00";
+Matcher m = p.matcher(s);
+
+while(m.find()) {
+	System.out.println(m.group());		//符合最大组的内容
+	System.out.println(m.group(1));		//符合第一组(\\d{3,5})的内容. 组的编号以左半边开始顺序为序
+	System.out.println(m.group(2));		//只打印字母组
+}
+
+=================== 12 抓email实例 ===================
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+public class Crawler {
+
+	public static void main(String[] args) {
+		BufferedReader br = null;			//用以存储完整原始文件
+		try {
+			br = new BufferedReader(new FileReader("filename"));
+			String line = "";			//用以存储读取的一行内容
+			while((line = br.readLine())!=null){
+				parse(line);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally{
+			try {
+				br.close();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
+	private static void parse(String line) {
+		Pattern p = Pattern.compile("[\\w.-]+@[\\w.-]+\\.[\\w]+");
+		Matcher m = p.matcher(line);
+		while (m.find()){
+			System.out.println(m.group());	//可以改接数据库
+		}
+	}
+}
+
+=================== 13 代码统计实例 ===================
+
+//大量文件操作实例
+
+=================== 14 Greedy, Reluctant, Possessive 取数量范围的区别 ===================
+
+Pattern p = Pattern.compile(".{3,10}+[0-9]");
+String s = "aaaa5bbbb6";
+Matcher m = p.matcher(s);
+if(m.find())
+	p(m.start() + "-" + m.end());
+else 
+	p("not match!");
+
+API doc:
+//Greedy quantifiers(常用)
+从指定范围的最大数值开始读取, 此例中为10, 如果不匹配, 则向内缩短一个, 再次进行比较. 结果为0-10
+X?	X, once or not at all
+X*	X, zero or more times
+X+	X, one or more times
+X{n}	X, exactly n times
+X{n,}	X, at least n times
+X{n,m}	X, at least n but not more than m times
+ 
+//?Reluctant quantifiers
+从指定范围的最小数值开始读取, 此例中为3, 如果不匹配, 则读取下一个字节, 再次进行比较. 结果为0-5
+X??	X, once or not at all
+X*?	X, zero or more times
+X+?	X, one or more times
+X{n}?	X, exactly n times
+X{n,}?	X, at least n times
+X{n,m}?	X, at least n but not more than m times
+ 
+//+Possessive quantifiers(不常用))
+从指定范围的最大数值开始读取, 此例中为10, 如果不匹配, 试图读取后一个字符. 此例中没有下一个字符, 则返回false. 如果有下一个字符, 例如字符串修改为"aaaa5bbbb68", 则找到匹配
+X?+	X, once or not at all
+X*+	X, zero or more times
+X++	X, one or more times
+X{n}+	X, exactly n times
+X{n,}+	X, at least n times
+X{n,m}+	X, at least n but not more than m times

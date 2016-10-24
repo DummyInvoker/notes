@@ -1,0 +1,1258 @@
+=============== 07 object属性操作 ===============
+
+# 输出对象所有keys
+var o1 = {
+	a01: '123',
+	a02: '456'
+};
+o1.a1 = 'abc';
+o1.a2 = 'def';
+console.log(Object.keys(o1));		// ["a01", "a02", "a1", "a2"]
+
+# 删除属性(不能删对象)
+delete o1.a01;
+console.log(Object.keys(o1));		// ["a02", "a1", "a2"]
+
+
+=============== 10-11 array操作 ===============
+
+var arr1 = [1, 2, 3, 4, 5, 6];
+console.log(typeof arr1);            // object
+console.log(Array.isArray(arr1));    // true
+console.log(arr1.push('a'));         // 7: push了一个新元素, 返回arr长度
+
+var arr2 = ['b', 'c', 'd'];
+console.log(arr1.concat(arr2));
+
+arr1.reverse();                     // 修改原数组
+console.log(arr1);                  // ["a", 6, 5, 4, 3, 2, 1]
+
+console.log(arr1.splice(1,2));      // array.splice(index,howmany,item1,.....,itemX); 修改原数组; 返回被删除的片段[6, 5]
+console.log(arr1);                  // ["a", 4, 3, 2, 1]
+
+var newArr1 = arr1.map(function(item){  // 对arr1中每个元素进行处理, 不修改原数组
+	return item + 1;
+})
+console.log(newArr1);                // ["a1", 5, 4, 3, 2]
+
+arr1.forEach(function(item, index) {
+	console.log(item + '|' + index);
+})
+
+
+var str = "hello world";
+console.log(str.substring(6,11));   // substring(包含开始位置,不包含结束位置), 不修改原string
+console.log(str.substring(11,6));   // 反过来也能自动调整
+console.log(str.substr(6,5));       // substr(开始位置,长度)
+
+
+=============== 12-13 Date, Math ===============
+
+console.log(new Date());                        // 当前Date
+console.log(new Date(1999,0,1));                // 注意月份和实际差1
+console.log(new Date("1999 jan 1  12:34:56"));  // String -> Date
+console.log(new Date(915212096000));            // long -> Date
+console.log(new Date().getTime());              // Date -> long
+
+console.log(Math.random());
+
+
+=============== 23 window event ===============
+
+console.log(window.screen.width);   // 设备宽度
+console.log(window.innerWidth);     // 浏览器宽度(可视范围+滚动条)
+
+
+=============== 24 timeout interval ===============
+
+var myTimeOut = window.setTimeout(function(){}, int);
+clearTimeOut(myTimeOut);
+
+=============== 25 call, apply ===============
+
+# call
+function People(){}	//没有say()方法
+var Animal={
+	name:"myName",
+	age:123,
+	say:function(sayCont1, sayCont2){
+		console.log(sayCont1, sayCont2);
+	}
+};
+
+Animal.say.call(People, "mySayCont1", "mySayCont2");
+// People对象没有say方法, 从Animal对象中借用, 第二个参数是传参
+
+# apply
+function People(){}	//没有say()方法
+var Animal={
+	name:"myName",
+	age:123,
+	say:function(sayCont1, sayCont2){
+		console.log(sayCont1, sayCont2);
+	}
+};
+
+Animal.say.apply(People, ["mySayCont1", "mySayCont2"]);
+// 传参细节有所区别
+
+=============== 25-27 regExp: test(), exec(), match(), search(), replace(), split() ===============
+
+var regex1 = /xyz/igm;				// 编译时建立正则对象, 允许参数, 更好用
+var regex2 = new RegExp('xyz');		// 运行时建立正则对象
+
+i: ignore case
+g: global
+m: multi-line
+
+<script>
+    var str = 'hello world xyz'
+    var regex1 = /xyz/igm;
+    var regex2 = new RegExp('xyz');
+
+    console.log(regex1.test(str));		// true | false, 注意指针会挪到第一个match之后
+	console.log(regex1.exec(str));		// 返回第一个匹配值的信息, 没有匹配返回null
+</script>
+
+
+<script>
+    var str = '-x-x-x';
+    var regex1 = /x/;
+    var regex2 = /x/igm;
+    console.log(str.match(regex1));		// 正则没有g时, 返回第一个匹配值的信息. 最常用
+	console.log(str.search(regex1));	// 同str.match(regex1).index
+</script>
+
+
+<script>
+    var str = 'x123-x456-x789';
+    var regex1 = /x/;
+    var regex2 = /x/igm;
+    var newStr1 = str.replace(regex1, "yy");	// 正则有g时替换所有的匹配值
+    console.log(newStr1);
+	var newStr2 = str.split(regex1);
+    console.log(newStr2);
+</script>
+
+
+=============== 28 JSON ===============
+
+<script>
+    var myJSONobj = [
+        {"name":"abc","age":123},
+        {"name":"def","age":456},
+        {"name":"ghi","age":789},
+        {"name":"jkl","age":120},
+    ]
+    console.log(typeof JSON.stringify(myJSONobj));
+    var copyOfMyJSONobj = JSON.parse(JSON.stringify(myJSONobj));    // deep copy
+    console.log(copyOfMyJSONobj);
+</script>
+
+
+=============== 29-30 web storage ===============
+
+sessionStorage
+localStorage
+
+<body>
+    <label for="username">User name:</label><input id="username" type="text" value="scott"/>
+    <label for="comment">Your comment:</label><input id="comment" type="text" value="tiger"/>
+    <hr/>
+    <input type="button" value="save" onclick="save()"/>
+    <input type="button" value="read" onclick="read()"/>
+    <input type="button" value="remove" onclick="removeSS()"/>
+    <input type="button" value="clear" onclick="clearSS()"/>
+</body>
+
+<script>
+    var save = function () {
+        var username = document.getElementById("username");
+        var comment = document.getElementById("comment");
+        var myObj = '{"username":"'+username.value+'","comment":"'+comment.value+'"}';
+        console.log(myObj);
+
+        window.sessionStorage.setItem("myObj", myObj);  // 只能保存string等基础类型
+    }
+
+    var read = function(){
+        var myObj = JSON.parse(sessionStorage.getItem("myObj"));
+        console.log(JSON.stringify(myObj));
+
+        var username = document.getElementById("username");
+        var comment = document.getElementById("comment");
+
+        username.value = myObj.username;
+        comment.value = myObj.comment;
+    }
+
+    var removeSS = function(){      // 不能用remove为名字, 有冲突
+        sessionStorage.removeItem("myObj");
+        console.log("sessionStorage content removed.");
+    }
+
+    var clearSS = function(){      // 不能用clear为名字, 有冲突
+        sessionStorage.clear();
+        console.log("sessionStorage cleared.");
+    }
+</script>
+
+=============== 31-32 WebSql/sqlite ===============
+
+<script>
+    var db = openDatabase("myDB", "1.0", "myDBname", 1024*768);
+	
+# 建立数据库	
+    var createTable = function () {
+        db.transaction(function(tx){
+            tx.executeSql(
+                "create table if not exists myTable (name TEXT, message TEXT, time integer)",
+                [],
+                function(){
+                    console.log("create table success");
+                },
+                function(){
+                    console.log("error");
+                }
+            );
+        })
+    };
+    createTable();
+	
+# 插入数据
+    var insertPeople = function (name, message, time) {
+        db.transaction(function (tx) {
+            tx.executeSql(
+                "insert into myTable values (?,?,?)",
+                [name, message, time],
+                function(){
+                    console.log("insert success");
+                },
+                function(tx, error){
+                    console.log("error: " + error.message);
+                }
+            );
+        })
+    }
+    insertPeople("myname", "mymessage", Date.parse(new Date()));
+
+# 查询数据
+    var queryPeople = function () {
+        db.transaction(function (tx) {
+            tx.executeSql(
+                "select * from myTable",
+                [],
+                function(rs){
+                    console.log("query success" + rs);
+                },
+                function(tx, error){
+                    console.log("error: " + error.message);
+                }
+            )
+        })
+    }
+    queryPeople();
+
+</script>
+
+=============== 33 Location 对象 ===============
+
+<!DOCTYPE html>
+<html>
+<body>
+    <button onclick="getHostname()">get hostname</button>
+    <button onclick="getPathname()">get pathname</button>
+    <button onclick="getPort()">get port</button>
+    <button onclick="getProtocol()">get protocol</button>
+    <button onclick="getHref()">get href</button>
+    <button onclick="locationAssign()">location assign</button>
+    <p></p>
+</body>
+
+<script>
+    var p = document.getElementsByTagName('p')[0];
+
+    var getHostname = function(){
+        p.innerHTML = window.location.hostname;
+    }
+    var getPathname = function(){
+        p.innerHTML = window.location.pathname;
+    }
+    var getPort = function(){
+        p.innerHTML = window.location.port;
+    }
+    var getProtocol = function(){
+        p.innerHTML = window.location.protocol;
+    }
+    var getHref = function(){
+        p.innerHTML = window.location.href;
+    }
+    var locationAssign = function(){
+        location.assign("http://www.google.com");
+    }
+</script>
+</html>
+
+=============== 33 screen 对象 ===============
+
+<!DOCTYPE html>
+<html>
+<body>
+    <button onclick="getMeasure()">get measures</button>
+    <p></p>
+</body>
+
+<script>
+    var getMeasure = function(){
+        document.write("width: " + window.screen.width + "; height: " + window.screen.height);
+        document.write("<br/>available width: " + window.screen.availWidth + "; available height: " + window.screen.availHeight);
+    }
+</script>
+</html>
+
+=============== 34-35 cookie ===============
+
+<script>
+    document.cookie="name=myname";
+
+    var cookieUtil = {
+        get:function(name){
+            var cookieName = name+'=';
+            var cookieStart = document.cookie.indexOf(cookieName);
+
+            var cookieValue = null;
+            if(cookieStart > -1){
+                var cookieEnd = document.cookie.indexOf(';', cookieStart);  //从cookieStart开始找, 找到';'
+                if (cookieEnd == -1){
+                    cookieEnd = document.cookie.length;
+                }
+                cookieValue = document.cookie.substring(cookieStart+cookieName.length, cookieEnd);
+            }
+            return cookieValue;
+        },
+
+        set:function(name, value, expires){
+            var cookieText = name+'='+value;
+            if (expires instanceof Date){
+                cookieText += ";expires="+expires;
+            }
+            document.cookie = cookieText;
+        },
+
+        unset:function(name, value, expires){
+            this.set(name, value, expires);
+        }
+    }
+
+    console.log(cookieUtil.get("name"));
+    cookieUtil.set("myCookieName","myCookieValue", new Date("Jan 1 2017"));
+    cookieUtil.unset("newCookieName","newCookieValue", new Date("Jan 2 2017"));
+</script>
+
+
+=============== 37-38 scrollTop ===============
+
+# 慢速滚动效果
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        div {height:500px; border: 1px red solid}
+        a {position:fixed; background-color:lightsteelblue; bottom:10px; right:10px; height:90px; width:90px}
+        a:hover {background-color:steelblue}
+    </style>
+</head>
+<body>
+<div><h1>1</h1></div>
+<div><h1>2</h1></div>
+<div><h1>3</h1></div>
+<div><h1>4</h1></div>
+<a id="backToTop" href="javascript:;">back to top</a>
+</body>
+
+<script>
+    var mya = document.getElementById("backToTop");
+    mya.addEventListener("click", function(){
+//      event.preventDefault();		
+        var timer = setInterval(function(){
+            document.body.scrollTop -= 10;     //每次往回混10px
+            if(document.body.scrollTop == 0) clearInterval(timer);
+        }, 30)
+    },false)
+</script>
+</html>
+
+# 增强版, 在第一个屏幕不显示控制
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        div {height:500px; border: 1px red solid}
+        a {position:fixed; display:none; background-color:lightsteelblue; bottom:10px; right:10px; height:90px; width:90px; text-decoration:none}
+        a:hover {background-color:steelblue; border-radius: 10px}
+    </style>
+</head>
+<body>
+<div><h1>1</h1></div>
+<div><h1>2</h1></div>
+<div><h1>3</h1></div>
+<div><h1>4</h1></div>
+<a id="backToTop" href="javascript:;">back to top</a>
+</body>
+
+<script>
+    var mya = document.getElementById("backToTop");
+
+    var windowHeight = window.innerHeight;          // 当前窗口高度
+    window.onscroll = function(){                   // 监听屏幕滚动
+        var yScrollTop = document.body.scrollTop;   //y滚动距离
+
+        if (yScrollTop < windowHeight) mya.style.display = 'none';
+        else mya.style.display = 'block';
+    }
+
+    mya.addEventListener("click", function(){
+        var timer = setInterval(function(){
+            document.body.scrollTop -= 10;     //每次往回混10px
+            if(document.body.scrollTop == 0) clearInterval(timer);
+        }, 30)
+    },false)
+</script>
+</html>
+
+=============== 37-38 tab效果 ===============
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        *{padding:0; margin:0; list-style-type: none; font-size: 12px}
+        #tab{width:302px; height:100px; border: 1px solid #eeeeee; margin:10px; overflow-y: hidden}
+        #title{height:30px;background-color: #f7f7f7;}
+        #title ul li{float:left;border-bottom:1px solid #eeeeee;width:60px;height:30px; text-align: center;line-height: 30px}
+        #title ul li a:hover{color:#f90;font-weight: 700}
+        .active{width:58px;background-color:#fff;border-bottom:none; border-left:1px solid #eeeeee; border-right:1px solid #eeeeee;font-weight: 700}
+        #tab a:link, #tab a:visited{text-decoration:none; color:black}
+        .cont{margin:20px 10px; overflow-y: hidden}
+        .cont li{float:left; height: 27px; widith: 140px;padding-left: 15px}
+    </style>
+</head>
+<body>
+<div id="tab">
+    <div id="title">
+        <ul>
+            <li class="active"><a href="">公告</a></li>
+            <li><a href="">规则</a></li>
+            <li><a href="">论坛</a></li>
+            <li><a href="">安全</a></li>
+            <li><a href="">公益</a></li>
+        </ul>
+    </div>
+
+    <div id="body">
+        <div class="cont">
+            <ul>
+                <li><a href="">无人爱苦, 乃因其苦a1...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦a2...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦a3...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦a4...</a></li>
+            </ul>
+        </div>
+        <div class="cont">
+            <ul>
+                <li><a href="">无人爱苦, 乃因其苦b1...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦b2...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦b3...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦b4...</a></li>
+            </ul>
+        </div>
+        <div class="cont">
+            <ul>
+                <li><a href="">无人爱苦, 乃因其苦c1...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦c2...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦c3...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦c4...</a></li>
+            </ul>
+        </div>
+        <div class="cont">
+            <ul>
+                <li><a href="">无人爱苦, 乃因其苦d1...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦d2...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦d3...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦d4...</a></li>
+            </ul>
+        </div>
+        <div class="cont">
+            <ul>
+                <li><a href="">无人爱苦, 乃因其苦e1...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦e2...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦e3...</a></li>
+                <li><a href="">无人爱苦, 乃因其苦e4...</a></li>
+            </ul>
+        </div>
+    </div>
+
+</div>
+</body>
+
+<script>
+    var title = document.getElementById("title").getElementsByTagName("li");
+    var content = document.getElementsByClassName("cont");
+
+    console.log(title);
+    console.log(content);
+
+    if(title.length == content.length){
+        for(var i=0; i<title.length; i++){
+            title[i].value=i;
+            title[i].onmouseenter=function(event){
+                var tmp = event.target;
+                setTimeout(function(){
+                    tmp.className="active";
+                    content[tmp.value].style.display="block";
+                },500);
+            }
+            title[i].onmouseleave=function(){
+                var tmp = this;     // setTimeout全写是window.setTimeout, 其this代表window对象
+                setTimeout(function(){
+                    tmp.className="";
+                    content[tmp.value].style.display="none";
+                },500);
+            }
+        }
+    }
+
+</script>
+</html>
+
+
+=============== 39-46 瀑布流效果 ===============
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        * {margin:0; padding:0;}
+        #container{position:relative}  /*只有父容器设置了布局, 子节点的position:absolute才有效果*/
+        .thumbnail{padding: 15px 0 0 15px; float: left}
+        .imgframe{padding: 5px; border: 1px solid #ccc; box-shadow:3px 3px 6px #ccc; border-radius:5px }
+        .imgframe img{width:200px}
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div class="thumbnail">
+            <div class="imgframe">
+                <img src="img/8.jpg">
+            </div>
+        </div>
+
+ ...
+
+        <div class="thumbnail">
+            <div class="imgframe">
+                <img src="img/7.jpg">
+            </div>
+        </div>
+    </div>
+</body>
+
+<script>
+window.onload = function() {     // 必须添加, 不然所有thumbnailHeight都为45px
+    waterfall();
+
+    var imgJSON = {"data":[
+        {"src":"1.jpg"},{"src":"2.jpg"},{"src":"3.jpg"},{"src":"4.jpg"},{"src":"5.jpg"},
+        {"src":"6.jpg"},{"src":"7.jpg"},{"src":"8.jpg"},{"src":"9.jpg"},{"src":"10.jpg"},
+        {"src":"11.jpg"},{"src":"12.jpg"},{"src":"13.jpg"},{"src":"14.jpg"},{"src":"15.jpg"}
+    ]}
+
+    window.onscroll = function(){       // 监听滚动
+        if(endlessLoad()){
+            var container = document.getElementById("container");
+            for (var i=0; i<imgJSON.data.length; i++){
+                var img = document.createElement("img");
+                img.src="img/" + imgJSON.data[i].src;
+
+                var imgframe = document.createElement("div");
+                imgframe.className = "imgframe";
+                imgframe.appendChild(img);
+
+                var thumbnail = document.createElement("div");
+                thumbnail.className = "thumbnail";
+                thumbnail.appendChild(imgframe);
+
+                container.appendChild(thumbnail);
+            }
+            waterfall();        	// 重新排布所有的thumbnail
+        }
+    }
+}
+//        <div class="thumbnail">
+    //        <div class="imgframe">
+    //           <img src="img/8.jpg">
+    //        </div>
+//        </div>
+
+var waterfall = function(){
+// 找出视图的列数
+    var thumbnails = document.getElementsByClassName("thumbnail");
+    var thumbnailWidth = thumbnails[0].offsetWidth;     // 227
+    var container = document.getElementById("container");
+    var numCol = Math.floor(container.offsetWidth/thumbnailWidth);
+    container.style.cssText="width:"+numCol*thumbnailWidth+"px;margin: 0 auto";   // container居中, 但不会自动刷新!
+
+// 找出高度最小的列添加图片
+    var columnHeights = [];
+    for(var i=0; i<thumbnails.length; i++){
+        var thumbnailHeight = thumbnails[i].offsetHeight;
+        if(i<numCol) columnHeights[i] = thumbnailHeight;
+        else {
+            var minColumnHeight = Math.min.apply(null, columnHeights);
+            var minColumn;
+            for(var j=0; j<numCol;j++){
+                if (columnHeights[j]==minColumnHeight) minColumn = j;
+            }
+
+            thumbnails[i].style.position = "absolute";
+            thumbnails[i].style.top = columnHeights[minColumn] + "px";
+            thumbnails[i].style.left = minColumn*thumbnailWidth + "px";
+            columnHeights[minColumn] += thumbnailHeight;
+        }
+    }
+}
+
+
+// 判断是否开始无限加载
+var endlessLoad = function(){
+    var thumbnails = document.getElementsByClassName("thumbnail");
+    var lastThumbnail = thumbnails[thumbnails.length-1];
+    var startLoadHeight = lastThumbnail.offsetTop - lastThumbnail.offsetHeight;
+
+    var scrolledHeight = document.body.scrollTop;					// 已滚动高度
+    var viewHeight = document.documentElement.clientHeight;			// 窗口高度
+
+    if (scrolledHeight+viewHeight > startLoadHeight) return true;   // 开始加载
+    return false;
+}
+</script>
+</html>
+
+=============== 47-49 tooltip 效果 ===============
+
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        * {margin:0; padding:0;font-size: 14px; line-height: 1.8em; font-family: sans-serif}
+        #container {width:500px;margin:30px auto;padding:20px 30px; position:relative;background-color: lightsteelblue;border-radius: 10px;box-shadow:5px 5px 10px grey}
+        #container h2 {font-size: 20px}
+        a{text-decoration: none;font-size: 16px}
+        #container .tooltip {color:blue; cursor:pointer}
+        .tooltipBody {
+            display: block; background-color: #eeeeee; line-height: 1.6em; border-radius:5px; border:solid 1px grey;
+            overflow: hidden; box-shadow: 3px 3px 6px grey; padding: 5px; position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <h2>Lorem Ipsum</h2>
+        <p>Morbi sollicitudin, <a href="javascript:;" id="tooltip1" class="tooltip">tooltip1</a> nulla eget consectetur tincidunt, sem urna dictum nisi, et convallis libero sem sit amet magna. Nam a scelerisque felis. In rhoncus, mi eget feugiat auctor, ex turpis tincidunt justo, at aliquet neque arcu fermentum mauris. Sed placerat turpis id vehicula fringilla. Curabitur ac mauris et enim semper condimentum sit amet vel dui. Cras vitae congue ante, et lacinia nisl. Curabitur a ullamcorper massa, at consectetur nisi. Morbi vel tempor odio. Aliquam a rutrum lorem. Nunc ligula magna, pharetra ac leo ac, volutpat tristique tortor. Phasellus eget felis tortor. Nullam pulvinar leo vitae dui ultricies, eu efficitur velit pulvinar. Aliquam nec ex non orci iaculis placerat. Vivamus odio arcu, sodales et fringilla a, semper sed dui.</p>
+        <p>Curabitur tincidunt, <a href="javascript:;" id="tooltip2" class="tooltip">tooltip2</a> enim at imperdiet ornare, diam lectus tincidunt felis, ut faucibus nisi quam vel diam. Donec mattis et leo eu accumsan. Vestibulum quam lorem, malesuada vel dolor non, euismod blandit elit. Nulla ut turpis sollicitudin, cursus metus vel, scelerisque magna. Aliquam lobortis turpis sed eros pharetra viverra. In hac habitasse platea dictumst. Cras consequat sem eget risus sollicitudin cursus. Aenean consectetur ultrices tellus, eget rutrum erat gravida non. Aenean dapibus at libero nec vulputate. Duis porta lobortis gravida. Suspendisse elementum felis et sem vehicula, eget mattis sapien lobortis. Pellentesque vel ex ornare, aliquet magna eu, pulvinar massa. Etiam a condimentum nulla. Integer semper neque elit, id porta nisi fermentum eget. Etiam commodo sapien eu condimentum iaculis.</p>
+    </div>
+</body>
+
+<script>
+    var container = document.getElementById("container");
+    container.addEventListener("mouseover", function(event){
+        var target = event.target;
+        if (target.className == "tooltip"){
+            var tooltipContent;
+            var tooltipWidth;
+            if(target.id == "tooltip1"){
+                tooltipContent = "tool tip 1 content";
+                tooltipWidth = 150;
+            } else if (target.id == "tooltip2") {
+                tooltipContent = "Vestibulum quam lorem, malesuada vel dolor non, euismod blandit elit. Nulla ut turpis sollicitudin, cursus metus vel, scelerisque magna. Aliquam lobortis turpis sed eros pharetra viverra. In hac habitasse platea dictumst.";
+                tooltipWidth = 250;
+            }
+            showTooltip(target, tooltipContent, tooltipWidth);
+        } else {
+           var tooltipBodies = document.getElementsByClassName("tooltipBody");
+            for (var i=0; i<tooltipBodies.length; i++){
+                tooltipBodies[i].style.display = "none";
+            }
+        }
+    });
+
+    var showTooltip = function(tooltip, tooltipContent, tooltipWidth){
+        var tooltipBody = document.createElement("div");
+        tooltipBody.className="tooltipBody";                        // for CSS styling
+        tooltipBody.innerHTML = tooltipContent;
+        tooltipBody.style.width = tooltipWidth + "px";
+        tooltipBody.style.left = tooltip.offsetLeft + "px";          // 触发tooltip对象的位置
+        tooltipBody.style.top = tooltip.offsetTop + 20 + "px";
+        document.getElementById("container").appendChild(tooltipBody);
+    }
+</script>
+</html>
+
+=============== 50-52 affix + scrollspy 效果 ===============
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        * {margin:0; padding:0;font-size: 14px; line-height: 1.8em; font-family: sans-serif}
+        #container {margin-left: 100px}
+        p{height: 500px}
+
+        ul{position: fixed;left:5px;top:150px}
+        ul li{margin:10px auto; cursor: pointer; width: 50px}
+        ul li a, ul li span{text-decoration: none; color: steelblue; font-weight: 700}
+
+        ul li a {display: none}
+        ul li:hover a {display: block; background-color: #ff9900; color:white}
+        ul li:hover span {display: none}
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <p id="1f" style="background-color: antiquewhite">1 服饰</p>
+        <p id="2f" style="background-color: aliceblue">2 美妆</p>
+        <p id="3f" style="background-color: gainsboro">3 家居</p>
+        <p id="4f" style="background-color: cornsilk">4 生活</p>
+        <p id="5f" style="background-color: lavenderblush">5 餐饮</p>
+    </div>
+
+    <ul>
+        <li><span>1F</span><a href="#1f">服饰</a></li>
+        <li><span>2F</span><a href="#2f">美妆</a></li>
+        <li><span>3F</span><a href="#3f">家居</a></li>
+        <li><span>4F</span><a href="#4f">生活</a></li>
+        <li><span>5F</span><a href="#5f">餐饮</a></li>
+    </ul>
+</body>
+
+<script>
+    // get p heights
+	var pHeightOffset = 250;
+    var pTags = document.getElementsByTagName("p");
+    var pTagHeights =[];
+    for (var i=0; i<pTags.length; i++){
+        pTagHeights[i] = pTags[i].offsetTop - pHeightOffset;
+    }
+
+    // get floor number
+    var activeFloor = 0;
+    window.onscroll = function(){
+        var scrolled = document.body.scrollTop;
+        for (var i=0; i<pTags.length; i++) {
+            if (scrolled > pTagHeights[pTags.length-1]) activeFloor = pTags.length-1;
+            else if ((scrolled > pTagHeights[i]) && (scrolled < pTagHeights[i + 1])) activeFloor = i;
+        }
+
+    // active corresponding li tag
+        var liTags = document.getElementsByTagName("li");
+        for (var i=0; i<pTags.length; i++) {
+            liTags[i].style.background = "";
+        }
+        liTags[activeFloor].style.background = "#ff9900";
+    }
+</script>
+</html>
+
+=============== 53-54 Constructor, prototype ===============
+
+# Constructor, prototype
+<script>
+    function People(head, leg) {
+        this.head = head;
+        this.leg = leg;
+    }
+
+    p1 = new People("head1","leg1");
+    console.log(p1);
+    console.log(p1 instanceof People);
+
+    People.prototype.body = "body";		// 修改People的父类, 从而所有People实例都将继承body属性, 在p1.__proto__中可以看到. 不是在实例p1上添加
+	People.prototype.walk = function(){}
+	
+    p2 = new People("head2","leg2");
+    console.log(p1.body);				// 可以看到结果'body'
+    console.log(p2.body);				// 可以看到结果'body', 来源于实现对象时产生的body属性
+
+    p2.body = "new body";
+    console.log(p2.body);
+</script>
+
+
+# prototype chain
+<script>
+    function myArray(){
+    }
+    myArray.prototype = new Array();
+    var mine = new myArray();
+
+    mine.push(1,2,3);
+    console.log(mine.length);       //3
+</script>
+
+=============== 55 继承 ===============
+
+# constructor的继承
+<script>
+    function People(){
+    }
+    People.prototype.say = function(){
+        console.log('People prototype say function');
+    }
+
+    // 继承Poeple
+    function Student() {
+    }
+    Student.prototype = new People();
+    var student = new Student();
+    student.say();
+
+    // 子类重写父类say方法
+    Student.prototype.say = function(){
+        console.log('Student prototype say function');
+    }
+    student.say();
+</script>
+
+# object的继承
+<script>
+    var proto = {
+        p1:123
+    }
+    var obj = Object.create(proto);     // obj对象继承了proto对象的所有属性
+    console.log(obj.p1);
+</script>
+
+<script>
+    var proto = {
+        a:1,
+        m:function(){
+            return this.a + 1;
+        }
+    }
+    var obj = Object.create(proto);
+    obj.a = 12;
+    console.log(proto.m());     // 2
+    console.log(obj.m());       // 13
+</script>
+
+
+=============== 56-57 audio video ===============
+
+<body>
+    <p>音频支持mp3格式, 可以自定义js控件</p>
+    <audio id="audio" src="media/wf.mp3">Not supported browser.</audio>
+    <input type="button" value="Play | Pause" onclick="audioPlay()"/>
+    <hr/>
+    <p>视频支持mp4格式, 可以用默认控件, 也可以如上例中自定义js控件</p>
+    <video id="video" src="media/53.mp4" controls="controls" width="480px">Not supported browser.</video>
+    <p>
+        <input type="button" value="Browser Width" onclick="browserWidth()"/>
+        <input type="button" value="Thumb Size" onclick="thumbSize()"/>
+    </p>
+</body>
+
+<script>
+    var audioPlay = function(){
+        var audio = document.getElementById("audio");
+        if(audio.paused) audio.play();
+        else audio.pause();
+    }
+
+    var browserWidth = function(){
+        var video = document.getElementById("video");
+        video.width = window.innerWidth;
+    }
+    var thumbSize = function(){
+        var video = document.getElementById("video");
+        video.width = 480;
+    }
+</script>
+
+
+=============== 61 drag drop ===============
+
+<body>
+    <div ondrop="drop(event)" ondragover="allowDrop(event)">
+        <img src="img/1.jpg" draggable="true" ondragstart="drag(event)" id="img1">      <!--被drag的对象必须有id-->
+    </div>
+    <div ondrop="drop(event)" ondragover="allowDrop(event)"></div>
+</body>
+
+<script>
+    var allowDrop = function (ev) {
+        ev.preventDefault();
+    }
+
+    var drag = function (ev) {
+        ev.dataTransfer.setData("text", ev.target.id);
+    }
+
+    var drop = function(ev){
+        ev.preventDefault();
+        var data = ev.dataTransfer.getData("text");
+        ev.target.appendChild(document.getElementById(data));
+    };
+</script>
+
+
+=============== 64-71 html5 ===============
+
+# 修改按tab键时选择顺序
+<button tabindex="4">button 4</button>
+<button tabindex="1">button 1</button>
+<button tabindex="2">button 2</button>
+<button tabindex="3">button 3</button>
+
+# html5新标签
+http://www.w3schools.com/html/html5_semantic_elements.asp
+
+# input新属性
+<input type="number" value="20" min="10" max="50" step="5"/>
+<input type="range" value="20" min="10" max="50" step="5"/>
+<input type="color" id="colorPicker"/>
+<output id="result"></output>
+<script>
+    document.getElementById("colorPicker").onchange = function(){
+        document.getElementById("result").value = colorPicker.value;
+    }
+</script>
+
+
+=============== 75-76 延时加载 (39-46 瀑布流的简化样例) ===============
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        p{width:500px; height: 200px; background-color: antiquewhite}
+        div{height:1000px}
+    </style>
+</head>
+
+<body>
+<p>content area</p>
+<div></div>
+<p><img src="img/1.jpg"></p>
+<div></div>
+</body>
+
+<script>
+
+    window.onscroll = function () {
+        var scrolledHeight = document.body.scrollTop + document.documentElement.clientHeight;
+        var p2Height = document.getElementsByTagName("p")[1].offsetTop;
+        if (scrolledHeight > p2Height + document.getElementsByTagName("img")[0].height) {
+            document.getElementsByTagName("p")[1].innerHTML = '<img src="img/2.jpg">';
+        }
+    }
+</script>
+</html>
+
+=============== 77-78 Application Cache ===============
+
+# 建立一套html,css,js文件
+# index.html
+<!DOCTYPE html>
+<html lang="en" manifest="app.appcache">
+<head>
+    <meta charset="UTF-8">
+    <link href="style.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+<p>content area</p>
+<div></div>
+<p><img src="img/1.jpg"></p>
+<div></div>
+</body>
+
+<script src="script.js"></script>
+</html>
+
+# style.css
+p{width:500px; height: 200px; background-color: antiquewhite}
+div{height:1000px}
+
+# script.js
+window.onscroll = function () {
+    var scrolledHeight = document.body.scrollTop + document.documentElement.clientHeight;
+    var p2Height = document.getElementsByTagName("p")[1].offsetTop;
+    if (scrolledHeight > p2Height + document.getElementsByTagName("img")[0].height) {
+        document.getElementsByTagName("p")[1].innerHTML = '<img src="img/2.jpg">';
+    }
+}
+
+# 建立一个manifest文件, 用以指导客户端缓存哪些文件
+# app.appcache
+CACHE MANIFEST
+CACHE:
+index.html
+style.css
+script.js
+
+NETWORK:
+
+FALLBACK:
+
+# 在html页面中html标签上加一个attribute: manifest="app.appcache", 参考之前html页面.
+# 加载页面后, 客户端会按manifest进行缓存, 可在客户端的Resources的Application Cache里看到
+# 客户端在离线情况下也可以看到一些缓存了的内容, 最多5M
+
+
+=============== 79-80 web worker 多线程 ===============
+
+# 做一个计时器, 思路: 主线程控制视图的变化, 子线程计时
+<script src="script.js"></script>
+<body>
+    <button id="startCount">start</button>
+    <button id="stopCount">stop</button>
+    <p><output id="output"></output></p>
+</body>
+
+# 主线程进行视图操作 script.js
+var worker;
+
+window.onload = function () {
+    document.getElementById("startCount").onclick = startWorker;
+
+    document.getElementById("stopCount").onclick = function () {
+        if(worker) {
+            worker.terminate();
+            worker = null;
+        }
+    }
+}
+
+var startWorker = function () {
+    if (worker == null){
+        worker = new Worker('counter.js')      				// 新建子线程
+        worker.postMessage("message from main to thread");  // 主线程可以往子线程发送数据
+        worker.onmessage = function (resp) {       			// 回调函数接收子线程返回数据
+            document.getElementById("output").value = resp.data;
+        }
+    }
+}
+
+# 子线程无法使用dom, 只用作耗时操作 counter.js
+var countNum = 1;
+var countAdd = function(){
+    self.onmessage = function (req) {      // 子线程接收主线程数据
+        console.log(req.data);
+    }
+	
+    postMessage(countNum);      			// 将数据从子线程传递到主线程
+    countNum ++;
+    setTimeout(countAdd, 1000)
+};
+countAdd();
+
+
+=============== 81-82 googlemap ===============
+
+<body onload="initialize()">
+<div id="googleMap" style="width:100%; height:600px"></div>
+</body>
+
+<script>
+    function initialize() {
+        navigator.geolocation.getCurrentPosition(
+            function (position) {   // success callback
+            // 取得当前地址
+                var coords = position.coords;
+                var latLng = new google.maps.LatLng(coords.latitude, coords.longitude);
+
+            // googleMap接口需求内容
+                var mapProp  = {
+                    zoom: 14,
+                    center: latLng,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP
+                }
+                var map = new google.maps.Map(document.getElementById("googleMap"), mapProp);
+
+            // marker
+                var marker = new google.maps.Marker({
+                    position: latLng,
+                    map: map,
+                });
+                var infoWindow = new google.maps.InfoWindow({
+                    content: "my current location"
+                });
+                infoWindow.open(map, marker);
+            },
+
+            function () {           // error callback
+
+            }
+        )
+    }
+    //google.maps.event.addDomListener(window, 'load', initialize);
+</script>
+
+=============== 83 server-sent event 服务器推送事件 ===============
+
+# 建立提供内容的服务器端
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.util.Date;
+
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@WebServlet("/gettime")
+public class ServerSentEvents extends HttpServlet {
+	private static final long serialVersionUID = 1L;
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		resp.setContentType("text/event-stream");
+		resp.setHeader("Cache-Control", "no-cache");
+		resp.setCharacterEncoding("UTF-8");
+		
+		PrintWriter writer = resp.getWriter();
+		writer.write("data:" + (new Date()).getTime() +"\n\n");		// JSON
+        writer.flush();
+        writer.close(); 
+	}
+
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		doGet(req, resp);
+	}
+}
+
+# 建立客户端页面(同域名下), 访问后会类似setInterval自动不停刷新, 大约3秒一次
+<body>
+    <button onclick="start()">Start</button>
+    <p><output id="push">output</output></p>
+</body>
+
+<script>
+    function start(){
+        var eventSource = new EventSource("http://localhost:8080/sse/gettime");
+        eventSource.onmessage = function(event){
+            console.log(event);
+            document.getElementById("push").value = new Date(parseInt(event.data));
+        }
+    }
+</script>
+</html>
+
+
+=============== 84 requestAnimationFrame ===============
+
+<body>
+    <div id="progressbar" style="width: 1px; height: 17px; background-color: steelblue"></div>
+    <button id="start">start</button>
+</body>
+
+<script>
+    window.requestAnimationFrame = window.requestAnimationFrame;
+    var progressbar = document.getElementById("progressbar");
+    var progress = 0;
+
+    function step(timestamp){
+        progress += 1;
+        progressbar.style.width = progress + "%";
+        progressbar.innerHTML = progress + "%";
+        if (progress <100) requestAnimationFrame(step);
+    }
+
+    document.getElementById("start").onclick = function () {
+        requestAnimationFrame(step);
+    };
+</script>
+
+
+=============== 85 factory ===============
+
+<script>
+    var myFactory = {};
+    myFactory.f1 = function () {
+        this.count = 100;
+    };
+    myFactory.f2 = function () {
+        this.count = 200;
+    };
+    myFactory.manufact = function (f) {
+        return new myFactory[f]();
+    };
+
+    var user = myFactory.manufact("f2");
+    console.log(user);		//myFactory.f2 {count: 200}
+</script>
+
+# factory 自己写的例子
+<script>
+    var myFactory = {
+        product1 : function(){console.log("product1")},
+        product2 : function(){console.log("product2")},
+        manufact : function(p){
+            return new myFactory[p]();
+        }
+    };
+    myFactory.manufact("product2");
+</script>
+
+
+=============== 87 singleton ===============
+
+<script>
+    var mySingleton = (function(){
+        var instantiated;
+        function init(){
+            return{
+                age:20,
+                publicContent:function(){
+                    return "public content";
+                }
+            }
+        }
+
+        return{
+            getInstance:function () {
+                if(!instantiated){
+                    instantiated = init();
+                }
+                return instantiated;
+            }
+        }
+    })();
+    console.log(mySingleton.getInstance().publicContent());
+</script>
+
+# singleton 自己写的例子
+<script>
+    var mySingleton = {
+        instance:null,
+        init:function(){
+            mySingleton.instance = "hello";
+        },
+        getInstance:function(){
+            if(!mySingleton.instance) mySingleton.init();
+            return mySingleton.instance;
+        }
+    }
+
+    console.log(mySingleton.getInstance());
+</script>

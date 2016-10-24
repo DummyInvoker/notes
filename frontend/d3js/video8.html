@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video8</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+    </head>
+    
+    
+    <body>
+    	<p>Transitions</p>
+    </body>
+    
+    
+    <script>
+		var canvas = d3.select("body")
+			.append("svg")
+			.attr("width", 500)
+			.attr("height", 500)
+		
+		var circle = canvas.append("circle")
+			.attr("cx", 50)
+			.attr("cy", 100)
+			.attr("r", 25)
+
+		circle
+			.transition()
+				.delay(2000)
+				.each("start",function(){d3.select(this).attr("fill", "steelblue")})
+				.attr("cx", 250)
+				.attr("r", 100)
+				.duration(2000)		//default = 500
+				
+			.transition()
+				.each("start",function(){d3.select(this).attr("fill", "red")})
+				.attr("cx", 450)
+				.attr("r", 25)
+				.duration(2000)
+				.each("end",function(){d3.select(this).attr("fill", "green")})
+    </script>
+</html>

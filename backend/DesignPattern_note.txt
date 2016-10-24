@@ -1,0 +1,1223 @@
+============ 3 strategy ============
+
+import java.util.Arrays;
+public class Test {
+	public static void main(String[] args) {
+		Cat[] catArray = {new Cat(3, 3), new Cat(5, 5), new Cat(1, 1)};
+		Arrays.sort(catArray);					//当Array中对象实现了Comparable时候即可使用
+		
+		for (Cat cat: catArray) System.out.print(cat + " ");
+		System.out.println("");
+	}
+}
+
+
+import java.util.Comparator;
+public class Cat implements Comparable<Cat> {
+	private int height;
+	private int weight;
+	//getters(); setters();
+
+	@Override
+	public String toString() {
+		return height + "|" + weight;
+	}
+	
+	private Comparator<Cat> comparator = new CatHeightComparator();		//指定比较策略的实现
+	
+	@Override
+	public int compareTo(Cat cat) {				//重写Comparable中方法, 实现比较大小的定义即可. 剩下排序算法java已经封装完毕
+		return comparator.compare(this, cat);		//不直接重写, 采用指定的比较策略, 有利于扩展性
+	}
+}
+
+
+import java.util.Comparator;
+public class CatHeightComparator implements Comparator<Cat> {
+
+	@Override
+	public int compare(Cat cat1, Cat cat2) {
+		if(cat1.getHeight() > cat2.getHeight()) return 1;
+		else if(cat1.getHeight() < cat2.getHeight()) return -1;
+		return 0;
+		// return Integer.compare(cat1.getHeight(), cat2.getHeight());
+	}
+}
+
+============ 4 iterator ============
+
+建立List的接口, 规范实现方法
+public interface Collection {
+	void add(Object o);
+}
+
+
+ArrayList方式实现List
+public class ArrayList implements Collection{
+	Object[] objects = new Object[10];
+	int index = 0;
+	public void add(Object o) {
+		if(index == objects.length) {
+			Object[] newObjects = new Object[objects.length * 2];
+			System.arraycopy(objects, 0, newObjects, 0, objects.length);
+			objects = newObjects;
+		}
+		objects[index] = o;		//在扩大了之后的数组后面继续写内容
+		index ++;
+	}
+}
+
+
+LinkedList方式实现List
+public class Node {
+	private Object data;
+	private Node next;
+	//getters(); setters();
+	
+	public Node(Object data, Node next) {
+		this.data = data;
+		this.next = next;
+	}
+}
+
+public class LinkedList implements Collection{
+	Node head = null;
+	Node tail = null;
+	
+	public void add(Object o) {
+		Node node = new Node(o, null);	//将传入obj包装成一个node
+		if(head == null) {				//说明这个是头node
+			head = node;				//这里的head, tail都是指向node的地址
+			tail = node;
+		} else {					//传入的是后续node
+			tail.setNext(node);		//tail此时是链尾node的地址, 调用其setNext就是将上一个node的next变量设置为下一个node的地址
+			tail = node;			//更新tail为新node地址	
+		}
+	}
+}
+
+
+在Collection接口中添加iterator方法;
+public interface Iterator {
+	Object next();
+	boolean hasNext();
+}
+
+public interface Collection {
+	//...
+	Iterator iterator();
+}
+
+
+ArrayList实现iterator方法
+public class ArrayList implements Collection {
+	//...
+	public Iterator iterator() {		//每个List实现方法不一样, iterator的方法也需放在各个方法中
+		return new ArrayListIterator();		//有变量, 不适合用单例模式
+	}
+	
+	private class ArrayListIterator implements Iterator {
+		private int currentIndex = 0;
+		
+		@Override
+		public boolean hasNext() {
+			if(currentIndex >= index) return false;		//index是已经写入ArrayList的内容量
+			else return true;
+		}
+
+		@Override
+		public Object next() {
+			Object o = objects[currentIndex];
+			currentIndex ++;
+			return o;
+		}
+	}
+}
+		
+============ 5.1 单例模式和静态工厂方法 ============	
+
+public class Car {
+	private static Car car = new Car();		//只在初始化时候实例化一次
+	
+	public static Car getInstance(){
+		return car;
+	}
+}
+
+public class Test {
+	public static void main(String[] args) {
+		Car c1 = Car.getInstance();
+		Car c2 = Car.getInstance();
+		if(c1 == c2) System.out.println("same car");
+	}
+}
+
+============ 5.1 多例模式 ============
+
+public class Car {
+	private static List<Car> cars = new ArrayList<Car>();
+	
+	public static void init(){
+		for (int i=0; i<10; i++){
+			Car car = new Car();
+			cars.add(car);
+		}
+	}
+	
+	public static List<Car> getInstance(){
+		if (cars.size() == 0){
+			init();
+		}
+		return cars;
+	}
+}
+
+
+public class Test {
+	public static void main(String[] args) {
+		List<Car> cars1 = Car.getInstance();
+		List<Car> cars2 = Car.getInstance();
+		
+		System.out.println(cars1.size());
+		
+		if(cars1.get(1) == cars2.get(1)) System.out.println("same cars at index 1");
+		if(cars1.get(1) != cars1.get(2)) System.out.println("different cars between car1 and car2");
+	}
+}
+
+============ 5.2 简单工厂模式 ============
+
+public interface Vehicle {			// 用接口规范实例的方法, 例如都必须有run(). 具体实现各类自己实现
+	void run();
+}
+
+public class Car implements Vehicle {
+	@Override
+	public void run() {
+		System.out.println("car po");
+	}
+}
+
+public class Plane implements Vehicle {
+	@Override
+	public void run() {
+		System.out.println("plane po");
+	}
+}
+
+
+public interface VehicleFactory {		// 用接口规范factory的方法
+	Vehicle create();
+}
+
+public class CarFactory implements VehicleFactory {		// 用工厂方法可以控制对象产生的过程
+	@Override
+	public Vehicle create() {
+		return new Car();
+	}
+}
+
+public class PlaneFactory implements VehicleFactory {
+	@Override
+	public Vehicle create() {
+		return new Plane();
+	}
+}
+
+
+public class Test {
+	public static void main(String[] args) {
+		VehicleFactory factory = new CarFactory();		// 这样更换factory不用更改主业务逻辑中其他部分
+		Vehicle vehicle = factory.create();
+		vehicle.run();
+	}
+}
+
+============ 5.2 抽象工厂模式 ============
+
+public Interface AbstractFactory {
+	Vehicle createVehicle();
+	Weapon createWeapon();
+	Food createFood();
+}
+
+public class DefaultFactory implements AbstractFactory{
+	@Override
+	public Food createFood() {
+		return new Apple();
+	}
+	@Override
+	public Vehicle createVehicle() {
+		return new Car();
+	}
+	@Override
+	public Weapon createWeapon() {
+		return new AK47();
+	}
+}
+
+public class Test {
+	public static void main(String[] args) {
+		AbstractFactory f = new DefaultFactory();		//这样就可以一次更改一系列产品的组合.
+		Vehicle v = f.createVehicle();
+		v.run();
+		Weapon w = f.createWeapon();
+		w.shoot();
+		Food a = f.createFood();
+		a.printName();
+	}
+}
+
+============ 5.3 从properties到class实例 ============
+	
+同package中建立spring.properties, 内容为:
+VehicleType=com.bjsxt.spring.factory.Car
+
+在使用properties文件的程序处:
+package com.bjsxt.spring.factory;
+
+import java.util.Properties;
+public class Test{
+	public static void main(String[] args) throws Exception{
+		Properties properties = new Properties();
+		properties.load(Test.class.getClassLoader().getResourceAsStream("com/bjsxt/spring/factory/spring.properties"));		//由于spring.properties文件存放在包中, 编译后会存放在bin目录中. 从虚拟机角度去load这个stream
+		
+		String vehicleTypeName = properties.getProperty("VehicleType"); 	//按照key=VehicleType, 取value=com.bjsxt.spring.factory.Car
+		Object object = Class.forName(vehicleTypeName).newInstance();		//加载对应的class文件, 创建对象实例. 需要有一个参数为空的构造方法
+		
+		(Moveable)object.run();		//调用Car类中的run()
+	}	
+}
+
+============ 5.4 从applicationContext.xml到class实例 ============
+
+同package中建立applicationContext.xml, 内容为:
+<?xml version="1.0" encoding="UTF-8"?>
+<beans>
+	<bean id="vehicle" class="com.bjsxt.spring.factory.Train"></bean>
+</beans>
+
+
+public class ClassPathXmlApplicationContext implements BeanFactory  {
+	private Map<String, Object> container = new HashMap<String, Object>();		//用于存放key和实例的容器
+	
+	public ClassPathXmlApplicationContext(String fileName) throws Exception{
+		SAXBuilder sb = new SAXBuilder();
+		Document doc = sb.build(this.getClass().getClassLoader().getResourceAsStream(fileName));	//xml文件与代码同根路径
+		Element root = doc.getRootElement();
+		List list = XPath.selectNodes(root, "/beans/bean");		//也可从root取
+		
+		for (int i = 0; i < list.size(); i++) { 
+			Element bean = (Element) list.get(i);
+			String id = bean.getAttributeValue("id");				//取出 "vehicle"
+			String clazz = bean.getAttributeValue("class");			//取出 "com.bjsxt.spring.factory.Train"
+			Object object = Class.forName(clazz).newInstance();		//实例化Train
+			
+			container.put(id, object);
+		}
+	}
+	
+	
+	public Object getBean(String id) {
+		return container.get(id);
+	}
+}
+
+public class Test{
+	public static void main (String[] args) throws Exception{
+		BeanFactory factory = new ClassPathXmlApplicationContext("com/bjsxt/spring/factory/applicationContext.xml");
+		
+		Object object = factory.getBean("vehicle");
+		(Moveable)object.run();
+	}
+}
+
+============ 6.1 静态代理 ============
+
+public interface Moveable{
+	void move();
+}
+
+// 直接修改代码方式测试方法时间
+public class Tank implements Moveable {
+	@Override
+	public void move() {
+		long start = System.currentTimeMillis();
+		
+		System.out.println("Tank Moving...");
+		try {
+			Thread.sleep(new Random().nextInt(10000));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		long end = System.currentTimeMillis();
+		System.out.println("time: " + (end-start));
+	}
+}
+
+
+// 继承方式测试方法时间 inherit
+public class Tank2 extends Tank{
+	@Override
+	public void move() {	
+		long start = System.currentTimeMillis();
+		super.move();
+		long end = System.currentTimeMillis();
+		System.out.println("time: " + (end-start));
+	}
+}
+
+
+// 聚合方式测试方法时间 aggregate
+public class TankTimeProxy implements Moveable{
+	Moveable tank;
+	public TankTimeProxy (Moveable tank) {
+		super();
+		this.tank = tank;
+	}
+
+	@Override
+	public void move() {
+		long start = System.currentTimeMillis();
+		tank.move();
+		long end = System.currentTimeMillis();
+		System.out.println("time: " + (end-start));
+	}
+}
+
+public class Test {
+	public static void main(String[] args) throws Exception {
+		Moveable tank = new TankTimeProxy();
+		tank.move();
+	}
+}
+
+
+// 使用聚合方式实现多个代理 (静态代理, 针对某个指定的方法的代理)
+public class Test {
+	public static void main(String[] args) throws Exception {
+		Tank tank = new Tank();
+		TankTimeProxy ttp = new TankTimeProxy(tank);		//第一层代理
+		TankLogProxy tlp = new TankLogProxy(ttp);			//TankLogProxy同TankTimeProxy结构, 计时业务改为log业务. 第二层
+		tlp.move();
+	}
+}
+
+============ 6.3 使用jdk的compiler将一个string编译为class文件 ============
+
+public class TestCompiler {
+	public static void main(String[] args) throws Exception{
+		
+	// step1, 准备一个string
+		String rt = "\r\n";		// 回车换行标
+		String src =
+			"public class TankTimeProxy implements Moveable{"+rt+
+			"	Moveable tank;"+rt+
+			"	public TankTimeProxy (Moveable tank) {"+rt+
+			"		super();"+rt+
+			"		this.tank = tank;" +rt+
+			"	}" +rt+
+
+			"	@Override" +rt+
+			"	public void move() {" +rt+
+			"		long start = System.currentTimeMillis();" +rt+
+			"		tank.move();" +rt+
+			"		long end = System.currentTimeMillis();" +rt+
+			"		System.out.println(\"time: \" + (end-start));" +rt+
+			"	}" +rt+
+			"}";
+		
+	// step2, string写成文件
+		String fileName = System.getProperty("user.dir")					// 取得当前项目的根路径
+							+ "/src/com/bjsxt/proxy/TankTimeProxy.java";	// 文件写的地址与后面URLClassLoader地址一致
+		
+		File file = new File(fileName);	
+		FileWriter fw = new FileWriter(file);
+		fw.write(src);
+		fw.flush();
+		fw.close();
+		
+	//step3, 编译!
+		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();		// 取得编译器. 注意: 修改默认配置的JRE为JDK; 更新项目library
+		
+		StandardJavaFileManager fileMgr = compiler.getStandardFileManager(null, null, null);		// 设置异常监听器, 编码等
+		Iterable units = fileMgr.getJavaFileObjects(fileName);		// 设置需编译的文件列表
+		
+		/*		
+		CompilationTask javax.tools.JavaCompiler.getTask(
+			Writer out, 						// 额外输出位置
+			JavaFileManager fileManager, 		// fileManager, 用null就是默认的fileManager
+			DiagnosticListener<? super JavaFileObject> diagnosticListener, 		// 设置异常监听器
+			Iterable<String> options, 			// 编译时提供的参数
+			Iterable<String> classes,			// 编译时用到的外部class文件
+			Iterable<? extends JavaFileObject> compilationUnits		// 需要被编译的文件
+		)		
+		*/	
+		CompilationTask compilationTask = compiler.getTask(null, fileMgr, null, null, null, units);
+		compilationTask.call();				// 编译!
+		fileMgr.close();
+	}
+}
+运行后, 打开Navigator视图可以看到编译出来的class文件. 注意, 使用以上配置编译的class文件在源码路径中, 不在bin中
+
+============ 6.4 加载class文件; 6.5 生成实例 ============
+
+public class TestCompiler {
+	public static void main(String[] args) throws Exception{
+	//接之前内容
+	
+	//step4, 加载class文件
+	//直接使用ClassLoader会读取默认的bin目录中的class文件, 这里改用URLClassLoader
+		URL[] urls = new URL[] {new URL("file:/" + System.getProperty("user.dir") +"/src/")};		//指定地址数组, 任何网络地址. 本例只有一个地址
+		URLClassLoader ul = new URLClassLoader(urls);		//创建loader
+		
+		Class c = ul.loadClass("com.bjsxt.proxy.TankTimeProxy");		//class文件加载到内存
+
+	//step5, 生成实例
+		// 直接调用c.newInstance()会调用参数为空的constructor, TankTimeProxy需要传入一个被代理的对象Moveable, 不适用.
+		Constructor constructor = c.getConstructor(Moveable.class);		//指定使用哪个constructor.
+		Moveable moveable = (Moveable)ctr.newInstance(new Tank());		//moveable就是新生成的代理对象
+		
+		moveable.move();
+	}
+}
+
+============ 6.6 取一个class中方法清单 ============
+
+public class Test2 {
+	public static void main(String[] args) {
+		Method[] methods = com.bjsxt.proxy.Moveable.class.getMethods();
+		for(Method m : methods) {
+			System.out.println(m.getName());
+		}
+	}
+}
+		
+============ 6.6 动态代理 ============
+
+给一个被代理对象, 还一个代理对象. 不需要手写固定的代理方法例如TankTimeProxy. 适用于不确定的类数量时使用, 例如intercept所有的方法
+
+update1, 传入接口类型, 适应多种接口
+public class Proxy {
+	public static Object newProxyInstance(Class infce) throws Exception {		// 传入需要的参数, 生成实例时候使用
+		String rt = "\r\n";
+		String src =
+			"public class TankTimeProxy implements" + infce.getName() + "{"+rt+
+			"	Moveable tank;"+rt+
+			"	public TankTimeProxy (Moveable tank) {"+rt+
+			"		super();"+rt+
+			"		this.tank = tank;" +rt+
+			"	}" +rt+
+
+			"	@Override" +rt+
+			"	public void move() {" +rt+
+			"		long start = System.currentTimeMillis();" +rt+
+			"		tank.move();" +rt+
+			"		long end = System.currentTimeMillis();" +rt+
+			"		System.out.println(\"time: \" + (end-start));" +rt+
+			"	}" +rt+
+			"}";
+
+		// step 2-5 与之前相同代码
+	}
+}
+
+update2, 取得方法清单, 适应接口的所有方法
+public class Proxy {
+	public static Object newProxyInstance(Class infce) throws Exception {
+		String rt = "\r\n";
+		
+	//step0, 组拼方法清单的methodStr
+		String methodStr = "";
+		Method[] methods = infce.getMethods();
+		for (Method m : methods) {
+			methodStr+=
+				"	@Override" +rt+
+				"	public void "+ m.getName() +"() {" +rt+				// TODO: 返回值类型还需要继续改进
+				"		long start = System.currentTimeMillis();" +rt+
+				"		tank."+ m.getName() +"();" +rt+
+				"		long end = System.currentTimeMillis();" +rt+
+				"		System.out.println(\"time: \" + (end-start));" +rt+
+				"	}" +rt+
+		}
+		
+	//step1, 插入之前固定方法写法处
+		String src =
+			"public class TankTimeProxy implements" + infce.getName() + "{"+rt+
+				infce.getName() + " tank;"+rt+
+			"	public TankTimeProxy ("+ infce.getName() +" tank) {"+rt+
+			"		super();"+rt+
+			"		this.tank = tank;" +rt+
+			"	}" +rt+
+
+			methodStr +			// 用上面组拼的method片段代替固定的方法
+			
+			"}";
+
+	// step2, string写成文件 (同之前)
+		String fileName = System.getProperty("user.dir")
+							+ "/src/com/bjsxt/proxy/TankTimeProxy.java";
+		
+		File file = new File(fileName);	
+		FileWriter fw = new FileWriter(file);
+		fw.write(src);
+		fw.flush();
+		fw.close();
+		
+	//step3, 编译 (同之前)
+		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+		
+		StandardJavaFileManager fileMgr = compiler.getStandardFileManager(null, null, null);
+		Iterable units = fileMgr.getJavaFileObjects(fileName);
+		
+		CompilationTask compilationTask = compiler.getTask(null, fileMgr, null, null, null, units);
+		compilationTask.call();
+		fileMgr.close();
+		
+	//step4, 加载class文件 (同之前)
+		URL[] urls = new URL[] {new URL("file:/" + System.getProperty("user.dir") +"/src/")};
+		URLClassLoader ul = new URLClassLoader(urls);
+		
+		Class c = ul.loadClass("com.bjsxt.proxy.TankTimeProxy");
+
+	//step5, 生成代理实例
+		Constructor constructor = c.getConstructor(Moveable.class);
+		Object moveable = ctr.newInstance(new Tank());					// TODO: 传入的被代理对象硬编码
+		
+		return moveable;
+	}
+}
+
+public class Test {
+	public static void main(String[] args) throws Exception {
+		Tank tank = new Tank();	//实际并未使用, 见TODO.
+		
+		Moveable moveable = (Moveable)Proxy.newProxyInstance(Moveable.class);		// 传入一个任意class类, 会生成一个遍历所有的方法的代理
+		moveable.move();
+	}
+}
+
+============ 6.6 使用handler, 产生灵活的advisor ============
+
+step1, 准备灵活的handler方案
+public interface InvocationHandler {
+	public void invoke(Object obj, Method m);
+}
+
+public class TimeHandler implements InvocationHandler throws Exception{
+	
+	private Object target;					// 接收被代理的对象
+	public TimeHandler(Object target) {
+		super();
+		this.target = target;
+	}
+
+	@Override
+	public void invoke(Object obj, Method m) {		//本逻辑中没有用到obj
+		long start = System.currentTimeMillis();
+		
+		/*
+		 *	Object java.lang.reflect.Method.invoke(Object obj, Object... args)
+		 *	obj the object the underlying method is invoked from
+		 *	args the arguments used for the method call
+		 */
+		m.invoke(target, new Object[]{});		// 这里invoke的对象是被代理对象
+
+		long end = System.currentTimeMillis();
+		System.out.println("time:" + (end-start));
+	}
+}
+
+step2, 在newProxyInstance中, 替换之前固定的advisor部分
+public class Proxy {
+	public static Object newProxyInstance(Class infce, InvocationHandler h) throws Exception {
+		String rt = "\r\n";
+		
+	//step0, 组拼方法清单的methodStr
+		String methodStr = "";
+		Method[] methods = infce.getMethods();
+		for (Method m : methods) {
+			methodStr+=
+				"	@Override" +rt+
+				"	public void "+ m.getName() +"() throws Exception{" +rt+
+				"		h.invoke(this, this.getMethod(\""  + m.getName()  + "\");" +rt+		//要求传的是obj, method对象. 不可简单传string, 或直接传对象. 这里h是外层代码内容, 后面继续处理
+				"	}" +rt+
+		}
+		
+	//step1, 插入之前固定方法写法处
+		String src =
+			"package com.bjsxt.proxy;" +  rt +
+			"import java.lang.reflect.Method;" + rt +
+			"public class TankTimeProxy implements" + infce.getName() + "{"+rt+		//在jdk中TankTimeProxy叫$Proxy1
+			"   com.bjsxt.proxy.InvocationHandler h;" + rt +				//添加InvocationHandler, 去除之前接口infce
+			
+			"	public TankTimeProxy (InvocationHandler h) {"+rt+
+			"		super();"+rt+
+			"		this.h = h;" +rt+
+			"	}" +rt+
+
+			methodStr +
+			
+			"}";
+			
+	// step2, string写成文件 (同之前)
+		String fileName = System.getProperty("user.dir")
+							+ "/src/com/bjsxt/proxy/TankTimeProxy.java";
+		
+		File file = new File(fileName);	
+		FileWriter fw = new FileWriter(file);
+		fw.write(src);
+		fw.flush();
+		fw.close();
+		
+	//step3, 编译 (同之前)
+		JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+		
+		StandardJavaFileManager fileMgr = compiler.getStandardFileManager(null, null, null);
+		Iterable units = fileMgr.getJavaFileObjects(fileName);
+		
+		CompilationTask compilationTask = compiler.getTask(null, fileMgr, null, null, null, units);
+		compilationTask.call();
+		fileMgr.close();
+		
+	//step4, 加载class文件 (同之前)
+		URL[] urls = new URL[] {new URL("file:/" + System.getProperty("user.dir") +"/src/")};
+		URLClassLoader ul = new URLClassLoader(urls);
+		
+		Class c = ul.loadClass("com.bjsxt.proxy.TankTimeProxy");
+		
+	//step5, 生成代理实例
+		Constructor constructor = c.getConstructor(InvocationHandler.class);		// 已经生成了新的代理对象, 加载代理对象的实例
+		Object moveable = ctr.newInstance(h);
+		
+		return moveable;
+	}
+}
+
+public class Test {
+	public static void main(String[] args) throws Exception {
+		Tank t = new Tank();
+		InvocationHandler h = new TimeHandler(t);
+		
+		Moveable m = (Moveable)Proxy.newProxyInstance(Moveable.class, h);
+		m.move();
+	}
+}
+
+
+再同样建一个代理
+public class TransactionHandler implements InvocationHandler {
+	private Object target;
+	public TransactionHandler(Object target) {
+		super();
+		this.target = target;
+	}
+
+	@Override
+	public void invoke(Object o, Method m) throws Exception{
+		System.out.println("Transaction Start");
+		m.invoke(target);
+		System.out.println("Transaction Commit");
+	}
+}
+
+进行代理叠加
+public class Test {
+	public static void main(String[] args) throws Exception {
+		Tank t = new Tank();
+		InvocationHandler h = new TimeHandler(t);
+		Moveable m = (Moveable)Proxy.newProxyInstance(Moveable.class, h);
+		
+		InvocationHandler tx = new TransactionHandler(m);
+		Moveable m = (Moveable)Proxy.newProxyInstance(Moveable.class, tx);
+		
+		m.move();
+	}
+}
+
+============ 7.1 问题 ============
+
+public class Main {
+	public static void main(String[] args) {
+		String msg = "保留内容<script>过滤内容过滤";
+		
+		MsgProcessor mp = new MsgProcessor();		
+		mp.setMsg(msg);
+		
+		String result = mp.process();
+		System.out.println(result);
+	}
+}
+
+public class MsgProcessor {
+	private String msg;
+	//getters(); setters();
+
+	public String process() {
+	//filter "< >"
+		String result = msg.replace('<', '[').replace('>', ']');
+		
+	//filter specific words. 应该先取得过滤词清单
+		result = result.replaceAll("过滤", '*');
+		return result;
+		
+	// 能否有方便的方式扩展过滤规则
+	}
+}
+
+============ 7.2 单责任链 ============
+
+public interface Filter {
+	String doFilter(String str);
+}
+
+public class HTMLFilter implements Filter {
+	@Override
+	public String doFilter(String str) {
+		String result = str.replace('<', '[').replace('>', ']');
+		return result;
+	}
+}
+
+public class SesitiveFilter implements Filter {
+	@Override
+	public String doFilter(String str) {
+		String result = str.replaceAll("过滤", '*');
+		return result;
+	}
+}
+
+
+public class MsgProcessor {
+	private String msg;
+	//getters(); setters();
+	
+	Filter[] filters = {new HTMLFilter(), new SesitiveFilter(), new FaceFilter()};	// 需要添加新过滤规则时, 扩展这个数组即可. 也可以安排先后顺序
+
+	public String process() {
+		String result = msg;
+		
+		for (Filter filter: filters){
+			result = filter.doFilter(result);
+		}
+		
+		return result;
+	}
+}
+
+public class Main {
+	public static void main(String[] args) {
+		String msg = "保留内容<script>过滤内容过滤";
+		
+		MsgProcessor mp = new MsgProcessor();		
+		mp.setMsg(msg);
+		
+		String result = mp.process();
+		System.out.println(result);
+	}
+}
+
+============ 7.3 多个责任链的交织1 ============
+
+public class FilterChain {
+	List<Filter> filters = new ArrayList<Filter>();
+	
+	public FilterChain addFilter(Filter filter) {			// 之后调用时, 完成add动作, 同时返回chain, 可以链式添加过滤条件
+		filters.add(filter);
+		return this;
+	}
+	
+	public String doFilter(String str) {
+		String result = str;
+		for (Filter filter: filters){
+			result = filter.doFilter(result);
+		}
+		return result;
+	}
+}
+
+
+public class MsgProcessor {
+	private String msg;
+
+	FilterChain fc;			//替换原来固定的Filter[]
+	//getters(); setters();
+	
+	public String process() {
+		return fc.doFilter(msg);
+	}
+}
+
+
+public class Main {
+	public static void main(String[] args) {
+		String msg = "保留内容<script>过滤内容过滤";
+		MsgProcessor mp = new MsgProcessor();		
+		mp.setMsg(msg);
+
+		FilterChain fc = new FilterChain();
+		fc.addFilter(new HTMLFilter()).addFilter(new SesitiveFilter());		// 利用了之前addFilter的返回值类型
+		mp.setFc(fc);
+		
+		System.out.println(mp.process());
+	}
+}
+
+============ 7.3 多个责任链的交织2 ============
+
+public class FilterChain implements Filter {		// 这样就可以	filterChain实例调用add(filterChain).
+	List<Filter> filters = new ArrayList<Filter>();
+	public FilterChain addFilter(Filter filter) {}
+	@Override
+	public String doFilter(String str) {}
+}
+
+public class Main {
+	public static void main(String[] args) {
+		String msg = "保留内容<script>过滤内容过滤";
+		MsgProcessor mp = new MsgProcessor();		
+		mp.setMsg(msg);
+
+		FilterChain fc = new FilterChain();
+		fc.addFilter(new HTMLFilter());
+		
+		FilterChain fc2 = new FilterChain();
+		fc.addFilter(new SesitiveFilter());
+		
+		fc.addFilter(fc2);					// 把一个filterChain对象看做一个Filter, 且同样可以调用doFilter()
+		
+		mp.setFc(fc);
+		
+		System.out.println(mp.process());
+	}
+}
+
+============ 7.4 双向filter1 ============
+
+public class Request {
+	String requestStr;
+	//getters(); setters();
+}
+
+public class Response {
+	String responseStr;
+	//getters(); setters();
+}
+
+public interface Filter {
+	void doFilter(Request request, Response response);
+}
+
+public class FilterChain implements Filter {
+	List<Filter> filters = new ArrayList<Filter>();
+	
+	public FilterChain addFilter(Filter filter) {
+		filters.add(filter);
+		return this;
+	}
+	
+	@Override
+	public void doFilter(Request request, Response response) {
+		for (Filter filter: filters){
+			filter.doFilter(request, response);
+		}
+	}
+}
+
+public class HTMLFilter implements Filter {
+	@Override
+	public void doFilter(Request request, Response response) {
+		request.setRequestStr(request.getRequestStr().replace('<', '[').replace('>', ']'));
+	}
+}
+
+
+public class Main {
+	public static void main(String[] args) {
+		String msg = "保留内容<script>过滤内容过滤";
+		Request request = new Request();
+		request.setRequestStr(msg);
+		
+		Response response = new Response();
+		response.setResponseStr("response");
+		
+		FilterChain fc = new FilterChain();
+		fc.addFilter(new HTMLFilter()).addFilter(new SesitiveFilter());
+		
+		fc.doFilter(request, response);
+		
+		System.out.println(request.getRequestStr());
+	}
+}
+
+============ 7.4 双向filter2 ============
+
+思路: 在处理request和response之间插入对下一个filter的调用, 这样就能像stack一样顺序处理request, 逆序处理response
+
+public interface Filter {
+	void doFilter(Request request, Response response, FilterChain chain);
+}
+
+public class FilterChain implements Filter {
+	List<Filter> filters = new ArrayList<Filter>();
+	public FilterChain addFilter(Filter filter) {
+		filters.add(filter);
+		return this;
+	}
+
+	@Override
+	public void doFilter(Request request, Response response, FilterChain chain) {
+		
+		if(index == filters.size()) return;		// 这样保证了当所有的filter都被调用完毕后, 开始后半段response的处理.
+		
+		Filter f = filters.get(index);
+		index ++;
+		f.doFilter(request, response, chain);
+	}
+}
+
+
+public class HTMLFilter implements Filter {
+	@Override
+	public void doFilter(Request request, Response response, FilterChain chain) {
+		request.requestStr = request.requestStr.replace('<', '[').replace('>', ']');
+		chain.doFilter(request, response, chain);				// 之后程序没有开始时, 插入这段调用doFilter(), 这样就可以通过filterChain开始下一个filter的调用
+		response.responseStr;
+	}
+}
+
+
+public class Main {
+	public static void main(String[] args) {
+		String msg = "保留内容<script>过滤内容过滤";
+		Request request = new Request();
+		request.setRequestStr(msg);
+		
+		Response response = new Response();
+		response.setResponseStr("response");
+		
+		FilterChain fc = new FilterChain();
+		fc.addFilter(new HTMLFilter()).addFilter(new SesitiveFilter());
+		
+		fc.doFilter(request, response, fc);
+		
+		System.out.println(request.getRequestStr());
+		System.out.println(response.getResponseStr());
+	}
+}
+
+============ 9.2 bridge模式 ============
+
+需求:
+解决同一个类有多个维度的扩展时, 一个实现同时存在多个维度中
+实质:
+继承(inherit)和聚合(aggregation)的关系
+疑问:
+一个类有两个维度, 不就是需要设置两个属性的值么...
+
+public class Gift {		// Gift有两个维度的扩展: 具体的Flower, Ring; 类型的WarmGift, WildGift
+	protected GiftImpl impl;
+}
+
+public class GiftImpl {
+}
+
+public class Flower extends GiftImpl {		// 具体的礼物继承GiftImpl
+}
+
+
+public class WarmGift extends Gift{
+	public WarmGift(GiftImpl impl) {
+		this.impl = impl;			//不规范写法, 需要用getters(); setters();
+	}
+}
+
+public class Boy {
+	private String name;
+	//getters(); setters();
+	
+	public void pursue(MM mm) {
+		Gift g = new WarmGift(new Flower());		// 这个Gift同时又是Warm又是Flower
+	}
+}
+
+============ 9.5 command模式 ============
+
+public class MM {
+	public void order(Boy b) {
+		Command c1 = new ShoppingCommand();
+		b.addCommand(c1);
+		Command c2 = new HugCommand();
+		b.addCommand(c2);
+		
+		b.executeCommands();			// 类似chainOfResponsibiilty中的doFilter()处, 顺序调用List中内容
+	}
+}
+
+public abstract class Command {
+	public abstract void execute();
+	public abstract void unDo();
+}
+public class ShoppingCommand extends Command {
+	@Override
+	public void execute() {
+		System.out.println("foo");
+	}
+}
+
+public class Boy {
+	private List<Command> commands = new ArrayList<Command>();
+	public void addCommand(Command command) {
+		this.commands.add(command);
+	}
+
+	public void executeCommands() {
+		for(Command c : commands) {
+			c.execute();
+		}
+	}
+}
+
+============ 9.6 state模式 ============
+
+public class MM {
+	private MMState state = new MMHappyState();
+	
+	public void smile() {
+		state.smile();
+	}
+	public void cry() {
+		state.cry();
+	}
+	public void say() {
+		state.say();
+	}
+}
+
+public abstract class MMState {
+	public abstract void smile();
+	public abstract void cry();
+	public abstract void say();
+}
+
+public class MMHappyState extends MMState{		// 定义开心状态的方法集
+	@Override
+	public void cry() {			// 定义开心的cry实现
+	}
+	@Override
+	public void say() {
+	}
+	@Override
+	public void smile() {
+	}
+}
+
+============ marlabs observer模式 ============
+
+实现listener效果
+
+# 被监听对象, 被监听salary的值变化
+public class Emp {
+	private double salary;
+	public double getSalary() {
+		return salary;
+	}	
+	public void setSalary(double salary) {
+		this.salary = salary;
+		notifyObservers();
+	}	
+	
+	private List<Observer> observers = new ArrayList<>();	// 用于保存监听者列表
+	public void attach(Observer obs){		// 添加监听者
+		observers.add(obs);
+	}
+	public void notifyObservers(){
+		for (Observer observer : observers) {
+			observer.update();
+		}
+	}
+}
+
+# 监听者类接口
+public abstract class Observer {
+	Emp emp;
+	
+	public Observer(Emp emp) {
+		super();
+		this.emp = emp;
+	}
+
+	public abstract void update();
+}
+
+# 监听者的实现类
+public class FinanceObserver extends Observer {
+
+	public FinanceObserver(Emp emp) {		// 接收被监听对象, 用于监听的业务逻辑
+		super(emp);
+	}
+
+	@Override
+	public void update() {
+		if (emp.getSalary() > 5000) System.out.println("FI: salary > 5000");
+		else System.out.println("FI: salary <= 5000");
+	}
+}
+
+# 测试
+public class Test {
+	public static void main(String[] args) {
+		Emp emp = new Emp();
+		
+		Observer hrObserver = new HRObserver(emp);
+		Observer financeObserver = new FinanceObserver(emp);
+		emp.attach(hrObserver);
+		emp.attach(financeObserver);
+		
+		emp.setSalary(1000);
+		emp.setSalary(9000);
+	}
+}
+
+
+============ marlabs synchronize 实现 ============
+public class MySync implements Runnable{
+	MySync mySync;
+	String name;
+	
+	public MySync() {
+		super();
+	}
+	public MySync(MySync mySync, String name) {
+		super();
+		this.mySync = mySync;
+		this.name = name;
+		Thread thread = new Thread(this);
+		thread.start();
+	}
+	
+	@Override
+	public void run() {
+		mySync.disp(name);		// 对同一对象加锁, 正确
+		//disp(name);			// 对子线程分别加锁, 没有意义
+	}
+
+	private synchronized void disp(String name) {
+		System.out.println("start of " + name);
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		System.out.println("resumed from sleep "+ name);
+	}
+
+
+	public static void main(String[] args) {
+		MySync mySync = new MySync();
+		MySync sync1 = new MySync(mySync, "sync1");
+		MySync sync2 = new MySync(mySync, "sync2");
+		MySync sync3 = new MySync(mySync, "sync3");
+	}
+}

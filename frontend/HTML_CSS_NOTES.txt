@@ -1,0 +1,1261 @@
+============ 02 ============
+18:24
+Attributes:
+link = "链接文本颜色"
+vlink = "访问过的文本颜色"
+alink = "激活的链接文本颜色"
+
+leftmargin = "0" <!--body默认情况下四边各有10个像素的边距-->
+rightmargin
+topmargin
+bottommargin
+
+============ 03 ============
+
+<hr/>	水平直线
+attributes:
+size: 线粗细
+width: 长度, 直接数字时为像素, 百分比值时为百分比
+noshade = "noshade" 表示实心线
+
+<blockquote>	块引用
+浏览器在 blockquote 元素前后添加了换行，并增加了外边距。
+attributes:
+cite="url"
+
+<pre>	预格式化
+
+============ 04 ============
+
+<ul> 无序列表
+	<li type="disc">实心圆, 默认</li>
+	<li type="circle">空心圆</li>
+</ul>
+
+<ol>	有序列表
+	<li type="1">123表示顺序, 默认</li>
+	<li type="a" start="25">abc表示顺序, 同理可以用A,i,I表示顺序</li>
+</ol>
+
+<dl>	定义列表
+	<dt>客户列表</dt>
+		<dd>客户1</dd>
+		<dd>客户2</dd>
+	
+	<dt>商家列表</dt>
+		<dd>商家1</dd>
+		<dd>商家2</dd>
+</dl>
+
+============ 05-06 ============
+
+<img src="url" />	图片
+attributes:
+width / height: 长度, 直接数字时为像素, 百分比值时为百分比
+border="3": 边框
+align: 表示图文混排时候的对齐方式, 而不是图片本身
+		bottom: 文字第一行和图片底端对齐(默认)
+		top: 文字第一行和图片顶端对齐
+		right/left: 图片在右, 文字全部在左, 文字多出部分顶边开始
+		
+实现图片和文字的混排, 只要将图片插入到文字的段落中即可, 然后控制align参数.
+
+vspace/hspace="5": 图像的顶部和底部的padding
+
+============ 07 ============
+
+<table>
+	<tr>
+		<th>标题栏文字, 会自动加粗居中</th>
+		<th></th>
+		<th></th>
+	</tr>	
+	
+	<tr>
+		<td></td>
+		<td></td>
+		<td></td>
+	</tr>
+</table>
+
+table attributes:
+border: 表格边框宽度
+bordercolor: 表格边框颜色
+align: 表格在父元素中的位置
+
+cellpadding: 单元格边框与其内部内容更之间填充大小, 默认为2
+cellspacing: 单元格之间的填充大小, 默认为2
+
+td attributes:
+width, height
+align: 水平对齐方式
+valign: 垂直对齐方式
+colspan/rowspan: 列/行合并数量, 注意删除多余的单元格
+nowrap="nowrap": 单元格中内容不自动换行
+
+============ 12 ============
+
+表格结构化
+<table>
+	<caption>
+		表格标题, 自动居中
+	</caption>
+	
+	<thead>
+		<tr>
+			<th>表头第1列, 自动加黑居中</th>
+			<th>表头第2列</th>
+			<th>表头第3列</th>
+		</tr>
+	</thead>
+	
+	<tbody>
+		<tr>
+			<td>表体第1列</td>
+			<td>表体第2列</td>
+			<td>表体第3列</td>			
+		</tr>
+	</tbody>	
+		
+	<tfoot>
+		<tr>
+			<td colspan="3">表尾汇总</td>
+		</tr>		
+	</tfoot>
+</table>
+
+
+<colgroup>: 表格直列化
+
+<table>
+	
+	<colgroup bgcolor="red" span="2"></colgroup>	span是指多少列, 不是第几列, 此处首2列都红
+	
+	<col span="2"></col>
+	<col bgcolor="red"></col>		这样可以跳过前2列, 使接下来一列列为红色
+	
+</table>
+
+============ 14 ============
+
+<a href="www.google.com" target="_blank">
+target values:
+_blank: 新窗口
+_self: 自身窗口, 默认值
+(使用框架时:)
+_parent: 上一级窗口打开
+_top: 本窗口的顶级窗口打开
+
+============ 15-16 ============
+
+<a href = "mailto:xx@xxx.com">邮箱链接</a>
+
+<a name = "anchor">创建锚点</a>
+<a href = "targetPage.html#anchor">锚点链接</a>
+
+<a href = "#">空链接</a>
+<a href = "#"
+	onClick="this.style.behavior='url(#default#homepage)';
+	this.sethomepage('http://www.xxx.com')">
+	设置首页</a>
+	
+<a href = "#"
+	onClick="javascript:window.external.addfavorite('http://www.xxx.com', 'xxxDescription')">
+	加入收藏夹</a>
+
+
+============ 17-18 ============
+
+单选按钮
+<input name="gender" type="radio" id="man" value="Male" checked="checked"/>Male
+<input name="gender" type="radio" value="Female"/>Female
+
+<lable>标注内容</lable>
+attributes:
+lable的id属性与相关元素的id相同
+<lable for="id">Male</lable>
+
+完整示例:
+<input name="gender" type="radio" id="man" value="Male"/>
+<lable for="man">Male</lable>
+
+<lable>
+	<input name="gender" type="radio" value="Female"/>Female
+</lable>
+此时点文字部分同样可以选中单选按钮
+
+============ 19 ============
+
+多选按钮
+<input name="brand" type="checkbox" value="dell" checked="checked"/>
+<input name="brand" type="checkbox" value="thinkpad" checked="checked"/>
+<input name="brand" type="checkbox" value="thinkpad"/>
+
+列表菜单(下拉菜单size="0")
+<select name="city" size="9" multiple="multiple">
+	<option value="bj">beijing</option>
+	<option value="sh">shanghai</option>
+	<option value="zj" selected="selected">zhejiang</option>
+	
+	<optgroup label="zhejiang">这行将黑体斜体显示且不可选, 子选项缩进方式显示
+		<option value="hz">hangzhou</option>
+		<option value="nb">ningbo</option>
+		<option value="wz">wenzhou</option>
+	</optgroup>
+</select>
+
+文件上传框
+<input type="file" name="browser" size="10"/>
+
+多行文本框
+<textarea name="newpost" cols="30" rows="20">
+	default text content
+</textarea>
+
+按钮
+<input type="button" name="normal" value="普通按钮">
+<input type="submit" name="submit" value="提交按钮">
+<input type="reset" name="reset" value="重置按钮">
+<input type="image" name="image" src="picture_url">
+
+隐藏域
+<input type="hidden" name="hidden" value="string">
+
+表单外框及标题
+<fieldset>
+	<legend>table titile</legend>
+</fieldset>
+
+============ 20 ============
+
+插入flash等插件
+<embed src="flashFile.swf" width="700" height="100" wmode="transparent"></embed>
+插入wmv格式视频
+<embed src="video.wmv"></embed>
+
+wmode="transparent": 使flash背景部分透明, 但对flash文件有一定要求
+
+通过media player插入音乐, 视频等(IE实测可用, chrome没反应)
+<object align=middle class=OBJECT classid=CLSID:22d6f312-b0f6-11d0-94ab-0080c74c7e95 id=MediaPlayer width=356 height=80>
+	<param name="ShowStatusBar" value="true">
+	<param name="AutoStart" value="true">	
+	<param name="Filename" value="mp3filename.mp3">
+</object>
+
+插入音乐, 无控制面板:
+<bgsound src="" loop="-1"/>
+
+插入流媒体:
+<embed src="http://video.swf" allowFullScreen="true" quality="high" width="480" height="400" align="middle"
+	allowScriptAccess="always" type="application/x-shockwave-flash">
+</embed>
+
+============ 22 ============
+
+web标准3部分:
+内容: html文字
+结构: dom树
+表现: css
+行为: javascript
+
+<html><!-- 一个html, css, javascript 结合的例子-->
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8" />
+	<style type="text/css">
+		h1{
+			width:200px;
+			height:50px;
+			background:grey;
+			border:solid 2px red
+		}
+		
+		p{
+			width:400px;
+			height:200px;
+			border:solid 2px blue		
+		}
+		
+		.yellow{
+			background:yellow;
+		}
+	</style>
+
+	<script type="text/javascript">
+		window.onload = function(){
+			var head1 = document.getElementById("head1");
+			head1.onmouseover = function(){
+				this.className="yellow";	//给head设置了class, 名字是yellow. 在css设置中, class名字为yellow的, 背景色修改为yellow
+			};
+			
+			head1.onmouseout = function(){
+				this.className="";		//鼠标out时, 去除class. 这样就按照css中h1规则, 背景色为蓝色
+			};
+		};
+	</script>
+
+</head>
+
+<body>
+	<h1 id="head1">h1 title</h1>
+	<p>
+		亲爱的同学们，大家好！
+		今年的GSO E-board 竞选，我们中国的学生周圣盛同学是GSO 2015-2016学年的候选人之一。周圣盛是比较文学系翻译研究专业的博士生，以下是她的写给BU研究生同学的一封信以及她的Platform. 希望大家给她投上一票！谢谢各位支持！
+		投票方法：登录进入Blackboard，点击左下角的My Organization下的GSO，进入选举页面。
+	</p>
+</body>
+</html>
+
+============ 23 开始css============
+
+/*css语法结构: 选择符{属性:值}*/
+body{
+	font-size:12px;
+	bgcolor:grey;
+}
+
+/*css长度单位*/
+px: 像素
+em: 当前文本格式的'm'的宽度, 是个相对尺寸. 1em就是什么都不变, 也可以写100%
+
+/*颜色*/
+十六进制: #660066
+颜色名称: #black
+三原色单位: rgb(255, 0, 0)
+
+/*字体*/
+字号: font-size: 12px
+字体: font-family: "宋体", Arial  /*注意: 别人电脑中可能没有指定的字体. 可以指定多个字体, 第一个没有时候使用下一个*/
+字重: font-weight: normal  /*||bold*/
+行高: line-height: 1.5em	/*字号12-14px, 习惯行高1.5-1.8; 字号越大, 行高越小*/
+
+当line-height和容器高度相同时, 自然垂直居中
+height:100px;
+line-height:100px;
+
+/*完整working sample*/
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+
+<style type="text/css">
+h1{
+	color:red;
+	font-size:30px;
+	
+}
+
+h2{
+	border:1px solid black;
+	width:200px;
+	height:auto;
+	line-height:100px;
+}
+
+em{
+	color:#C90;
+	font-style:normal;
+}
+
+span{
+	font-size:2em;
+	color:#63F;
+	font-family:"Courier New", Courier, monospace;
+	font-weight: bold;
+}
+
+.testcls1, li{
+	font-weight:bold;
+	text-decoration:underline;
+}
+
+#testid1{
+	font-weight:bold;
+	color:#90F
+}
+</style>
+
+</head>
+
+<body>
+	<h1><span>智者abcABC</span>减半，愚者全无。</h1>
+	<h2>在家由父，出嫁从夫</h2>
+	<p><strong>痴人畏妇，</strong><em>贤女敬夫。</em></p>
+	<p>是非终日有，不听自然无。</p>
+	<p><span class="testcls1">竹篱defDEF</span>茅舍风光好，道院僧房终不如。</p>
+	<ul>
+		<div id="testid1">宁可正而不足，不可邪而有余。</div>
+		<li>宁可信其有，不可信其无。</li>
+		<li>命里有时终须有，命里无时莫强求。</li>
+		<li>道院迎仙客，<a href="#">书堂隐相儒</a>。</li>
+		<li>庭栽栖凤竹，池养化龙鱼。</li>
+	</ul>
+</body>
+
+============ 24 ============
+
+/*css选择器*/
+tag选择器:
+h1{
+	color:red;
+	font-size:30px;
+}
+<h1>智者abcABC减半，愚者全无。</h1>
+
+class选择器:
+.testcls1, li{
+	font-style:italic;
+}
+<span class="testcls1">竹篱defDEF</span>
+
+id选择器: (id不能以数字开头)
+#testid1{
+	font-weight:bold;
+	color:#90F
+}
+<li id="testid1">宁可正而不足，不可邪而有余。</li>
+
+============ 26 ============
+
+/*css在html中使用的方式*/
+内联式: 直接写在现有的标记中
+<p style="color:red">用css内联方式设置p颜色</p>
+
+嵌入式: 用<style></style>写在文件头部
+
+外部链接式: 将css样式表写在一个独立的css文件中, 然后用<link>标签在文件头部调用
+<head>
+	<link href="mycss.css" rel="stylesheet" type="text/css">
+</head>
+
+/*css之间的继承*/
+father.css中内容:
+h1{
+	color:red;
+	font-size:30px;
+}
+
+son.css:
+h1{
+	@import url("father.css");
+	font-family:"宋体";
+}
+
+============ 27 ============
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<title>Untitled Document</title>
+	<style type="text/css">
+		ul{
+			width:auto;
+			height:100px;
+			background:url(bg.jpg);
+			border:#blue dashed 2px;
+		}
+		li{
+			width:150px;
+			height:100px;
+			float:left;		/*改为水平右向列表*/
+			list-style:none; /*去除前面小点*/
+			line-height:100px;  /*让文字在垂直方向上居中*/
+			text-align:center;  /*让文字在水平方向上居中*/
+			background:url(divider.jpg) no-repeat right;	/*让分割线图在每个li的right边*/
+			color:#9C6;
+			border:#red dashed 1px;
+		}
+	</style>
+</head>
+
+<body>
+	<ul>
+	  <li>宁可正而不足</li>
+	  <li>不可邪而有余</li>
+	  <li><img src="einstein.jpg" height="100%"/></li>
+	  <li>宁可信其有</li>
+	  <li>不可信其无</li>
+	</ul>
+</body>
+
+内联式 > id选择器 > class选择器 > tag选择器
+
+提权: !important
+p{
+	background-color:green !important;
+	background-color:red;		/*最终bg还是为green*/
+}
+
+============ 28 ============
+
+段始缩进:
+text-indent:2em;
+
+文本水平对齐方式:
+text-align: left||center||right;
+
+white-space处理:
+pre: 保留空白和换行格式
+normal: 默认值, 忽略一切空白和换行, 在页面边自动换行
+nowrap: 忽略一切空白和换行, 在页面边不换行
+
+字母大小写转换:
+text-transform: non||capitalize||uppercase||lowercase
+
+元素的垂直对齐方式vertical-align:
+sub: 下标方式对齐
+super: 上标方式对齐
+top: 元素的顶端与行中最高元素的顶端对齐
+middle||central: 中间对齐
+baseline||bottom: 底端
+
+/*完整working sample*/
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+<style type="text/css">
+body {
+	font-size: 14px;
+	line-height: 1.5em;
+	font-family: "Courier New", Courier, monospace;
+}
+#testid {
+	width: 500px;
+	border: #00F dashed 1px;
+	line-height: 1.5em;
+	white-space: normal;
+	text-indent: -2em;
+	text-transform: uppercase;
+	padding:0.5em;
+	padding-left:2.5em;
+}
+span {
+	vertical-align: super;
+}
+img {
+	vertical-align:middle;
+}
+input {
+	height: 50px;
+	vertical-align: middle;	
+}
+</style>
+</head>
+
+<body>
+    <p id="testid"> 亲爱的同学们，大家好！
+      今年的GSO E-board 竞选，我们中国的学生周圣盛同学是GSO 2015-2016学年的候选人之一。
+      周圣盛是比较文学系翻译研究专业的博士生，以下是她的写给BU研究生同学的一封信以及她的Platform. 希望大家给她投上一票！
+      谢谢各位支持！
+      投票方法：登录进入Blackboard，点击左下角的My Organization下的GSO，进入选举页面。 
+    </p>
+
+  <div> <img src="einstein.jpg" height="200"/>E=m*c<span>2</span> </div>
+
+<br />
+
+<form action="#" method="get">
+  <table width="500" border="0" cellspacing="0" cellpadding="0" align="center">
+    <tr>
+      <td>账  号
+        <input name="username" type="text" id="username" /></td>
+    </tr>
+    <tr>
+      <td>密  码 </td>
+    </tr>
+    <tr>
+      <td>确  定 </td>
+    </tr>
+  </table>
+</form>
+
+============ 29 伪类 ============
+
+伪类: 不是一种类, 实际上是一个状态
+
+链接状态(顺序不可变):
+未访问   a:link {color: #FF0000}
+已访问   a:visited {color: #00FF00}
+悬浮      a:hover {color: #FF00FF}
+点击时   a:active {color: #0000FF}
+
+/*完整working sample*/
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+<style type="text/css">
+a:link{
+	text-decoration:none;
+	color:red;
+}
+a:visited{
+	text-decoration:line-through;
+	color:blue;
+}
+
+a:hover{
+	text-decoration:underline;
+	color:green;
+}
+
+a:active{
+	color:black;
+	text-decoration:line-through;	
+}
+</style>
+</head>
+
+<body>
+<p> 亲爱的同学们，大家好！
+	今年的GSO E-board 竞选，我们中国的学生周圣盛同学是GSO 2015-2016学年的候选人之一。
+	周圣盛是比较文学系翻译研究专业的博士生，以下是她的写给BU研究生同学的一封信以及她的Platform. 希望大家给她投上一票！
+	谢谢各位支持！
+	投票方法：登录进入<a href="http://www.google.com">Blackboard</a>，点击左下角的My Organization下的GSO，进入选举页面。 
+</p>
+</body>
+	
+============ 30 ============
+
+伪类的语法:
+选择器: 伪类名称{
+		属性:值
+}
+input:focus {
+	border:4px solid red;
+}
+
+/*完整working sample*/
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+<style type="text/css">
+input {
+	height: 30px;
+	vertical-align: middle;	 /*设置该元素的对齐方式, 不是其内部的对齐方式*/
+	line-height:30px;		/*使用技巧使内容居中对齐. 好像默认值本来就是居中对齐*/
+}
+input:focus {
+	border:4px solid red;
+}
+</style>
+</head>
+
+<body>
+<form action="#" method="get">
+  <table width="500" border="0" cellspacing="0" cellpadding="0" align="center">
+    <tr>
+      <td>账  号
+        <input name="username" type="text" id="username" /></td>
+    </tr>
+    <tr>
+      <td>密  码
+      	<input name="password" type="password" id="password" /> </td>
+    </tr>
+    <tr>
+      <td><button>确  定</button> 
+      </td>
+    </tr>
+  </table>
+</form>
+</body>
+
+通过JS实现同样效果:
+/*input:focus, */.blue {
+	border:2px solid red;
+	background-color:#FFC;
+}
+
+<script type="text/javascript">
+var username=document.getElementById("username");
+username.onfocus=function(){
+	this.className="blue";
+};
+username.onblur=function(){
+	this.className="";
+};
+</script>
+
+通过JQuery实现同样效果:
+$("#username").focus(function(){
+  this.attr("class", "blue"));
+});
+$("#username").blur(function(){
+  this.attr("class", ""));
+});
+
+============ 31 选择器 ============
+
+/*对所有的元素*/
+*{attr:value}
+注意, 查询了不必要的元素, 指定的效率非常低
+
+/*包含选择器, 间有空格*/
+e1 e2 {attr:value}
+表示e1后代中e2元素使用这个样式
+table span {font-size:20px;}
+
+#h1id span {font-size:20px;}
+id为h1id的后代中span使用这个样式
+
+/*给某一个元素同时应用多个class与id*/
+<p class ="cls1 cls2" id="id6"></p>
+
+/*多个选择器使用同样的样式, 间有逗号*/
+#idxx, .clsxx , #h1id span {font-size:20px;}
+id为idxx, class为clsxx及id为h1id下的span都使用这个样式
+
+/*某一个元素同时使用tagname和attri, 紧密连接*/
+h1#content{font-size:20px;}
+同时是h1并且id是content的元素使用这个样式
+h5.mycls{font-size:20px;}
+同时是h5并且class名是mycls的元素使用这个样式
+
+============ 32 背景图控制 ============
+
+background-color: yellow;
+background-image:url(NaotoKan.jpg);
+
+背景图重复方式:
+background-repeat: repeat repeat-x repeat-y no-repeat;
+
+背景图位置控制(相对于其父容器):
+background-position:top center;
+background-position: 20px, 40px;
+
+ 背景滚动时控制:
+ background-attachment:fixed scroll
+ 
+ <head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Untitled Document</title>
+<style type="text/css">
+body
+{
+	font-size:16px;
+	line-height:1.5em;
+	background-image:url(NaotoKan.jpg);
+	background-attachment:fixed;
+}
+
+div{
+	width:500px;
+	height:850px;
+	margin-left:auto;
+	margin-right:auto;
+	
+	border:2px red solid;
+	color:red;
+	padding:5px;
+	
+	background-color:#FFC;
+	background-image:url(NaotoKan.jpg);
+	background-repeat:no-repeat;
+	background-position:bottom center;
+	/*background:#FFC url(NaotoKan.jpg) no-repeat bottom center fixed*/
+}
+</style>
+</head>
+
+<body>
+<div>
+  <p>2014年11月26日早7时，68岁的前首相菅直人手持一把塑料伞冒雨出现在东京都府中市路边，卖力地进行街头演讲，但长达一个多小时的演讲几乎无人驻足倾听。</p>
+  <p> 菅直人在演讲中将首相安倍晋三比作“二战”头号战犯希特勒。菅直人演讲期间，路人大都视若无睹匆匆而过，上前与他握手的只有两人，一个是菅直人旧识，另一个是女大学生。</p>
+  <p>即使如此，菅直人演讲结束后对周边数名记者说：“深切感受到大家的支持。”《产经新闻》调侃说，前首相展现出“谜一样的自信”。 </p>
+</div>
+
+</body>
+
+============ 33  ============
+
+通过设置border-bottom实现可控的下划线
+<head>
+<style type="text/css">
+body{
+	font-size:14px;
+}
+a{
+	/*border:red 2px dashed;*/
+	padding-bottom:3px;
+	text-decoration:none;
+}
+a:link{
+	color:#F60;
+}
+a:hover{
+	/*text-decoration:underline;*/
+	border-bottom:blue 2px dotted;
+}
+</style>
+</head>
+
+<body>
+<p><a href="#">文字颜色和下划线不一致</a></p>
+</body>
+
+仿三维按钮
+#lt{
+	background-color:#FFC;
+	font-size:16px;
+	width:80px;
+	border-top: #FC9 2px solid;
+	border-left:#FC9 2px solid;
+	border-bottom: #C33 2px solid;
+	border-right: #C33 2px solid;
+	text-align:center;
+}
+
+<div id="lt">3d text</div>
+
+============ 34 ============
+
+标记的水平位置控制
+<style type="text/css">
+li.out{
+	list-style-type:circle;
+	list-style-position:outside;
+}
+li.in{
+	list-style-position:inside;
+}
+</style>
+
+<ul>
+	<li class="out">外标记</li>
+    <li class="out">外标记</li>
+	<li class="in">内标记</li>
+    <li class="in">内标记</li>
+</ul>
+
+用图片做标记
+li.pic{
+	padding-left:60px; /*给图片空出位置*/
+	line-height:60px;	/*垂直居中文字*/
+	height:60px;
+
+	border: red 3px solid;
+	background:#FFC url(../Alex%20Shutin/98359.gif) no-repeat 5px center;
+	margin-bottom:3px;
+	
+	list-style-type:none;
+	
+	/*	list-style-image:url(../Alex%20Shutin/98387.gif); 标准方法不好控制, 不建议使用*/
+}
+<ul>
+	<li class="pic">图像</li>
+    <li class="pic">图像</li>
+	<li class="pic">图像</li>
+</ul>
+
+控制border的大小
+div{
+	width:200px;
+	min-height:200px;
+	background:#CCC;
+	border: 2px red solid;
+/*设置了min-height后, border从min-height值开始, 自动随内容变大.
+  设置了height后,border不随内容变化.
+  设置了max-height后, border自动随内容变大.
+*/
+}
+
+<div>
+	磨刀恨不利，刀利伤人指；<br /> 
+	求财恨不多，财多害自己。<br />
+	知足常足，终身不辱；知止常止，终身不耻。<br />
+	有福伤财，无福伤己。<br />
+	差之毫厘，失之千里。<br />
+	若登高必自卑，若涉远必自迩。<br />
+	三思而行，再思可矣。<br />
+	动口不如亲为，求人不如求己。
+</div>
+
+============ 34 div+css ============
+
+div是一个容器. 是xhtml中指定的, 专门用于布局的容器对象. CSS布局又称div+css布局
+div本身会占用一行
+盒子模型的4个区域: 内容content; 填充padding; 边框border; 边界margin
+
+#bigbox{
+	width:300px;
+	height:300px;
+	background-color:#9FC;
+	border:black 2px solid;
+}
+#smallbox{
+	width:100px;	/*这里定义的宽和高都是内容的大小, paddding和margin额外计算*/
+	height:100px;
+	background:#CCC;
+	border:#F00 5px solid;
+	padding:10px;
+	margin:10px;
+}
+<div id="bigbox">大盒子
+	<div id="smallbox">小盒子</div>
+</div>
+
+============ 35-36 浮动 ============
+
+浮动就像在水里放的木块, 正常情况下木块从上向下一个压着一个
+当某个木块设置了float后飘走了, 则其下一个木块上浮占用了其位置
+
+如果这个木块已经在最left, 再float left将没有空间, 所以仍然停留在原地, 但是下一个木块将上浮也使用同一个位置
+如果此时盒子1和盒子2同样大小, 盒子2的文字将没地方显示, 文字将被挤到下一个盒子3的位置, 从而看起来好像是盒子2和盒子3在一起
+#left{
+	width:150px;
+	height:350px;
+	background:#CCC;
+	border:2px solid black;
+	float:left;
+}
+#center{
+	width:450px;
+	height:350px;
+	background:#0F6;
+	border:2px solid red;
+	float:left;
+}
+#right{
+	width:450px;
+	height:350px;
+	background:#FC0;
+	border:2px solid blue;
+	float:left;
+}
+<div id="left">left</div>
+<div id="center">center</div>
+<div id="right">right</div>
+
+div水平居中
+#big{
+	width:1062px;
+	margin:100px auto;
+}
+#left{
+	width:150px;
+	height:350px;
+	background:#CCC;
+	border:2px solid black;
+	float:left;
+}
+#center{
+	width:450px;
+	height:350px;
+	background:#0F6;
+	border:2px solid red;
+	float:left;
+}
+#right{
+	width:450px;
+	height:350px;
+	background:#FC0;
+	border:2px solid blue;
+	float:left;
+}
+</style>
+</head>
+
+<body>
+<div id="big">
+    <div id="left">left</div>
+    <div id="center">center</div>
+    <div id="right">right</div>
+</div>
+
+============ 37 ============
+
+在windows下拉单中可以看到:
+control+F2, 插入对象的快捷键
+shift+F11, CSS规则定义器
+
+#header {
+	background-color: #CCC;
+	height: 100px;
+	width: 608px;
+	margin-top: 10px;
+	margin-right: auto;
+	margin-bottom: 10px;
+	margin-left: auto;
+	border: 2px solid #F0F;
+	border-radius:5px;
+	box-shadow:0 0 5px 0;
+	/*box-shadow: h-shadow v-shadow blur spread color inset;*/
+}
+#container{
+	width:608px;
+	height:354px;	/*不建议省略, 否则边框显示将高度为0. 后面会有自动伸展方案*/
+	border:2px red solid;
+	border-radius:5px;
+	margin:0px auto;
+}
+
+#left{
+	width:150px;
+	height:350px;
+	background:#CCC;
+	border:2px solid black;
+	float:left;
+}
+#right{
+	width:450px;
+	height:350px;
+	background:#FC0;
+	border:2px solid blue;
+	float:left;
+}
+<div id="header">Content for  id "header" Goes Here</div>
+<div id="container">
+    <div id="left">left</div>
+    <div id="right">right</div>
+</div>
+
+============ 38 ============
+
+clear清除之前浮动对后面的影响
+/*当浮动了很多元素之后, 需要另起干净一行, 可以制作一个空白div, 并设置clear:both*/
+#one{
+	width:300px;
+	height:200px;
+	background:#CCC;
+	float:right;
+}
+#two{
+	width:200px;
+	height:200px;
+	background:#FC0;
+	clear:both;
+	/*这时候这个box继续被压在原位*/
+}
+<div id="one">box one</div>
+<div id="two">box two</div>
+
+
+容器盒子自动伸展
+#container{
+	width:608px;
+	/*height:354px;*/
+	border:5px red solid;
+	margin:0px auto;
+}
+#left{
+	width:150px;
+	height:350px;
+	background:#CCC;
+	border:2px solid black;
+	float:left;
+}
+#right{
+	width:450px;
+	height:350px;
+	background:#FC0;
+	border:2px solid blue;
+	float:left;
+}
+.clear{
+	clear:both;
+}
+</style>
+</head>
+<body>
+<div id="header">Content for  id "header" Goes Here</div>
+<div id="container">
+    <div id="left">left</div>
+    <div id="right">right</div>
+    <div class="clear"></div>
+</div>
+
+============ 38 ============
+
+css中元素的分类
+块级元素{display:block}
+每个块级元素都从一个新行开始, 并且其后的元素也需另起一行开始. 块级元素可以作为其他元素的父元素用于布局. 如: div, h1, p, table, body
+
+内联元素{display:inline}
+内联元素不需要新行显示, 内联元素可以为任何元素的子元素. 如 a, em, span
+
+隐藏元素{display:none}
+当元素被设置为display:none时, 浏览器会完全忽略这个元素
+
+span{
+	display:block;
+}
+hello <span>world!</span>
+这里hello world 默认下应该一行, 现在变为2行
+
+p{
+	display:inline;
+}
+</style>
+hello p <p>world p!</p>
+
+============ 39 ============
+
+<style type="text/css">
+/*公共样式部分*/
+body{
+	margin:0; 
+	padding:0;
+	font-size:12px;
+	line-height:1.5em;
+}
+.clean{
+	clear:both;
+}
+#header, #navi, #cont, #footer{
+	width:700px;
+	margin:0 auto;
+}
+#header{
+	position:fixed;
+	top:0px;
+	left:0px;
+	right:0px;
+	border:2px red solid;
+}
+/*navi样式部分*/
+#navi{
+	height:30px;
+	line-height:30px; /*文字垂直居中*/
+	background:#69C;
+	box-shadow:0 0 5px 0;
+	margin-top:463px;
+}
+#navi ul{
+	list-style-type:none;
+	margin:0;
+	padding:0;
+}
+#navi ul li{
+	width:100px;
+	float:left;
+	text-align:center; /*文字水平居中*/
+	/*border:#F00 1px solid;*/
+}
+#navi ul li a:link{
+	color:black;
+}
+#navi ul li a:visited{
+	color:#666;
+}
+#navi ul li a:hover{
+	color:red;
+	font-size:14px;
+}
+#navi ul li a:active{
+	color:yellow;
+	font-size:14px;
+}
+/*cont样式部分*/
+#cont{
+	background-color:#CCC;
+}
+#left{
+	width:150px;
+	height:700px;
+	float:left;
+	text-align:center;
+}
+#left p img{
+	border:red 1px solid;
+	padding:1px;
+}
+#left p{
+	margin:5px 10px;
+}
+#right{
+	width:550px;
+	height:700px;
+	background: #1F4B6E url(androidlogo.png) right bottom no-repeat;
+	background-size:550px;
+	float:left;
+}
+/*footer样式部分*/
+#footer{
+	margin-bottom:20px;
+	text-align:right;
+}
+</style>
+
+<body>
+<!--start banner picture part-->
+<div id="header"><img src="pic.jpg" width="700"/></div>
+
+<!--start navi bar part-->
+<div id="navi">
+	<ul>
+    	<li><a href="#">首页</a></li>
+        <li><a href="#">心情日记</a></li>
+        <li><a href="#">神马</a></li>
+        <li><a href="#">一起走到</a></li>
+		<li><a href="#">从明天起</a></li>
+        <li><a href="#">纸飞机</a></li>
+        <li><a href="#">下一站</a></li>
+	</ul>
+</div>
+
+<!--start content part-->
+<div class="clean"></div>
+<div id="cont">
+  <div id="left">
+  	<p><img src="NaotoKan.jpg" width="120" /></p>
+    <p>图片文字</p>
+    <p>那不是得打很多字!那不是得打很多字!那不是得打很多字!那不是得打很多字!那不是得打很多字!</p>
+
+    <p><img src="einstein.jpg" width="120" /></p>
+    <p>图片文字2</p>
+    <p>那不是得打很多字!那不是得打很多字!那不是得打很多字!那不是得打很多字!那不是得打很多字!</p>
+  </div>
+  <div id="right">Content for  id "right" Goes Here</div>
+  <div class="clean"></div> <!--用于盒子自动伸展-->
+</div>
+
+<!--start footer part-->
+<div id="footer">Content for  id "footer" Goes Here</div>
+</body>
+
+============ other ============
+
+固定顶端导航条
+#header{
+	position:fixed;
+	top:0px;
+	left:0px;
+	right:0px;
+}
+#navi{
+	height:30px;
+	line-height:30px; /*文字垂直居中*/
+	background:#69C;
+	box-shadow:0 0 5px 0;
+	margin-top:463px; /*这个数字是固定部分的高度, 需要提前让出来*/
+}
+<div id="header"><img src="pic.jpg" width="700"/></div>
+
+<!--start navi bar part-->
+<div id="navi">
+	<ul>
+    	<li><a href="#">首页</a></li>
+        <li><a href="#">心情日记</a></li>
+        <li><a href="#">神马</a></li>
+        <li><a href="#">一起走到</a></li>
+		<li><a href="#">从明天起</a></li>
+        <li><a href="#">纸飞机</a></li>
+        <li><a href="#">下一站</a></li>
+	</ul>
+</div>
+
+============ 40 ============
+
+两个div并列, 长度为min-height或max-height时, 内容长度不同导致长度差距
+将被动一侧的div的背景放在box中. 也就是主动一侧的背景色有2层
+解决方案: 容器盒子自动伸展
+#cont{
+	background-color:#CCC;
+}
+.clean{
+	clear:both;
+}
+<div id="cont">
+  <div id="left">Content for  id "left" Goes Here</div>
+  <div id="right">Content for  id "right" Goes Here</div>
+  <div class="clean"></div> <!--用于盒子自动伸展-->
+</div>
+

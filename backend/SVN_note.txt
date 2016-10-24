@@ -1,0 +1,164 @@
+============ 5 server安装 ============
+
+------------服务器端下载------------
+windows:(解压, 加path):
+https://subversion.apache.org/packages.html
+
+Ubuntu:
+apt-get install subversion
+apt-get install libapache2-svn
+
+------------测试svn安装成功------------
+svn help
+
+------------建立Repository------------
+svnadmin help
+d:
+cd workspace
+svnadmin create svnrepository		#这个时候就在当前目录, 也就是d盘workspace下建立一个带svn目录结构的svnrepository. 严禁手动修改
+
+------------设置账号------------
+在conf/svnserve.conf文件中进行各种设置:
+去掉 # password-db = passwd 前的#号, 启用密码文件
+到 passwd 中, 建立一个新用户. 给项目组每个人都设一个账号, 例如用户u1, 密码p1
+u1=p1
+
+------------启动svn服务器------------
+windows:
+svnserve -d -r d:\workspace\svnrepository
+以deamon, root方式启动
+开启后保持窗口打开
+
+Ubuntu:
+svnserve -d -r /home/dataorta/svnrepository
+开启后无需保持窗口, 重启后不会自动开始服务. 检查是否开启服务:
+ps -ef | grep svnserve
+
+============ 6 windows系统中使用svn客户端 ============
+
+客户端下载:
+http://tortoisesvn.net/downloads.html
+
+checkout 下载:
+任意处建一目录, 例如u1
+u1目录内右键 >> tortoiseSVN >> Repo-browser >>  填入例如本地URL: svn://localhost , 窗口中看到地址指向的库, 目前为空
+u1目录内右键 >> SVN Checkout >> URL of repository: 选择localhost服务器 >> ok >>查看u1目录里, 此时可以看到一个.svn目录
+
+checkin (Commit)上传:
+u1目录内新建目录及文件, 例如 project1/hello.java
+project1目录上右键 >> tortoiseSVN >> Add... >> ok >> ok
+project1目录上右键 >> SVN Commit... >> 在message框内填注释, 例如: first submission >> ok >> 填用户名密码 >> ok >> ok
+
+检查是否成功:
+u1目录内右键 >> tortoiseSVN >> Repo-browser >>  填入例如本地URL: svn://localhost , 窗口中看到地址指向的库, 可以看到project1/hello.java
+新建用户u2目录 >> u2目录内右键 >> SVN Checkout >> URL of repository: 选择localhost服务器 >> ok >> 可以看到完整的项目被复制下来了
+
+============ 7 Eclipse中安装svn客户端 ============
+
+svn的Eclipse插件: subclipse
+
+安装方法1:
+Eclipse >> Help >> Install New Software... >> Work with: 粘贴地址: http://subclipse.tigris.org/update_1.10.x >> Add... >> Name: 任意填写, 例如subclipse >> ok
+全选 >> Next >> ... 各种确认
+
+安装方法2(推荐):
+下载插件zip包: http://subclipse.tigris.org/servlets/ProjectDocumentList?folderID=2240
+Eclipse >> Help >> Install New Software... >> Add... >> Archive... >> site-1.10.9.zip >> Name: 任意填写, 例如subclipse >> ok >> 全选 >> Next >> ... 各种确认
+
+检查是否成功:
+Eclipse >> Window >> Show View >> Other... >> 可以看到SVN目录
+
+============ 8 Eclipse中使用svn客户端 ============
+
+打开SVN Repositories视图:
+Eclipse >> Window >> Show View >> Other... >> SVN >> SVN Repositories
+视图上右键 >> New >> Repository Location... >> Url: 填写 svn://localhost >> Finish >> 这时可以看到本地SVN Repository了
+
+------------checkin一个项目------------
+New一个Java Project: P1
+New一个class: T1
+public class T1 {
+	public static void main(String[] args) {
+		System.out.println(A1);
+	}
+}
+P1项目上右键 >> Team >> Share Project >> SVN >> next若干次 >> 填写提交注释 >> Finish >> 填用户名密码 >> ok
+SVN Repositories视图中, svn://localhost 上刷新, 可以看到svn库中的P1目录
+P1项目上右键 >> Team >> Commit... >> 填写提交注释 >> Finish
+SVN Repositories视图中, svn://localhost 上刷新, 可以看到svn库中P1项目已有内容, 并且有版本号: 3
+
+------------其他用户checkout项目------------
+第二个用户想checkout该项目(注意: 需要一个新的workspace避免两个用户之间数据互相干扰)
+SVN Repositories视图中, 在想要checkout的项目上, 例如P1上右键, checkout
+
+------------其他用户checkout项目更新------------
+第一个用户修改code后:
+public class T1 {
+	public static void main(String[] args) {
+		System.out.println("A2");
+	}
+}
+P1项目上右键 >> Team >> Commit... >> 填写提交注释, 例如: update content >> ok
+
+第二个用户手动更新:
+P1项目上右键 >> Team >> Update to HEAD
+
+------------比较版本------------
+第一个用户修改code后:
+public class T1 {
+	public static void main(String[] args) {
+		System.out.println("A2");
+		System.out.println("A3");		
+	}
+}
+T1.java上右键 >> Team >> Compare with >> 选择合适的比较对象, 可以方便发现不同
+
+------------协调不同组员的代码差异------------
+第一个用户将如下修改的代提交到repository
+System.out.println("A2");		//版本8内容
+System.out.println("A3");		//提交后版本9含有该内容
+
+第二个用户也基于A2版本做了如下修改, 也提交到repository
+System.out.println("A2");
+System.out.println("B1");		//提交时会发现Transaction is out of date问题
+
+第二个用户手动更新:
+P1项目上右键 >> Team >> Update to HEAD
+系统下载第一个用户的版本8, 版本9 和第二个用户mine版本
+public class T1 {
+	public static void main(String[] args) {
+<<<<<<< .mine
+		System.out.println("A2");
+		System.out.println("B1");
+=======
+		System.out.println("A2");
+		System.out.println("A3");	
+>>>>>>> .r9
+	}
+}		//手动解决差异后, 删除下载的多余版本文件, Commit
+
+------------看版本更替总图------------
+想看的文件/项目上右键 >> Team >> Show Revision Graph >> 点小方格看相关信息
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

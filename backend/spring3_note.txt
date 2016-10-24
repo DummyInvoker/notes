@@ -1,0 +1,135 @@
+﻿
+============ 1-2 ============
+
+spring MVC 是和 struts2 竞争, 且做的更好
+
+
+AbstractJUnit4SpringContextTests的使用
+@ContextConfiguration("classpath:beans.xml")	//原来用ClassPathXmlApplicationContext("beans.xml")初始化factory, 参考spring的video8
+public class UserDAOTest extends AbstractJUnit4SpringContextTests{
+	@Resource(name="userDAO")					//直接field注入, 不需要写@Resource setters()
+	private UserDAO userDAO;
+	
+	@Test
+	public void testSave() {
+		this.userDAO.save(new User());
+	}
+}
+
+============ 3 getBean可以使用generic type ============
+
+public class UserDAOTest2 {
+	@Test
+	public void testSave() {
+		ApplicationContext context = new ClassPathXmlApplicationContext("beans.xml");		//老方法取得容器
+		//UserDAO userDAO = (UserDAO)context.getBean("userDAO");					//老方法取出bean时是一个object类, 需cast
+		
+		UserDAO userDAO = context.getBean("userDAO", UserDAO.class);				//新方法, 指定类型...
+		userDAO.save(new User());
+	}
+}
+
+============ 4 第三种配置方式(XML, annotation, JavaConfig) ============
+
+step1, beans.xml中
+<beans>
+	<context:component-scan base-package="com.bjsxt.spring30.config"></context:component-scan>
+</beans>
+不需要定义具体的bean
+
+step2, com.bjsxt.spring30.config包下有一个AppConfig.java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration			//这个注解表示不要看做一个类, 要看做一个配置文件.
+public class AppConfig {
+	@Bean				//定义一个bean. 这里没有定义name, 所以用默认的方法名
+	public UserDAO userDAO() {
+		return new UserDAOImpl();			//相当于xml中class的定义部分
+	}
+}
+注意要用到cglib-nodep-3.1.jar(这个是包含了所有的dependency整合包, 不需要独立的asm)
+
+============ 5 JavaConfig方式的属性注入 ============
+
+@Configuration
+public class AppConfig {
+	private @Value("#{jdbcProperties.url}") Strin jdbcUrl;		//简单属性注值方法
+
+	@Bean
+	public UserDAO userDAO() {
+		return new UserDAOImpl();
+	}
+	
+	@Bean
+	public UserService userService() {
+		UserServiceImpl service = new UserServiceImpl();
+		service.setUserDAO(userDAO());			//调用UserServiceImpl.setUserDAO注入
+		return service;
+	}
+}
+
+============ 6 Spring Expression Language (SpEL) ============
+
+API: pdf page173
+public class SpELTest_Simple {
+	@Test
+	public void test01() {
+		ExpressionParser parser = new SpelExpressionParser();			//产生一个SpEL解析器实例
+		Expression exp = parser.parseExpression("'Hello, '.concat('World!').getBytes().length");		//产生一个Expression实例
+		System.out.println(exp.getValue());						//取出Expression实例中含的对象
+	}
+
+	@Test
+	public void test02() {				//??不是很明白??
+		User u = new User();
+		u.setUsername("zhangsan");
+		
+		EvaluationContext context = new StandardEvaluationContext(u);		//产生一个上下文对象容器. u是根对象
+		
+		ExpressionParser parser = new SpelExpressionParser();
+		Expression exp = parser.parseExpression("username"); 	//就是u.getUsername()
+		
+		System.out.println((String)exp.getValue(context));
+		System.out.println((String)exp.getValue(u));
+	}
+}
+
+============ 7 SpEL 增强 ============
+
+在xml配置中的使用
+step1, 在beans.xml中, 通过property注入简单属性. 比之前固定内容灵活
+<bean id="my" class="com.bjsxt.spring30.spel.MyBean">
+	<property name="randomNumber" value="#{T(java.lang.Math).random()}"></property>		<!--T()就是调用某类-->
+	<property name="userRegion" value="#{systemProperties['user.country']}"></property>		<!--SpEL中包装了System.Properties方法-->
+</bean>
+
+step2, 
+@ContextConfiguration("classpath:beans.xml")
+public class SpELTest extends AbstractJUnit4SpringContextTests{
+	@Resource
+	private MyBean mybean;
+	
+	@Test
+	public void test01() {
+		System.out.println(mybean.getRandomNumber());			//读取了mybean由xml配置产生的值
+		System.out.println(mybean.getUserRegion());
+	}
+}
+
+
+取子集 API: pdf page186
+// create an array of integers
+List<Integer> primes = new ArrayList<Integer>();
+primes.addAll(Arrays.asList(2,3,5,7,11,13,17));
+
+// create parser and set variable primes as the array of integers
+ExpressionParser parser = new SpelExpressionParser();
+
+StandardEvaluationContext context = new StandardEvaluationContext();
+context.setVariable("primes",primes);
+
+// all prime numbers > 10 from the list (using selection ?{...})
+List<Integer> primesGreaterThanTen = (List<Integer>) parser.parseExpression("#primes.?[#this>10]").getValue(context);
+
+mybatis可以使用原生sql指令

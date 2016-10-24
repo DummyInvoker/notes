@@ -1,0 +1,425 @@
+============ 1 ============
+
+windows中双击msi文件包安装
+在netbeans中需要配置node.exe和npm.cmd的位置, 都在nodejs安装目录中
+
+============ 4 非阻断式单线程 ============
+
+var placeOrder = function(orderNum){
+    console.log("order received: ", orderNum)
+    setTimeout(function(){
+        console.log("order delivered", orderNum)
+    },2000)
+}
+
+placeOrder(1)
+placeOrder(2)
+placeOrder(3)
+placeOrder(4)
+placeOrder(5)
+
+# 运行结果
+order received:  1
+order received:  2
+order received:  3
+order received:  4
+order received:  5
+order delivered 1
+order delivered 2
+order delivered 3
+order delivered 4
+order delivered 5
+
+# 分析
+node js为非阻断式单线程. 耗时操作只是在任务列表中添加一个callback的恢复运行点, 不像java暂停一个线程
+
+============ 5 everything is reference ============
+
+var person1 = {
+    name:"hello",
+    age:123
+}
+var person2 = person1			// 不是复制对象, 只是添加一个reference
+person2.name = "world"
+console.log(person1.name)	//world
+
+console.log(19 == "19")      // true: 值比较, 不考虑类型
+console.log(19 === "19")     // false: 包括类型比较
+
+============ 6 this ============
+
+var bucky = {
+    printFirstName: function(){
+        console.log(this === bucky)		// true: this指call this的对象, 在这里是bucky. 参考bean中用法
+    }
+}
+bucky.printFirstName()
+
+function defaultCaller(){
+    console.log(this === global)		// true: 默认的caller: global对象
+}
+defaultCaller()
+
+============ 7 prototype ============
+
+var User = function(){					// 开始时的User对象, 没有takeMoney方法
+    this.name;
+    this.giveMoney = function (targetUser){
+        targetUser.money = targetUser.money + 1;
+        this.money = this.money - 1;
+        console.log(this.name + " gave 1 money to " + targetUser.name);
+    }
+}
+
+var bucky = new User();
+bucky.name = "bucky";
+var wendy = new User(); 
+wendy.name = "wendy";
+
+User.prototype.money = 100;		// 通过prototype修改User对象的field, 所有的实例都立即受到影响
+
+bucky.giveMoney(wendy);
+console.log("bucky has money:" + bucky.money);
+console.log("wendy has money:" + wendy.money);
+
+User.prototype.takeMoney = function(targetUser){	// 通过prototype修改User对象的method
+    targetUser.money = targetUser.money - 1;
+    this.money = this.money + 1;
+    console.log(this.name + " took 1 money from " + targetUser.name);
+}
+
+wendy.takeMoney(bucky);	
+console.log("bucky has money:" + bucky.money);
+console.log("wendy has money:" + wendy.money);
+
+============ 8 import/export module 方法1 ============
+
+# 建立单独module: myModule.js
+function exportMethod(){
+    console.log("from myModule.exportMethod");
+}
+function noExportMethod(){
+    console.log("from myModule.NOexportMethod");
+}
+module.exports.myExport = exportMethod;		// 只有exportMethod可以被外部调用
+
+# 在主程序main.js中导入单独module
+var importModule = require('./myModule');	// 用"./"区分不是core module; 不可添加扩展名
+
+importModule.myExport();    // 不能直接调用exportMethod(), 不能调用没有export的方法
+
+
+============ 9 import/export module 方法2 ============
+
+# 建立单独module: myModule.js
+module.exports = {      	// 默认存在, 之前就是向这个对象中写key, value对
+    myExport:function exportMethod(){
+        console.log("from myModule.exportMethod");
+    },
+    myNoExport:function noExportMethod(){
+        console.log("from myModule.NOexportMethod");
+    },
+    myField:"my field string"
+}
+
+# 在主程序main.js中导入单独module
+var importModule = require('./myModule');
+
+importModule.myExport();
+console.log(importModule.myField);
+
+============ 10 一个module被多个地方引用时只有一个实例 ============
+
+# main.js中建立两个import(不调用其中变量或方法, 不用module.export())
+var person1 = require('./person1');
+var person2 = require('./person2');
+
+# person1.js中导入myModules, 并修改其内容
+var myModule = require('./myModule')
+myModule.myField = "person1"
+console.log("person1's name is: " + myModule.myField)
+
+# person2.js也导入同一个module, 但不修改内容
+var myModule = require('./myModule')
+console.log("person2's name is: " + myModule.myField)
+
+# myModule.js
+module.exports = {
+    myField:""
+}
+
+# 运行结果:
+person1's name is: person1
+person2's name is: person1	// 值为共享的module中取值
+
+============ 11 工厂模式的module ============
+
+# main.js中建立两个import
+var person1 = require('./person1');
+var person2 = require('./person2');
+
+
+# person1.js中导入myModules, 建立其实例
+var myModule = require('./myModule')
+
+var person1FieldInstance = myModule()      //值为return中的对象实例
+person1FieldInstance.myField = "person1"
+
+console.log("person1's name is: " + person1FieldInstance.myField)
+
+
+# person2.js也导入同一个module, 建立其实例, 但不修改内容
+var myModule = require('./myModule')
+
+var person2FieldInstance = myModule()
+
+console.log("person2's name is: " + person2FieldInstance.myField)
+
+# myModule.js 调用方法时, 返回一个实例
+module.exports = function(){
+    return{
+        myField:"noname"
+    }
+}
+
+# 运行结果:
+person1's name is: person1
+person2's name is: noname
+
+
+============ 12 core module: fs; path ============
+
+// 读写文件
+var fs = require('fs');    // 不用加相对路径了  
+
+fs.writeFileSync("filename.txt", "file content");
+console.log(fs.readFileSync("filename.txt").toString());
+
+// 自动按系统环境调整路径格式等
+var path = require('path');
+
+var pathStr1 = "myPath/myFolder//myFile.html";
+var pathStr2 = "myPath\myFolder\\myFile.html";
+
+console.log(path.normalize(pathStr1));
+console.log(path.normalize(pathStr2));
+console.log("dirname: ", path.dirname(pathStr1));
+console.log("basename: ", path.basename(pathStr1));
+console.log("extname: ", path.extname(pathStr1));
+
+console.log(__dirname);
+console.log(__filename);
+
+
+============ 13 core module: http ============
+
+var http = require('http');
+var fs = require('fs');
+
+var respCont = fs.readFileSync("main.js").toString();
+
+var onRequest = function(req, resp){
+    console.log("received 1 connection request", req.url);
+    
+    resp.writeHead(200,{"Context-Type":"text/plain"});
+    resp.write(respCont);
+    resp.end();
+}
+
+http.createServer(onRequest).listen(8888);
+console.log("server on");
+
+
+============ 14 http; fs.createReadStream ============
+
+var http = require('http');
+var fs = require('fs');
+
+// resp
+var resp404 = function(resp){
+    resp.writeHead(404,{"Context-Type":"text/plain"});
+    resp.write("Error 404: page not found!");
+    resp.end();
+}
+
+var resp200 = function(resp){
+    resp.writeHead(200,{"Context-Type":"text/html"});
+    fs.createReadStream("./index.html").pipe(resp);      // 将大文件转为stream传出去
+//    var respCont = fs.readFileSync("./index.html").toString();
+//    resp.write(respCont);
+//    resp.end();
+}
+
+// main
+var onRequest = function(req, resp){
+    console.log("received 1 connection request", req.url);
+    
+    if(req.method === "GET" && req.url === '/') resp200(resp);
+    else resp404(resp);
+}
+
+// server
+http.createServer(onRequest).listen(8888);
+console.log("server on ...");
+
+============ 15 connect 实现router ============
+
+# 安装
+在terminal中项目路径下: npm install connect
+完成后可以看到多了一个node_modules\connect目录
+
+
+var connect = require("connect");
+var http = require("http");
+
+// middle ware
+var doNext = function (req, resp, next) {
+    console.log("content of doNext");
+    next();
+}
+var myFunc = function(req, resp, next){
+    console.log("using connect as route");
+    next();     // 有这个方法才会继续寻找下一个任务
+}
+
+// main
+var app = connect();
+app.use("/mypath", myFunc)		// 在这里实现路由功能
+app.use("/mypath", doNext)		// 同一地址多个方法时执行第一个, 根据next()配置决定是否执行后面的
+
+// server
+http.createServer(app).listen(8888);
+console.log("server on ...");
+
+============ 16 express 项目结构 ============
+
+webstorm中建立新express项目, options中template选EJS(默认是jade)
+
+# bin 目录
+www是express项目的开始点, 然后开始调用app.js
+
+# node_module 目录
+存放各种library
+
+# public 目录
+和服务器无关的静态文件, img, css等
+
+# routes 目录
+相当于springMVC的controller
+
+# views 目录
+相当于springMVC的jsp文件
+
+============ 17-20 express 运行流程 ============
+
+# app.js中默认带了两个地址过滤条件
+var app = express();
+
+app.use('/', routes);
+app.use('/users', users);
+
+var routes = require('./routes/index');
+var users = require('./routes/users');
+
+# 直接设置简单的返回内容: users.js:
+router.get('/', function(req, res, next) {
+  res.send('respond with a resource');
+});
+
+# 或者像使用model+jsp一样: index.js:
+router.get('/', function(req, res, next) {
+  res.render('index', { title: 'Express' });		// 这里的index指的是view/index.ejs
+});
+
+# index.ejs格式:
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+  <body>
+    <h1><%= title %></h1>
+    <p>Welcome to <%= title %></p>
+  </body>
+</html>
+
+============ 21 include ============
+
+# app.js 以下都是非完整代码
+var app = express();
+app.use('/', routes);
+app.use('/about', about);
+
+var routes = require('./routes/index');
+var about = require('./routes/about');
+
+
+# /routes/about.js
+router.get('/', function(req, res, next) {
+    res.render('about', {
+        title: 'about Code Master',
+        name: "datAorta"
+    });
+});
+
+# about.ejs
+<!DOCTYPE html>
+<html>
+<head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+</head>
+<body>
+
+<% include templates/header.ejs %>
+<h1><%= title %></h1>
+<p>bla bla bla of <%= name %></p>
+</body>
+</html>
+
+
+# templates/header.ejs
+<a href="/">Home</a> | <a href="/about">About</a> | <a href="#">Link</a>
+
+============ 22 json ============
+
+# app.js中建立全局变量 以下都是非完整代码
+var app = express();
+app.locals.myObjList = require('./videodata.json'); // 这个myObjList会被所有页面共享
+
+# index.ejs中调用model
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+  <body>
+  <% include templates/header.ejs %>
+    <h1><%= title %></h1>
+    <p>Welcome to <%= title %></p>
+    <p>from locals:</p>
+    <%= myObjList.categories[0].categoryDescription %>
+    <ul>
+      <% myObjList.categories.forEach(function (obj) { %>
+        <li><%= obj.categoryName %></li>
+      <% })%>
+    </ul>
+  </body>
+</html>
+
+# index.js中建立只有index.ejs能用的model
+var express = require('express');
+var router = express.Router();
+var myObjList = require('../videodata.json');		// 不用.local标识了
+
+/* GET home page. */
+router.get('/', function(req, res, next) {
+  res.render('index', {
+    title: 'Code Master',
+    myObjList: myObjList
+  });
+});
+
+module.exports = router;

@@ -1,0 +1,258 @@
+============== 7 jQuery ============== ajax.html; verify1.js; verify.js
+<head>
+	<title>itcast.cn用户名校验ajax实例</title>
+	<meta http-equiv="content-type" content="text/html; charset=gb2312" />
+	<script type="text/javascript" src="<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js">//这里直接使用google的JQuery加速, 如果需要阅读学习, 另有未压缩版可参考</script>
+</head>
+<body>
+	<!--基于标准的一些好习惯，首先标签名要小写，其次标签必须关闭，第三属性名必须是小写的，第四属性值必须位于双引号中-->
+	itcast.cn用户名校验的ajax实例，请输入用户名： <br>
+	
+	<!--ajax方式下不需要使用表单来进行数据提交，因此不用写表单标签-->
+	<!--ajax方式不需要name属性，只需要一个id的属性-->
+	<input type="text" id="userName" />
+	<input type="button" value="校验" onclick="verify()"/>
+	
+	<!--这个div用于存放服务器段返回的信息，开始为空-->
+	<!--id属性定义是为了利用dom的方式找到某一个节点，进行操作-->
+	<div id="result"></div>
+
+	<!--<div id="result">123</div><div>456</div>-->
+	<!--<span>123</span><span>456</span>-->
+	<!--div和span的直观差异，div中的内容独占行，span中的内容和前后其他内容相处良好-->
+</body>
+
+<script type="text/javascript">
+function verify() {
+    var url = "AJAXServer?name=" + encodeURI(encodeURI($("#userName").val()));
+	//解决中文乱码问题的方法1，页面端发出的数据作一次encodeURI，服务器段使用new String(old.getBytes("iso8859-1"),"UTF-8");
+    //解决中文乱码问题的方法2，页面端发出的数据作两次encodeURI，服务器段使用URLDecoder.decode(old,"UTF-8")
+    url = convertURL(url);
+    $.get(url,null,function(data){
+        $("#result").html(data);
+	});
+}
+</script>
+
+
+
+//所有 jQuery 函数位于一个 document ready 函数中是为了防止文档在完全加载（就绪）之前运行 jQuery 代码
+$(document).ready(function(){
+	--- jQuery functions go here ----
+});
+
+
+//取node方式对比:
+dom 方式, 返回的是dom节点:
+var domElement = document.getElementById("userName");
+domElement.value();
+JQuery 方式, 返回的是JQuery对象, 可以执行其他JQuery方法:
+var JQueryObj = $("#userName")	//$代表开始JQuery语法, #id代表id字符串, .class代表class字符串
+$("#userName").val()
+$("#userName").attr("value")
+
+
+//JQuery 连接服务器
+$.get(URL,callback);
+必需的 URL 参数规定您希望请求的 URL。
+可选的 callback 参数是请求成功后所执行的函数名。
+
+//JQuery设置内容 - text()、html() 以及 val()
+text() - 设置或返回所选元素的文本内容 
+html() - 设置或返回所选元素的内容（包括 HTML 标记） 
+val() - 设置或返回表单字段的值
+
+// JQuery页面地址需要和查询的服务器地址是同一网站内, 详见 video17
+
+
+
+============== 10-11 AJAX ============== ajax1.html; verifyown.js
+
+xmlhttp.onreadystatechanges = callback;
+// 必须是用callback的名字注册, 如果用callback(),则会把callback()的返回值赋给onreadystatechanges
+
+============== 16 AJAX 避免使用缓存问题==============  verify.js
+
+//indexOf(), valueOf()
+function convertURL(url) {
+    var timstamp = (new Date()).valueOf();
+    //假设 url = "AJAXServer"
+    if (url.indexOf("?") >= 0) {
+        url = url + "&t=" + timstamp;
+    } else {
+        url = url + "?t=" + timstamp;
+    }
+    return url;
+}
+
+============== 17 AJAX 字符处理, 跨域处理============== 
+
+JS中用UTF-8转码:
+var url = "AJAXServer?name=" + encodeURI($("#userName").val());
+servlet解码:
+URLDecoder.decode(old,"UTF-8")	//old是传入的已编码的参数
+
+
+//跨域处理 24:28
+JS中替换?为&
+functioin convertURL(url){
+	if(url.substring(0,7) == "http://"){
+		url = url.replace("?","&");
+		url = "Proxy?url=" + url;
+	}
+	return url;
+}
+
+servlet思路: 详见proxy.java
+解析出所有的url参数
+按post/get方式重新拼装
+接收返回的数据, 发送给客户端
+
+
+
+
+============w3school==================================================================
+
+// jQuery 元素选择器
+$("p") 选取 <p/> 元素。
+$("p.intro") 选取所有 class="intro" 的 <p/> 元素。
+$("p#demo") 选取所有 id="demo" 的 <p/> 元素。
+
+// jQuery 属性选择器
+$("[href]") 选取所有带有 href 属性的元素。
+$("[href='#']") 选取所有带有 href 值等于 "#" 的元素。
+$("[href!='#']") 选取所有带有 href 值不等于 "#" 的元素。
+$("[href$='.jpg']") 选取所有 href 值以 ".jpg" 结尾的元素。
+
+// jQuery 事件
+...
+
+// jQuery 获得/设置内容 - text()、html() 以及 val()
+text() - 设置或返回所选元素的文本内容 
+html() - 设置或返回所选元素的内容（包括 HTML 标记） 
+val() - 设置或返回表单字段的值 
+$("#btn1").click(function(){
+  alert("Text: " + $("#test").text());
+});
+
+$("#btn1").click(function(){
+  $("#test1").text("Hello world!");
+});
+
+$("#btn1").click(function(){	//带callback
+  $("#test1").text(function(i,origText){
+    return "Old text: " + origText + " New text: Hello world!
+    (index: " + i + ")";
+  });
+});
+
+
+// jQuery 获取/设置属性 - attr()
+$("button").click(function(){
+  alert($("#w3s").attr("href"));
+});
+
+$("button").click(function(){
+  $("#w3s").attr("href","http://www.w3school.com.cn/jquery");
+});
+
+$("button").click(function(){	//带callback
+  $("#w3s").attr("href", function(i,origValue){
+    return origValue + "/jquery";
+  });
+});
+
+// jQuery 添加新内容的四个方法：
+append() - 在被选元素的结尾插入内容
+prepend() - 在被选元素的开头插入内容
+after() - 在被选元素之后插入内容
+before() - 在被选元素之前插入内容
+
+ $("#btn2").click(function(){
+    $("ol").append("<li>Appended item</li>");
+  });
+
+  
+  
+// jQuery parent() 方法向上一级对 DOM 树进行遍历
+parent() 方法返回被选元素的直接父元素。
+
+$("span").parent().css({"color":"red","border":"2px solid red"});
+此例中有2个span的2个父元素被修改
+
+或者:
+var tr = a.closest('tr');
+
+// jQuery parents() 方法找所有祖先
+返回所有 <span> 元素的所有祖先，并且它是 <ul> 元素
+$(document).ready(function(){
+  $("span").parents("ul");
+});
+
+// jQuery children() 方法向下一级对 DOM 树进行遍历
+返回class为 "1" 的所有 <p> 元素，并且它们是 <div> 的直接子元素
+$(document).ready(function(){
+  $("div").children("p.1");
+});
+
+// jQuery siblings() 方法返回被选元素的所有同胞元素
+<h2> 的同胞元素的所有 <p> 元素
+$(document).ready(function(){
+  $("h2").siblings("p");
+});
+
+$(document).ready(function(){
+  $("h2").next();
+  $("h2").prev();
+});
+
+
+============time date==================================================================
+  
+取得当前时间日期:
+var myDate = new Date();
+
+Date转long格式:
+var myLong = myDate.valueOf();
+var myLong = myDate.getTime();
+
+long转Date格式:
+var myDate = new Date(myLong);
+
+从Date格式中快速取出日期string
+myDate.toJSON().substring(0,10);
+  
+从Date格式中取出各种单位的值
+年	myDate.getFullYear()
+月	myDate.getMonth()+1
+日	myDate.getDate()
+小时	myDate.getHours()
+分钟	myDate.getMinutes()
+秒	myDate.getSeconds()
+  
+============取值==================================================================
+
+单选radio中取值
+<p>readmitted
+	<input type=radio name="readmitted" value="1" id="yes"><label for="yes">yes</label>
+	<input type=radio name="readmitted" value="0" id="no" checked><label for="no">no</label>
+</p>
+$("input[name='readmitted'][checked]").val()
+
+下拉菜单
+<select size="0">
+	<optgroup label="FY2015">
+		<option value="y2015q2" selected="selected">FY2015Q2</option>
+	</optgroup>
+	<option value="y2014">FY2014</option><!-- value equals DB table name -->
+	<option value="y2013">FY2013</option>
+	<option value="y2012">FY2012</option>
+</select>
+下拉菜单选中项的文字: 
+var year = $("#year select").find("option:selected").text();
+下拉菜单选中项的value:
+var year = $("#year select").val();
+  
+  
+  
+ "123".toNum(); 

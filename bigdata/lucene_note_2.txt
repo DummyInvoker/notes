@@ -1,0 +1,539 @@
+============ 1 建立索引 ============
+
+# 建简单maven项目 >> 修改jre library到1.8
+
+# pom中添加对lucene的支持
+<dependencies>  
+	<dependency>
+		<groupId>org.apache.lucene</groupId>
+		<artifactId>lucene-core</artifactId>
+		<version>5.5.0</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>org.apache.lucene</groupId>
+		<artifactId>lucene-queryparser</artifactId>
+		<version>5.5.0</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>org.apache.lucene</groupId>
+		<artifactId>lucene-analyzers-common</artifactId>
+		<version>5.5.0</version>
+	</dependency>
+</dependencies>
+
+
+# 建立writer. 其有两个主要组件: directory索引文件位置; analyzer分词器
+public class Indexer {
+	private IndexWriter writer;
+	
+	public Indexer(String indexDir) throws Exception{
+		Directory dir = FSDirectory.open(Paths.get(indexDir));	// 保存index索引文件位置
+		
+		Analyzer analyzer = new StandardAnalyzer();				// 分词器
+		IndexWriterConfig iwc =new IndexWriterConfig(analyzer);
+		
+		writer = new IndexWriter(dir, iwc);
+	}
+	
+	public void close() throws Exception{
+		writer.close();
+	}
+}
+
+
+# 建立建索引方法. 被索引文件目录 >> 文件file >> 一个file文档转换为索引中一条记录document >> 用write写索引
+public class Indexer {
+	//public Indexer(String indexDir) throws Exception{...}
+	
+	public int index(String dataDir) throws Exception{
+		File[] files = new File(dataDir).listFiles();	// 被索引的文件数组
+		for (File file : files) {
+			Document document = new Document();
+			
+			document.add(new TextField("contents", new FileReader(file)));				// 默认不将实际的文件内容存到索引中
+			document.add(new TextField("fileName", file.getName(), Field.Store.YES));	// 将文件名存到索引中, 用空间换效率
+			document.add(new TextField("fullPath", file.getCanonicalPath(),Field.Store.YES));		
+		
+			writer.addDocument(document);
+		}
+		return writer.numDocs();
+	}
+}
+
+
+# 测试添加
+public class Indexer {
+	//public Indexer(String indexDir){...}
+	//public int index(String dataDir){...}
+
+	public static void main(String[] args) {
+		String indexDir = "D:/lucene";
+		String dataDir = "D:/lucene/data";
+		
+		Indexer indexer = null;
+		int numIndexed = 0;
+		try {
+			indexer = new Indexer(indexDir);
+			numIndexed = indexer.index(dataDir);
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try {
+				indexer.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		System.out.println(numIndexed);
+	}
+}
+
+
+============ 1 查询索引; 4 分页 ============
+
+# 建立索引查询方法
+public class searcher {
+	public static void search(String indexDir, String queryStr) throws Exception{
+		// 建立搜索器
+		Directory directory = FSDirectory.open(Paths.get(indexDir));
+		IndexReader reader = DirectoryReader.open(directory);
+		IndexSearcher is = new IndexSearcher(reader);
+		
+		// 建立搜索搜索条件parser(实际项目使用, 比term方法强)
+		Analyzer analyzer = new StandardAnalyzer();
+		String[] fields = {"fileName", "contents"};
+		QueryParser parser = new MultiFieldQueryParser(fields, analyzer);
+		Query query = parser.parse(queryStr);
+		
+		// 搜索及结果处理
+		TopDocs hits = is.search(query, 100);
+		System.out.println(hits.totalHits);
+		for(ScoreDoc scoreDoc: hits.scoreDocs){			//取ScoreDoc[]部分即可实现分页功能
+			Document doc = is.doc(scoreDoc.doc);
+			System.out.println(doc.get("fullPath"));
+		}
+		
+		reader.close();
+	}
+
+
+# 测试查询	
+	public static void main(String[] args) throws Exception {
+		String indexDir="d:/lucene";
+		String queryStr = "particular unicode";			// 用空格分隔关键词代表OR关系, 忽略大小写
+		String queryStr2 = "particular AND unicode";	// AND 必须大写
+		String queryStr3 = "particula~";				// 模糊查询
+		
+		search(indexDir, queryStr);
+	}
+}
+
+
+============ 2 对索引document的 删除, 更新 ============
+
+# 准备测试环境
+public class IndexerTest {
+	// 准备测试数据
+	private String ids[]={"1","2","3"};
+	private String citys[]={"qingdao","nanjing","shanghai"};
+	private String descs[]={
+			"Qingdao is a beautiful city.",
+			"Nanjing is a city of culture.",
+			"Shanghai is a bustling city."
+	};
+	
+	
+	// getWriter()经常用到, 单独封装
+	private IndexWriter getWriter() throws Exception{		
+		Analyzer analyzer = new StandardAnalyzer();
+		IndexWriterConfig iwc =new IndexWriterConfig(analyzer);
+		return new IndexWriter(dir, iwc);
+	}
+
+	// 写index数据
+	private Directory dir;
+	@Before
+	public void setUp() throws Exception {
+		dir = FSDirectory.open(Paths.get("D:/lucene"));
+		IndexWriter writer = getWriter();
+		
+		for (int i = 0; i < ids.length; i++) {
+			Document document = new Document();
+			document.add(new StringField("id", ids[i], Field.Store.YES));
+			document.add(new StringField("city", citys[i], Field.Store.YES));
+			document.add(new TextField("desc", descs[i], Field.Store.NO));
+			
+			writer.addDocument(document);
+		}
+		writer.close();
+	}
+}
+
+
+# 测试删除(不合并记录)
+@Test
+public void testDeleteBeforeMerge() throws Exception{
+	IndexWriter writer = getWriter();
+	System.out.println(writer.numDocs());		// 删除前有几条索引:3
+	
+	writer.deleteDocuments(new Term("id", "1"));
+	writer.commit();
+	
+	System.out.println(writer.maxDoc());		// 最多有几条索引:3
+	System.out.println(writer.numDocs());		// 实际有几条索引:2
+	writer.close();
+}
+
+
+# 测试删除(合并记录: 是一个耗时操作)
+@Test
+public void testDeleteAfterMerge() throws Exception{
+	IndexWriter writer = getWriter();
+	System.out.println(writer.numDocs());		// 删除前有几条索引:3
+	
+	writer.deleteDocuments(new Term("id", "1"));
+	writer.forceMergeDeletes();					// 强制合并上一次合并后的所有索引操作
+	writer.commit();
+	
+	System.out.println(writer.maxDoc());		// 最多有几条索引:2
+	System.out.println(writer.numDocs());		// 实际有几条索引:2
+	writer.close();
+}
+
+
+# 测试更新
+@Test
+public void testUpdate() throws Exception{
+	IndexWriter writer = getWriter();
+	
+	Document document = new Document();
+	document.add(new StringField("id", "1", Field.Store.YES));
+	document.add(new StringField("city", "qingdao", Field.Store.YES));
+	document.add(new TextField("desc", "dsss is a city.", Field.Store.NO));
+	
+	writer.updateDocument(new Term("id", "1"), document);	//Term是搜索单位. 代表某个Field及其内容
+	writer.close();
+}
+
+
+============ 3 document域(字段)加权 ============
+
+public class IndexerTest2 {
+	// 准备测试数据
+	private String ids[]={"1","2","3","4"};
+	private String authors[]={"Jack","Marry","John","Json"};
+	private String positions[]={"accounting","technician","salesperson","boss"};
+	private String titles[]={"Java is a good language.","Java is a cross platform language","Java powerful","You should learn java"};
+	private String contents[]={
+			"If possible, use the same JRE major version at both index and search time.",
+			"When upgrading to a different JRE major version, consider re-indexing. ",
+			"Different JRE major versions may implement different versions of Unicode,",
+			"For example: with Java 1.4, `LetterTokenizer` will split around the character U+02C6,"
+	};
+	
+	// getWriter()经常用到, 单独封装
+	private IndexWriter getWriter() throws Exception{
+		Analyzer analyzer = new StandardAnalyzer();
+		IndexWriterConfig iwc =new IndexWriterConfig(analyzer);
+		return new IndexWriter(dir, iwc);
+	}
+	
+	// 写index数据
+	private Directory dir;
+	@Test
+	public void index() throws Exception {
+		dir = FSDirectory.open(Paths.get("D:/lucene"));
+		IndexWriter writer = getWriter();
+		
+		for (int i = 0; i < ids.length; i++) {
+			Document document = new Document();
+			document.add(new StringField("id", ids[i], Field.Store.YES));
+			document.add(new StringField("author", authors[i], Field.Store.YES));
+			document.add(new StringField("position", positions[i], Field.Store.YES));
+			document.add(new TextField("content", contents[i], Field.Store.NO));		// 用TextField才会被分词
+			
+			// 域(字段)加权
+			TextField field = new TextField("title", titles[i], Field.Store.YES);
+			if("boss".equals(positions[i])){
+				field.setBoost(1.5f);  
+			}
+			document.add(field);
+			
+			writer.addDocument(document);
+		}
+		writer.close();
+	}
+	
+	// 用term方式查询
+	@Test
+	public void search() throws Exception{
+		// 建立搜索器(同之前)
+		dir = FSDirectory.open(Paths.get("D:/lucene"));
+		IndexReader reader = DirectoryReader.open(dir);
+		IndexSearcher is = new IndexSearcher(reader);
+		
+		// 建立搜索搜索条件term
+		String searchField = "title";
+		String queryStr = "java";
+		Term term = new Term(searchField, queryStr);
+		Query query = new TermQuery(term);
+		
+		// 搜索及结果处理(同之前)
+		TopDocs hits = is.search(query, 10);
+		System.out.println(hits.totalHits);
+		for(ScoreDoc scoreDoc: hits.scoreDocs){
+			Document doc = is.doc(scoreDoc.doc);
+			System.out.println(doc.get("author"));
+		}
+		
+		reader.close();
+	}
+}
+
+
+============ 4 分页 ============
+
+# 思路: 查100条分值最高项, 从ScoreDoc数组中取分页需要条目, 比如10条. 每次分页都查100条再取一部分. 很少有人会翻第2页 
+# 具体参考video1中的索引及查询功能
+
+============ 5 高级查询 ============
+
+# 准备测试环境
+public class Indexer5 {
+	// 准备测试数据
+	private Integer ids[]={1, 2, 3};		// 略有区别, 不再是String类型
+	private String citys[]={"qingdao","nanjing","shanghai"};
+	private String descs[]={
+			"Qingdao is a beautiful city.",
+			"Nanjing is b city of culture.",
+			"Shanghai is c bustling city."
+	};
+	
+	// getWriter()经常用到, 单独封装	
+	private IndexWriter getWriter() throws Exception{
+		Analyzer analyzer = new StandardAnalyzer();
+		IndexWriterConfig iwc =new IndexWriterConfig(analyzer);
+		return new IndexWriter(dir, iwc);
+	}
+
+	// 写index数据
+	private Directory dir;
+	private void index(String indexDir) throws Exception{
+		dir = FSDirectory.open(Paths.get(indexDir));
+		IndexWriter writer = getWriter();
+		
+		for (int i = 0; i < ids.length; i++) {
+			Document document = new Document();
+			document.add(new IntField("id", ids[i], Field.Store.YES));
+			document.add(new StringField("city", citys[i], Field.Store.YES));
+			document.add(new TextField("desc", descs[i], Field.Store.YES));
+			
+			writer.addDocument(document);
+		}
+		writer.close();
+	}
+	
+	
+	public static void main(String[] args) throws Exception {
+		new Indexer5().index("D:/lucene");
+	}
+}
+
+# 各种用Term的搜索
+public class Indexer5SearchTest {
+	private Directory dir;
+	private IndexReader reader;
+	private IndexSearcher is;
+	
+	@Before
+	public void setUp() throws Exception {
+		dir = FSDirectory.open(Paths.get("d:/lucene"));
+		reader = DirectoryReader.open(dir);
+		is = new IndexSearcher(reader);
+	}
+
+	@After
+	public void tearDown() throws Exception {
+		reader.close();
+	}
+
+// 指定数字范围的搜索	
+	@Test
+	public void testNumerircRangeQuery() throws Exception {
+		NumericRangeQuery<Integer> query = NumericRangeQuery.newIntRange("id", 1, 3, true, true);	// 最后两个参数设置边界包含
+		
+		TopDocs hits = is.search(query, 100);
+		System.out.println(hits.totalHits);
+		for(ScoreDoc scoreDoc: hits.scoreDocs){
+			Document doc = is.doc(scoreDoc.doc);
+			System.out.println(doc.get("id"));
+			System.out.println(doc.get("city"));
+			System.out.println(doc.get("desc"));
+		}
+	}
+	
+// 指定字符串开头的搜索
+	@Test
+	public void testPrefixQuery() throws Exception {
+		PrefixQuery query = new PrefixQuery(new Term("city","s"));		// 在city属性中以s开头
+		
+		TopDocs hits = is.search(query, 100);
+		System.out.println(hits.totalHits);
+		for(ScoreDoc scoreDoc: hits.scoreDocs){
+			Document doc = is.doc(scoreDoc.doc);
+			System.out.println(doc.get("id"));
+			System.out.println(doc.get("city"));
+			System.out.println(doc.get("desc"));
+		}
+	}
+	
+// 组合搜索
+	@Test
+	public void testBooleanQuery() throws Exception {
+		NumericRangeQuery<Integer> query1 = NumericRangeQuery.newIntRange("id", 2, 3, true, true);
+		PrefixQuery query2 = new PrefixQuery(new Term("city","s"));		// 在city属性中以s开头
+		
+		BooleanQuery.Builder query = new BooleanQuery.Builder();
+		query.add(query1, Occur.MUST);	//MUST是and逻辑; SHOULD是or逻辑; MUST_NOT是not逻辑
+		query.add(query2, Occur.MUST);
+		
+		TopDocs hits = is.search(query.build(), 100);
+		System.out.println(hits.totalHits);
+		for(ScoreDoc scoreDoc: hits.scoreDocs){
+			Document doc = is.doc(scoreDoc.doc);
+			System.out.println(doc.get("id"));
+			System.out.println(doc.get("city"));
+			System.out.println(doc.get("desc"));
+		}
+	}		
+}
+
+
+============ 6 中文分词 smartcn ============
+
+# pom中添加对smartcn的支持
+<dependencies>  
+	<dependency>
+		<groupId>org.apache.lucene</groupId>
+		<artifactId>lucene-analyzers-smartcn</artifactId>
+		<version>5.5.0</version>
+	</dependency>
+</dependencies>
+
+
+# 准备测试环境
+public class Indexer6 {
+	// 准备测试数据
+	private Integer ids[]={1, 2, 3};
+	private String citys[]={"奶粉","咖啡","美禄"};
+	private String descs[]={
+			"干混1号机生产奶粉, 发生漏粉现象",
+			"干混2号机生产咖啡, 包装出现过重",
+			"干混3号机生产美禄, 能不能用仅一包装呢"
+	};
+	
+	// getWriter()经常用到, 单独封装	
+	private IndexWriter getWriter() throws Exception{
+		Analyzer analyzer = new StandardAnalyzer();
+		IndexWriterConfig iwc =new IndexWriterConfig(analyzer);
+		return new IndexWriter(dir, iwc);
+	}
+
+	// 写index数据
+	private Directory dir;
+	private void index(String indexDir) throws Exception{
+		dir = FSDirectory.open(Paths.get(indexDir));
+		IndexWriter writer = getWriter();
+		
+		for (int i = 0; i < ids.length; i++) {
+			Document document = new Document();
+			document.add(new IntField("id", ids[i], Field.Store.YES));
+			document.add(new StringField("city", citys[i], Field.Store.YES));
+			document.add(new TextField("desc", descs[i], Field.Store.YES));
+			
+			writer.addDocument(document);
+		}
+		writer.close();
+	}
+	
+	public static void main(String[] args) throws Exception {
+		new Indexer6().index("D:/lucene");
+	}
+}
+
+
+# 中文检索
+public class Indexer6SearchTest {
+	private Directory dir;
+	private IndexReader reader;
+	private IndexSearcher is;
+	@Before
+	public void setUp() throws Exception {
+		dir = FSDirectory.open(Paths.get("d:/lucene"));
+		reader = DirectoryReader.open(dir);
+		is = new IndexSearcher(reader);
+	}
+
+	@After
+	public void tearDown() throws Exception {
+		reader.close();
+	}
+
+	@Test
+	public void testPrefixQuery() throws Exception {
+		SmartChineseAnalyzer analyzer = new SmartChineseAnalyzer();
+		String[] fields = {"city", "desc"};
+		QueryParser parser = new MultiFieldQueryParser(fields, analyzer);
+		Query query = parser.parse("奶粉仅一");
+		
+		TopDocs hits = is.search(query, 100);
+		System.out.println(hits.totalHits);
+		for(ScoreDoc scoreDoc: hits.scoreDocs){
+			Document doc = is.doc(scoreDoc.doc);
+			System.out.println(doc.get("id"));
+			System.out.println(doc.get("city"));
+			System.out.println(doc.get("desc"));
+		}
+	}
+}
+
+============ 6 高亮关键词 ============
+
+@Test
+public void testPrefixQuery() throws Exception {
+	SmartChineseAnalyzer analyzer = new SmartChineseAnalyzer();
+	String[] fields = {"city", "desc"};
+	QueryParser parser = new MultiFieldQueryParser(fields, analyzer);
+	Query query = parser.parse("奶粉干混仅一");
+	
+	TopDocs hits = is.search(query, 100);
+	System.out.println(hits.totalHits);
+	
+// 高亮关键词
+	Formatter formatter = new SimpleHTMLFormatter("<font color='red'>", "</font>");
+	Scorer scorer = new QueryScorer(query);	
+	Highlighter highlighter = new Highlighter(formatter, scorer);
+	
+	Fragmenter fragmenter = new SimpleFragmenter(10);		//设定摘要字符数, 默认100
+	highlighter.setTextFragmenter(fragmenter);
+	
+	for(ScoreDoc scoreDoc: hits.scoreDocs){
+		Document doc = is.doc(scoreDoc.doc);
+		String desc = doc.get("desc");
+		if(desc!=null){
+			TokenStream tokenStream = analyzer.tokenStream("desc", new StringReader(desc));		// 取出desc内容, 高亮, 放回"desc"
+			System.out.println(highlighter.getBestFragment(tokenStream, desc));
+		}
+	}
+}
+
+
+
+
+
+
+
+
+

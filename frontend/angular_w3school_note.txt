@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<body>
+
+<div ng-app="">
+ 	<p>Name: <input type="text" ng-model="name"></p>
+ 	<p ng-bind="name"></p>
+</div>
+
+</body>
+</html>
+
+
+
+
+============ ng-init ============
+
+<div ng-app="" ng-init="firstName='John'">
+
+<p>The name is <span ng-bind="firstName"></span></p>
+
+</div>
+
+
+
+============ module, ng-controller ============
+
+<div ng-app="myApp" ng-controller="myCtrl">
+
+First Name: <input type="text" ng-model="firstName"><br>
+Last Name: <input type="text" ng-model="lastName"><br>
+<br>
+Full Name: {{firstName + " " + lastName}}
+
+</div>
+
+<script>
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope) {
+    $scope.firstName= "John";
+    $scope.lastName= "Doe";
+});
+</script>
+
+
+============ object, array ============
+
+<div ng-app="" ng-init="person={firstName:'John',lastName:'Doe'}">
+<p>The name is {{ person.lastName }}</p>
+</div>
+
+<div ng-app="" ng-init="points=[1,15,19,2,40]">
+<p>The third result is {{ points[2] }}</p>
+</div>
+
+
+============ custom directives ============
+
+<div ng-app="myApp" w3-test-directive></div>
+
+<script> 
+var app = angular.module("myApp", []);
+
+app.directive("w3TestDirective", function() {
+    return {
+        template : "I was made in a directive constructor!"
+    };
+});
+</script>
+
+
+============ custom directives Restrictions ============
+
+var app = angular.module("myApp", []);
+app.directive("w3TestDirective", function() {
+    return {
+        restrict : "A",
+        template : "<h1>Made by a directive!</h1>"
+    };
+});
+
+E for Element name
+A for Attribute
+C for Class
+M for Comment
+
+
+============ ng-repeat ============
+
+<div ng-app="" ng-init="names=[
+	{name:'Jani',country:'Norway'},
+	{name:'Hege',country:'Sweden'},
+	{name:'Kai',country:'Denmark'}]">
+
+<ul>
+  <li ng-repeat="x in names">
+    {{ x.name + ', ' + x.country }}
+  </li>
+</ul>
+
+</div>
+
+#
+<div ng-app="myApp" ng-controller="myCtrl">
+
+<ul>
+    <li ng-repeat="x in names">{{x}}</li>
+</ul>
+
+</div>
+
+<script>
+var app = angular.module('myApp', []);
+
+app.controller('myCtrl', function($scope) {
+    $scope.names = ["Emil", "Tobias", "Linus"];
+});
+</script>
+
+
+============ Validate ng-show ============
+
+<form ng-app="" name="myForm">
+    Email:
+    <input type="email" name="myAddress" ng-model="text">
+    <span ng-show="myForm.myAddress.$error.email">Not a valid e-mail address</span>
+</form>
+
+
+<form ng-app="" name="myForm" ng-init="myText = 'post@myweb.com'">
+    Email:
+    <input type="email" name="myAddress" ng-model="myText" required>
+    <h1>Status</h1>
+    {{myForm.myAddress.$valid}}
+    {{myForm.myAddress.$dirty}}
+    {{myForm.myAddress.$touched}}
+</form>
+
+
+============ CSS Classes ============
+
+<style>
+input.ng-invalid {
+    background-color: lightyellow;
+}
+</style>
+
+<form ng-app="" name="myForm">
+    Enter your name:
+    <input name="myAddress" ng-model="text" required>
+</form>
+
+ng-empty
+ng-not-empty
+ng-touched
+ng-untouched
+ng-valid
+ng-invalid
+ng-dirty
+ng-pending
+ng-pristine
+
+
+============ ng-click ============
+
+<div ng-app="myApp" ng-controller="myCtrl">
+    <h1 ng-click="changeName()">{{firstname}}</h1>
+</div>
+
+<script>
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope) {
+    $scope.changeName = function() {
+        $scope.firstname = "Nelly";
+    }
+});
+</script>
+
+
+#
+<div ng-app="myApp" ng-controller="personCtrl">
+
+First Name: <input type="text" ng-model="firstName"><br>
+Last Name: <input type="text" ng-model="lastName"><br>
+<br>
+Full Name: {{fullName()}}
+
+</div>
+
+<script>
+var app = angular.module('myApp', []);
+app.controller('personCtrl', function($scope) {
+    $scope.firstName = "John";
+    $scope.lastName = "Doe";
+    $scope.fullName = function() {
+        return $scope.firstName + " " + $scope.lastName;
+    };
+});
+</script>
+
+
+============ Root Scope ============
+
+All applications have a $rootScope which is the scope created on the HTML element that contains the ng-app directive.
+
+<body ng-app="myApp">
+
+<p>The rootScope's favorite color:</p>
+<h1>{{color}}</h1>
+
+<div ng-controller="myCtrl">
+    <p>The scope of the controller's favorite color:</p>
+    <h1>{{color}}</h1>
+</div>
+
+<p>The rootScope's favorite color is still:</p>
+<h1>{{color}}</h1>
+
+<script>
+	var app = angular.module('myApp', []);
+	app.run(function($rootScope) {
+		$rootScope.color = 'blue';
+	});
+	app.controller('myCtrl', function($scope) {
+		$scope.color = "red";
+	});
+</script>
+</body>
+
+
+============ Filters ============
+
+<div ng-app="myApp" ng-controller="personCtrl">
+<p>The name is {{ lastName | uppercase }}</p>
+</div>
+
+#
+currency: Format a number to a currency format.
+date: Format a date to a specified format.
+filter: Select a subset of items from an array.
+json: Format an object to a JSON string.
+limitTo: Limits an array/string, into a specified number of elements/characters.
+number: Format a number to a string.
+orderBy: Orders an array by an expression.
+uppercase: Format a string to upper case.
+lowercase: Format a string to lower case.
+
+# orderBy
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<body>
+
+<p>Click the table headers to change the sorting order:</p>
+
+<div ng-app="myApp" ng-controller="namesCtrl">
+
+<table border="1" width="100%">
+<tr>
+<th ng-click="orderByMe('name',ascend)">Name</th>
+<th ng-click="orderByMe('country',ascend)">Country</th>
+</tr>
+<tr ng-repeat="x in names | orderBy:myOrderBy:ascend">
+<td>{{x.name}}</td>
+<td>{{x.country}}</td>
+</tr>
+</table>
+
+</div>
+
+<script>
+angular.module('myApp', []).controller('namesCtrl', function($scope) {
+    $scope.names = [
+        {name:'Jani',country:'Norway'},
+        {name:'Carl',country:'Sweden'},
+        {name:'Margareth',country:'England'},
+        {name:'Hege',country:'Norway'},
+        {name:'Joe',country:'Denmark'},
+        {name:'Gustav',country:'Sweden'},
+        {name:'Birgit',country:'Denmark'},
+        {name:'Mary',country:'England'},
+        {name:'Kai',country:'Norway'}
+        ];
+	$scope.orderByMe = function(col, ascend) {
+		$scope.myOrderBy = col;
+		$scope.ascend = !ascend;
+	}
+});
+</script>
+
+</body>
+</html>
+
+
+# filter
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<body>
+
+<div ng-app="myApp" ng-controller="namesCtrl">
+
+<p>Type a letter in the input field:</p>
+
+<p><input type="text" ng-model="test"></p>
+
+<ul>
+  <li ng-repeat="x in names | filter:test">
+    {{ x }}
+  </li>
+</ul>
+
+</div>
+
+<script>
+angular.module('myApp', []).controller('namesCtrl', function($scope) {
+    $scope.names = [
+        'Jani',
+        'Carl',
+        'Margareth',
+        'Hege',
+        'Joe',
+        'Gustav',
+        'Birgit',
+        'Mary',
+        'Kai'
+    ];
+});
+</script>
+
+<p>The list will only consists of names matching the filter.</p>
+
+
+</body>
+</html>
+
+
+
+# custom filter
+<ul ng-app="myApp" ng-controller="namesCtrl">
+    <li ng-repeat="x in names">
+        {{x | myFormat}}
+    </li>
+</ul>
+
+<script>
+var app = angular.module('myApp', []);
+app.filter('myFormat', function() {
+    return function(x) {
+        var i, c, txt = "";
+        for (i = 0; i < x.length; i++) {
+            c = x[i];
+            if (i % 2 == 0) {
+                c = c.toUpperCase();
+            }
+            txt += c;
+        }
+        return txt;
+    };
+});
+app.controller('namesCtrl', function($scope) {
+    $scope.names = ['Jani', 'Carl', 'Margareth', 'Hege', 'Joe', 'Gustav', 'Birgit', 'Mary', 'Kai'];
+});
+</script>
+
+
+
+============ $http Service ============
+
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope, $http) {
+    $http.get("welcome.htm").then(function (response) {
+        $scope.myWelcome = response.data;
+    });
+});
+
+#
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope, $http) {
+    $http({
+        method : "GET",
+        url : "welcome.htm"
+    }).then(
+		function mySucces(response) {
+			$scope.myWelcome = response.data;
+		},
+		function myError(response) {
+			$scope.myWelcome = response.statusText;
+			$scope.content = response.data;
+			$scope.statuscode = response.status;
+			$scope.statustext = response.statustext; 		
+		}
+	);
+});
+
+.config the object used to generate the request.
+.data a string, or an object, carrying the response from the server.
+.headers a function to use to get header information.
+.status a number defining the HTTP status.
+.statusText a string defining the HTTP status.
+
+#
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope, $http) {
+    $http.get("wrongfilename.htm")
+    .then(function(response) {
+        //First function handles success
+        $scope.content = response.data;
+    }, function(response) {
+        //Second function handles error
+        $scope.content = "Something went wrong";
+    });
+});
+
+============ $timeout Service ============
+
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope, $timeout) {
+    $scope.myHeader = "Hello World!";
+    $timeout(function () {
+        $scope.myHeader = "How are you today?";
+    }, 2000);
+});
+
+
+============ $interval Service ============
+
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope, $interval) {
+    $scope.theTime = new Date().toLocaleTimeString();
+    $interval(function () {
+        $scope.theTime = new Date().toLocaleTimeString();
+    }, 1000);
+});
+
+
+============ $index ============
+
+<table>
+  <tr ng-repeat="x in names">
+    <td>{{ $index + 1 }}</td>
+    <td>{{ x.Name }}</td>
+    <td>{{ x.Country }}</td>
+  </tr>
+</table>
+
+
+============ $even and $odd ============
+
+<table>
+<tr ng-repeat="x in names">
+	<td ng-if="$odd" style="background-color:#f1f1f1">{{ x.Name }}</td>
+	<td ng-if="$odd" style="background-color:#f1f1f1">{{ x.Country }}</td>
+	<td ng-if="$even">{{ x.Name }}</td>
+	<td ng-if="$even">{{ x.Country }}</td>
+</tr>
+</table>
+
+
+============ Select Box ============
+
+# The ng-repeat directive has its limitations, the selected value must be a string
+
+$scope.cars = [
+    {model : "Ford Mustang", color : "red"},
+    {model : "Fiat 500", color : "white"},
+    {model : "Volvo XC90", color : "black"}
+];
+
+<select ng-model="selectedCar">
+  <option ng-repeat="x in cars" value="{{x.model}}">{{x.model}}</option>
+</select>
+<h1>You selected: {{selectedCar}}</h1><!--String的传递, 不含color信息-->
+
+
+# When using the ng-options directive, the selected value can be an object
+<select ng-model="selectedCar" ng-options="car.model for car in cars"></select>	<!--显示值为car.model; 选中value为car对象; 来源于cars列表-->
+<h1>You selected: {{selectedCar.model}}</h1>
+<p>Its color is: {{selectedCar.color}}</p>
+
+
+# 标准的array格式
+<div ng-app="myApp" ng-controller="myCtrl">
+<select ng-model="selectedName" ng-options="name for name in names"></select>
+</div>
+
+<script>
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope) {
+    $scope.names = ["Emil", "Tobias", "Linus"];
+});
+</script>
+
+
+# The Data Source as an Object
+	Using an object as the data source, x represents the key, and y represents the value
+	The selected value will always be the value in a key-value pair.
+
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<body>
+
+<div ng-app="myApp" ng-controller="myCtrl">
+<p>Select a car:</p>
+<select ng-model="selectedCar" ng-options="key for (key, value) in cars"></select>
+<h1>You selected: {{selectedCar}}</h1>
+</div>
+
+
+<script>
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope) {
+    $scope.cars = {
+        car01 : "Ford",
+        car02 : "Fiat",
+        car03 : "Volvo"
+    }
+});
+</script>
+
+</body>
+</html>
+
+
+============ Mouse Events ============
+
+#
+ng-mouseenter
+ng-mouseover
+ng-mousemove
+ng-mouseleave
+
+ng-mousedown
+ng-mouseup
+ng-click
+
+<div ng-app="myApp" ng-controller="myCtrl">
+
+<button ng-click="myFunction()">Click me!</button>
+
+<p>{{ count }}</p>
+
+</div>
+<script>
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope) {
+    $scope.count = 0;
+    $scope.myFunction = function() {
+        $scope.count++;
+    }
+});
+</script>
+
+# Toggle
+<div ng-app="myApp" ng-controller="myCtrl">
+
+<button ng-click="myFunc()">Click Me!</button>
+
+<div ng-show="showMe">
+    <h1>Menu:</h1>
+    <div>Pizza</div>
+    <div>Pasta</div>
+    <div>Pesce</div>
+</div>
+
+</div>
+<script>
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope) {
+    $scope.showMe = false;
+    $scope.myFunc = function() {
+        $scope.showMe = !$scope.showMe;
+    }
+});
+</script>
+
+
+============ $event Object ============
+
+<div ng-app="myApp" ng-controller="myCtrl">
+
+<h1 ng-mousemove="myFunc($event)">Mouse Over Me!</h1>
+
+<p>Coordinates: {{x + ', ' + y}}</p>
+
+</div>
+<script>
+var app = angular.module('myApp', []);
+app.controller('myCtrl', function($scope) {
+    $scope.myFunc = function(myE) {
+        $scope.x = myE.clientX;
+        $scope.y = myE.clientY;
+    }
+});
+</script>
+
+
+============ Form Validation ============
+
+# 使用angular form properties
+<form name="myForm">
+<input name="myInput" ng-model="myInput" required>
+</form>
+
+<p>The input's valid state is:</p>
+<h1>{{myForm.myInput.$valid}}</h1>
+
+
+# CSS Classes
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>  
+<style>
+input.ng-invalid {		/* 可以使用css的选择器, 例如#id */
+    background-color:pink;
+}
+input.ng-valid {
+    background-color:lightgreen;
+}
+</style>
+<body ng-app="">
+
+<p>Try writing in the input field:</p>
+
+<form name="myForm">
+<input name="myName" ng-model="myName" required>
+</form>
+
+<p>The input field requires content, and will therefore become green when you write in it.</p>
+
+</body>
+</html>
+
+
+============ Includes ============
+
+# myTable.htm:
+<table>
+	<tr ng-repeat="x in names">
+		<td>{{ x.Name }}</td>
+		<td>{{ x.Country }}</td>
+	</tr>
+</table>
+
+#
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<body>
+
+<div ng-app="myApp" ng-controller="customersCtrl"> 
+  <div ng-include="'myTable.htm'"></div>
+</div>
+
+<script>
+var app = angular.module('myApp', []);
+app.controller('customersCtrl', function($scope, $http) {
+    $http.get("customers.php").then(function (response) {
+        $scope.names = response.data.records;
+    });
+});
+</script>
+
+<p>The HTML, and AngularJS code, for this table are located in the file "myTable.htm".</p>
+
+</body>
+</html>
+
+============ angular routing ============
+
+# index.html中:
+<!DOCTYPE html>
+<html ng-app = "app">
+<head>
+	<script src="angular.min.js"></script>
+	<script src="angular-route.min.js"></script>
+</head>
+
+<body>
+	<a href="#dummyUrl/listorders">My Orders</a><br/><a href="#dummyUrl/neworder">New Order</a><!--注意这里的地址需以#开头-->
+	<div ng-view></div>
+</body>
+
+<script>
+	var app = angular.module("app", ['ngRoute'])
+	app.config(['$routeProvider', function($routeProvider) {
+		$routeProvider
+		.when('/dummyUrl/listorders', {		// html中以#开头后内容, 需要与when('')中/开头后内容一致
+			templateUrl: 'listorders.html',
+			//controller: 'listorders_ctrl'
+		})
+	}])
+</script>
+</html>
+
+# listorders.html中
+<h2>hello world from list orders</h2>
+
+
+
+============ angular CRUD 例子 ============
+
+# dummy数据服务器 getAllOrders.json
+[
+	{"id":1,"description":"Laptops","amount":2345.67},
+	{"id":2,"description":"Gadgets","amount":4545.23},
+	{"id":3,"description":"SMart phones","amount":770.76},
+	{"id":4,"description":"S6 Edge Plus","amount":975.0},
+	{"id":6,"description":"iPhone glass","amount":25.0},
+	{"id":7,"description":"SONY XPeria","amount":234.56},
+	{"id":8,"description":"TV","amount":3322.0},
+	{"id":9,"description":"TV Table","amount":123.45},
+	{"id":12,"description":"abc","amount":123.0},
+	{"id":13,"description":"laptop","amount":12.34},
+	{"id":16,"description":"Projector","amount":123.4},
+	{"id":17,"description":"macbookair","amount":12.34}
+]
+
+
+# 总框架 index.html
+<!DOCTYPE html>
+<html>
+<head>
+	<script src="angular.js"></script>
+	<script src="angular-route.js"></script>
+</head>
+
+<body ng-app = "app">
+	<a href="#dummyUrl/listorders">My Orders</a><br/><a href="#dummyUrl/neworder">New Order</a>
+	<div ng-view></div>
+</body>
+
+<script>
+    var app = angular.module("app", ['ngRoute'])
+
+    app.factory("orderService", function(){
+        return{}
+    })
+	
+	app.config(function($routeProvider) {
+		$routeProvider.caseInsensitiveMatch = true
+	
+		$routeProvider
+		.when('/dummyUrl/listorders', {
+			templateUrl: 'listorders.html',
+			controller: 'listorders_ctrl'
+		})
+		.when('/dummyUrl/neworder', {
+			templateUrl: 'neworder.html',
+			controller: 'neworder_ctrl'
+		})
+	}])
+	
+	app.controller("listorders_ctrl", function($scope, $http, orderService){
+		// list
+		$scope.getorders = function(){
+			$http.get("getAllOrders.json").then(function(resp){
+				orderService.orders = resp.data
+				$scope.orders = orderService.orders
+				orderService.id = orderService.orders.length     // TODO: id = max(ids)
+			})
+		}
+		if(orderService.orders === undefined) $scope.getorders()
+        else $scope.orders = orderService.orders
+		
+		// delete
+		$scope.deleteorder = function(order){			// TODO: 用传递$index方法更好
+			orderService.orders.splice(orderService.orders.indexOf(order),1)
+			$scope.orders = orderService.orders
+		}
+	})
+	
+	
+	app.controller("neworder_ctrl", function($scope, orderService, $location){
+		// add
+		$scope.addorder = function(){
+			orderService.orders.push({
+				id: orderService.id,
+				description:$scope.description,		// TODO: verify input
+				amount:$scope.amount				// TODO: verify input
+			})
+			orderService.id = orderService.id + 1
+			$scope.description = ""
+            $scope.amount = ""
+            $location.url("/dummyUrl/listorders")
+		}
+	})
+</script>
+</html>
+
+
+# 局部view: listorders.html
+<table>
+<tr>
+	<th>description</th><th>amount</th>
+</tr>
+<tr ng-repeat="order in orders">
+	
+	<td>
+		<span ng-hide="isEdit">{{order.description}}</span>
+		<input type="text" ng-show="isEdit" ng-model="order.description"/>
+	</td>
+	
+	<td>
+		<span ng-hide="isEdit">{{order.amount}}</span>
+		<input type="text" ng-show="isEdit" ng-model="order.amount"/>
+	</td>
+	
+	<td>
+		<button ng-hide="isEdit" ng-click="isEdit = !isEdit">Edit</button>
+		<button ng-show="isEdit" ng-click="isEdit = !isEdit">Save</button><!--TODO: save时并没有更新service中的内容-->
+	</td>
+	
+	<td>
+		<button ng-click="deleteorder(order)">Delete</button>
+	</td>
+	
+</tr>
+
+</table>
+
+
+# 局部view: neworder.html
+<label for="description">Description: </label><input type="text" ng-model="description" id="description"/>
+<label for="amount">Amount: </label><input type="text" ng-model="amount" id="amount"/>
+<br/>
+<button ng-click="addorder()">submit</button>
+
+

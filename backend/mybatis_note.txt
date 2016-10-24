@@ -1,0 +1,1662 @@
+解决导入项目中文乱码问题
+Eclipse >> Window >> Preference >> General >> Workspace >> Text file encoding 选UTF-8或其他编码格式试试
+
+============ 2 ============
+
+新建工作区
+打开Package Explorer视图 >> 右上角向下三角形 >> Top Level Element >> Working Sets >> OK
+向下三角形 >> Configure Working Sets >> New >> 填写合适内容, 例如mybatisTest >> 这样就创建了一个虚拟目录, 方便管理
+右键 >> JAVA project >> 剩下的老方法建实际项目. 也可以指定与虚拟目录相同的目录
+
+
+============ 4 项目架构搭建 ============
+
+复制mybatis的jar包到项目下, 比如lib目录下, 然后Build Path中Add To Build Path. 这样项目迁移也不会找不到jar包
+mysql_connector_java_5.1.31_bin.jar
+mybatis-3.3.0.jar
+mybatis的依赖包, 都在mybatis的lib目录下
+
+
+自建Source Folder, 随便起名, 例如config
+log4j记录
+因为有了log4j的jar包, 所以建立log4j.properties就可以看到log过程. 无需指定引用, 神奇
+内容复制文档
+# Global logging configuration
+log4j.rootLogger=DEBUG, stdout
+# Console output...
+log4j.appender.stdout=org.apache.log4j.ConsoleAppender
+log4j.appender.stdout.layout=org.apache.log4j.PatternLayout
+log4j.appender.stdout.layout.ConversionPattern=%5p [%t] - %m%n
+
+// 创建mybatis全局配置文件
+名字和位置都随意. 例如: config下SqlMapConfig.xml
+内容之后补
+
+// 创建sqlmap目录, 用于存放mapping
+内容之后补
+
+完成了项目架构搭建
+
+============ 5 实现 SqlMapConfig.xml全局配置文件 ============
+
+实现SqlMapConfig.xml全局配置文件
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<environments default="development">	<!-- 和spring整合后 environments配置将废除-->	
+		<environment id="development">
+		
+			<!-- 使用jdbc事务管理-->
+			<transactionManager type="JDBC" />
+			
+			<!-- 数据库连接池-->
+			<dataSource type="POOLED">
+				<property name="driver" value="com.mysql.jdbc.Driver" />
+				<property name="url" value="jdbc:mysql://localhost:3306/mybatis?characterEncoding=utf-8" />
+				<property name="username" value="root" />
+				<property name="password" value="root" />
+			</dataSource>
+		</environment>
+	</environments>
+</configuration>
+
+
+实现实体类
+package cn.itcast.mybatis.po;
+import java.util.Date;
+public class User {
+	private int id;		//属性名和数据库表的字段对应
+	private String username;
+	private String sex;
+	private Date birthday;
+	private String address;
+	//getters(); setters();
+}
+
+============ 6 #{}占位符 selectOne() ============
+
+sqlmap下创建实体类的映射文件User.xml, 实现查询单条的statement
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="test">		<!-- 对sql语句进行分类化管理, 理解sql隔离 -->
+	<select id="findUserById" parameterType="int" resultType="cn.itcast.mybatis.po.User">
+		SELECT * FROM USER WHERE id=#{id}		<!--#{id}表示一个占位符, id表示输入的参数的名字, 可以随便起-->
+	</select>
+</mapper>
+
+在SqlMapConfig.xml中加载User.xml配置
+<configuration>
+	<environments default="development">...</environments>
+	<mappers>
+		<mapper resource="sqlmap/User.xml"/>
+	</mappers>
+</configuration>
+
+
+测试程序编写
+public class MybatisFirst {
+	@Test
+	public void findUserByIdTest() throws IOException {
+		//创建 SqlSessionFactory
+		String resource = "SqlMapConfig.xml";
+		InputStream inputStream = Resources.getResourceAsStream(resource);
+		SqlSessionFactory sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+		
+		//创建SqlSession
+		SqlSession sqlSession = sqlSessionFactory.openSession();
+
+		//参数1: 映射文件中statement的id, namespace + statement的id
+		//参数2: 映射文件中需要的输入参数
+		User user = sqlSession.selectOne("test.findUserById", 1);	//结果必须是单条对象
+		System.out.println(user.getUsername());
+		
+		//释放SqlSession资源, 最好用try...catch...finally结构
+		sqlSession.close();
+	}
+}
+
+============ 8 ${}拼接 selectList() ============
+
+User.xml中实现查询多条的statement
+<mapper namespace="test">
+	<select id="findUserByName" parameterType="java.lang.String" resultType="cn.itcast.mybatis.po.User">
+	<!--虽然返回值可能是list, 但还是用单条的bean-->
+		SELECT * FROM USER WHERE username LIKE '%${value}%'
+		<!--${}表示将接收到的参数不加任何修饰拼接在sql中, 如果传入简单类型参数, ${}中只能用value-->
+	</select>
+</mapper>
+注意: ${}拼接有sql注入风险, 慎用
+
+测试程序编写
+public class MybatisFirst {
+	@Test
+	public void findUserByName() throws IOException {
+		//创建SqlSessionFactory
+		//创建SqlSession
+		
+		List<User> list = sqlSession.selectList("test.findUserByName", "小明");
+		System.out.println(list.get(0).getUsername());
+	
+		//释放SqlSession资源
+	}
+}
+
+============ 10 insert() ============
+
+User.xml中实现添加的statement
+<mapper namespace="test">
+	<insert id="insertUser" parameterType="cn.itcast.mybatis.po.User">		<!--输入类型为entity bean, mybatis通过OGNL表达式获取属性值-->
+		insert into user(username, birthday, sex, address) value(#{username}, #{birthday}, #{sex}, #{address})
+	</insert>
+</mapper>
+
+测试程序编写
+public class MybatisFirst {
+	@Test
+	public void insertUser() throws IOException {
+		//创建SqlSessionFactory
+		//创建SqlSession
+		
+		User user = new User();		//在db中id是auto increment
+		user.setUsername("王小军");
+		user.setBirthday(new Date());
+		user.setSex("1");
+		user.setAddress("河南郑州");
+		
+		sqlSession.insert("test.insertUser", user);
+		sqlSession.commit();			//以后和spring整合后会auto commit. 除了query, 其余操作都要commit
+		
+		//释放SqlSession资源
+	}
+}
+
+============ 11 返回auto increment的值 LAST_INSERT_ID() ============
+
+如果插入主副表, 很可能需要将主表的主键id值作为副表的foreign key输入
+
+思路: MySQL中, insert后马上用LAST_INSERT_ID(), 可以获得自增主键值
+insert into user(username, birthday, sex, address) value('username', '2014-07-10', '1', 'address');
+select LAST_INSERT_ID();
+
+User.xml中实现返回自增主键的statement
+<mapper namespace="test">
+	<insert id="insertUser" parameterType="cn.itcast.mybatis.po.User">
+		<selectKey keyProperty="id" order="AFTER" resultType="java.lang.Integer">		<!--指定返回值注入User.id中-->
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		
+		insert into user(username, birthday, sex, address) value(#{username}, #{birthday}, #{sex}, #{address})
+	</insert>
+</mapper>
+
+测试程序编写
+public class MybatisFirst {
+	@Test
+	public void insertUser2() throws IOException {
+		//创建SqlSessionFactory
+		//创建SqlSession
+		//创建一个user实例
+		
+		sqlSession.insert("test.insertUser", user);
+		sqlSession.commit();
+		
+		System.out.println(user.getId());		//取得注入的id值
+		
+		//释放SqlSession资源
+	}
+}
+
+另外一种实现注入方式(未测试)
+<mapper namespace="test">
+	<insert id="insertUser" parameterType="cn.itcast.mybatis.po.User" useGeneratedKeys="true" keyProperty="id">
+		insert into user(username, birthday, sex, address) value(#{username}, #{birthday}, #{sex}, #{address})
+	</insert>
+</mapper>
+
+============ 11 使用uuid值 UUID() ============
+
+思路: MySQL中, insert前用UUID(), 可以获得将插入值的UUID字符串
+insert into user(uid, username, birthday, sex, address) value((select UUID()), 'username', '2014-07-10', '1', 'address');
+
+step1, 给user表添加接收uuid的属性:
+ALTER TABLE `user` ADD COLUMN `uid` VARCHAR(35);		#uuid改叫uid, 避免关键字. 可能长度不够, 设置为50没问题
+
+step2, 建立相应的pojo
+public class UserUUID extends User{
+	private String uid;
+	//getters(); setters();
+}
+
+step3, User.xml中实现返回自增主键的statement
+<mapper namespace="test">
+	<insert id="insertUserUUID" parameterType="cn.itcast.mybatis.po.UserUUID">
+		<selectKey keyProperty="uid" order="BEFORE" resultType="java.lang.String">	<!--指定select返回值注入uid-->
+			SELECT uuid()
+		</selectKey>
+		insert into user(uid, username, birthday, sex, address) value(#{uid}, #{username}, #{birthday}, #{sex}, #{address})
+	</insert>
+</mapper>
+
+step3, 测试程序编写
+public class MybatisFirst {
+	@Test
+	public void insertUserUUID() throws IOException {
+		//创建SqlSessionFactory
+		//创建SqlSession
+
+		UserUUID userUUID = new UserUUID();
+		userUUID.setUsername("王小军");
+		userUUID.setBirthday(new Date());
+		userUUID.setSex("1");
+		userUUID.setAddress("河南郑州");
+		
+		sqlSession.insert("test.insertUserUUID", userUUID);		//userUUID的uid段由mybatis注入
+		sqlSession.commit();
+		
+		//释放SqlSession资源
+	}
+}
+
+============ 12 delete(); update() ============
+
+User.xml中实现删除的statement
+<mapper namespace="test">
+	<delete id="deleteUser" parameterType="java.lang.Integer">
+		delete from user where id=#{id}
+	</delete>
+</mapper>
+
+测试程序编写
+public class MybatisFirst {
+	@Test
+	public void deleteUserTest() throws IOException {
+		//创建SqlSessionFactory
+		//创建SqlSession
+
+		sqlSession.delete("test.deleteUser", 31);
+		sqlSession.commit();
+		
+		//释放SqlSession资源
+	}
+}
+
+
+User.xml中实现更新的statement
+<mapper>
+	<update id="updateUser" parameterType="cn.itcast.mybatis.po.User">
+		update user set username=#{username},birthday=#{birthday},sex=#{sex},address=#{address} where id=#{id}
+	</update>
+</mapper>
+
+测试程序编写
+public class MybatisFirst {
+	@Test
+	public void updateUser() throws IOException {
+		//创建SqlSessionFactory
+		//创建SqlSession
+
+		User user = new User();
+		user.setId(41);					//务必设置id
+		user.setUsername("王大军");
+		user.setBirthday(new Date());
+		user.setSex("2");
+		user.setAddress("河南郑州");
+
+		sqlSession.update("test.updateUser", user);
+		sqlSession.commit();
+		
+		// 释放SqlSession资源
+	}
+}
+
+============ 16 原始Dao开发模式 ============
+
+思路: DaoImpl中注入SQLSessionFactory属性, 然后在方法体内部, 用factory创建SqlSession实体
+
+step1, 建立Dao接口
+public interface UserDao {
+	public User findUserById(int id) throws Exception;
+	//public List<User> findUserByName(String name) throws Exception;
+	//public void insertUser(User user) throws Exception;
+	//public void deleteUser(int id) throws Exception;
+}
+
+step2, 实现Dao接口
+public class UserDaoImpl implements UserDao {
+	private SqlSessionFactory sqlSessionFactory;
+
+	public UserDaoImpl(SqlSessionFactory sqlSessionFactory) {		// 构造方法接收单例管理的sqlSessionFactory, 由测试程序(未来的spring)产生实例
+		this.sqlSessionFactory = sqlSessionFactory;
+	}
+
+	@Override
+	public User findUserById(int id) throws Exception {
+		SqlSession sqlSession = sqlSessionFactory.openSession();		//方法体内建SqlSession
+		User user = sqlSession.selectOne("test.findUserById", id);
+		sqlSession.close();
+		return user;
+	}
+	// 其他方法的实现
+}
+
+step3, 建立JUnit测试程序
+建立source folder, 名字test. 
+source folder不是一个真正的物理目录. 也就是说, 在test中的cn.itcast.mybatis.Dao和在src中的cn.itcast.mybatis.Dao实际上还是在一个package中.
+测试目标的类文件上, 右键New >> Other >> JUnit Test Case >> 修改test程序source folder; package; Name 等信息 >> 选择要测试的方法
+public class UserDaoImplTest {
+	@Before										//用于初始化测试环境
+	public void setUp() throws Exception {}
+	@Test
+	public void testFindUserById() throws Exception {}
+}
+
+基于以上默认生成的JUnit模板进行修改
+public class UserDaoImplTest {
+	private SqlSessionFactory sqlSessionFactory;
+
+	@Before
+	public void setUp() throws Exception {
+		String resource = "SqlMapConfig.xml";
+		InputStream inputStream = Resources.getResourceAsStream(resource);
+		sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+	}
+
+	@Test
+	public void testFindUserById() throws Exception {
+		UserDao userDao = new UserDaoImpl(sqlSessionFactory);
+		User user = userDao.findUserById(1);
+		System.out.println(user.getUsername());
+	}
+}
+
+============ 18-19 mapper代理方式替代Dao(主要使用方式) ============
+
+mapper代理方式开发规范
+1. mapper.xml中, namespace 等于mapper接口类名, 包含package路径
+2. mapper.xml中, statement的 id 等于mapper接口中方法名
+3. mapper.xml中, statement的 parameterType 类型等于mapper接口中方法输入参数类型
+4. mapper.xml中, statement的 resultType 类型等于mapper接口中方法返回值类型
+5. sql查询结果的列名和pojo中的属性名一致时, 输出映射才能成功. 或者要用resultMap设置映射关系. 参考video28
+
+step1, 准备mapper接口
+package cn.itcast.mybatis.mapper;
+public interface UserMapper {
+	public User findUserById(int id) throws Exception;
+	public List<User> findUserByName(String name)throws Exception;	//mybatis依据返回值类型, 自动选择使用selectOne()或selectList()
+}
+
+step2, 准备mapper文件UserMapper.xml, 让mybatis实现接口. 本例中文件位置随意定, 但批量加载时有命名及位置规范, 参考video24
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.itcast.mybatis.mapper.UserMapper">
+	<select id="findUserById" parameterType="int" resultType="cn.itcast.mybatis.po.User">
+		SELECT * FROM USER WHERE id=#{value}
+	</select>
+	
+	<select id="findUserByName" parameterType="java.lang.String" resultType="cn.itcast.mybatis.po.User">
+		SELECT * FROM USER WHERE username LIKE '%${value}%'
+	</select>
+</mapper>
+
+step3, 将mapper.xml添加到SqlMapConfig.xml主配置中. 本例中手动添加, 设置批量加载后废除, 参考video24
+<configuration>
+	<mappers>
+		<mapper resource="sqlmap/User.xml"/>
+		<mapper resource="mapper/UserMapper.xml"/>
+	</mappers>
+</configuration>
+
+step4, 测试方法
+public class UserDaoImplTest {
+	private SqlSessionFactory sqlSessionFactory;
+
+	@Before
+	public void setUp() throws Exception {
+		String resource = "SqlMapConfig.xml";
+		InputStream inputStream = Resources.getResourceAsStream(resource);
+		sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+	}
+
+	@Test
+	public void testFindUserById() throws Exception {
+		SqlSession sqlSession = sqlSessionFactory.openSession();
+
+		UserMapper userMapper = sqlSession.getMapper(UserMapper.class);		//创建mapper代理对象
+		User user = userMapper.findUserById(1);								//调用mapper代理的方法
+		sqlSession.close();
+		
+		System.out.println(user.getUsername());
+	}
+	
+	@Test
+	public void testFindUserByName() throws Exception {
+		SqlSession sqlSession = sqlSessionFactory.openSession();
+
+		UserMapper userMapper = sqlSession.getMapper(UserMapper.class);
+		List<User> list = userMapper.findUserByName("username");
+		sqlSession.close();
+		
+		System.out.println(list.get(0).getUsername());
+	}
+}
+
+============ 20-24 SqlMapConfig.xml ============
+
+注意: 需要严格按照以下顺序配置(不需要每项都配置)
+properties(属性)
+settings(全局配置参数)
+typeAliases(类型别名)
+typeHandlers(类型处理器)
+objectFactory(对象工厂)
+plugins(插件)
+environments(环境集合属性对象)
+	environment(环境子属性对象)
+		transactionManager(事务管理)
+		dataSource(数据源)
+mappers(映射器)
+
+------------ 20 properties(属性) ------------
+
+将dataSource中的dataSource property单独配置, 以便于在集群环境下快速安全修改配置
+
+step1, 准备db.properties:
+jdbc.driver=com.mysql.jdbc.Driver
+jdbc.url=jdbc:mysql://localhost:3306/mybatis
+jdbc.username=root
+jdbc.password=root
+
+step2, SqlMapConfig.xml中加载db.properties:
+<configuration>
+	<properties resource="db.properties"></properties>
+
+	<environments default="development">
+		<environment id="development">
+			<transactionManager type="JDBC" />
+
+			<dataSource type="POOLED">
+				<property name="driver" value="${jdbc.driver}" />
+				<property name="url" value="${jdbc.url}" />
+				<property name="username" value="${jdbc.username}" />
+				<property name="password" value="${jdbc.password}" />
+			</dataSource>
+		</environment>
+	</environments>
+</configuration>
+
+------------ 22 typeAliases(类型别名) ------------
+
+在指定parameterType, resultType类型时输入类型全路径太长
+
+mybatis内置别名:
+_byte 		byte 
+_long 		long 
+_short 		short 
+_int 		int 
+_integer 	int 
+_double 	double 
+_float 		float 
+_boolean 	boolean 
+string 		String 
+byte 		Byte 
+long 		Long 
+short 		Short 
+int 		Integer 
+integer 	Integer 
+double 		Double 
+float 		Float 
+boolean 	Boolean 
+date 		Date 
+decimal 	BigDecimal 
+bigdecimal 	BigDecimal 
+
+自定义单个别名: cn.itcast.mybatis.po.User => user
+<configuration>
+	<properties/>
+	
+	<typeAliases>
+		<typeAlias type="cn.itcast.mybatis.po.User" alias="user"/>
+	</typeAliases>
+</configuration>
+在UserMapper.xml中, resultType就只用写"user"即可
+
+批量别名定义: mybatis扫描指定包中的po类, 别名就是类名
+<configuration>
+	<typeAliases>
+		<package name="cn.itcast.mybatis.po"/>
+	</typeAliases>
+</configuration>
+在UserMapper.xml中, resultType写"user"或"User"都可
+
+------------ 24 mappers(映射器) ------------
+
+方法1: resource一次加载一项. 也可以是url写绝对路径. xml中配置id和class
+<configuration>
+	<mappers>
+		<mapper resource="sqlmap/User.xml"/>
+	</mappers>
+</configuration>
+
+方法2: mapper接口一次加载一项, xml文件和映射的接口在同目录中且同名. 配置中不需要配置class
+<configuration>
+	<mappers>
+		<mapper class="cn.itcast.mybatis.mapper.UserMapper"/>
+	</mappers>
+</configuration>
+
+方法3: 指定mapper的包名, mybatis自动加载所有接口. xml文件规范同上
+<configuration>
+	<mappers>
+		<package name="cn.itcast.mybatis.mapper"/>
+	</mappers>
+</configuration>
+
+============ 25 建立自定义组合的pojo ============
+
+需求: 传递查询条件时, 需要在一个pojo中同时包含用户信息和商品信息
+
+step1, 一般不直接修改User.java, 而是通过extends添加新的属性
+public class UserCustom extends User{
+	//新的fields及其getters(); setters();
+}
+
+step2, 建立用户pojo和商品pojo的组合
+public class QueryVo {
+	private UserCustom userCustom;
+	// getters(); setters();
+
+	//商品列表pojo
+	// getters(); setters();
+}
+
+============ 26 自定义pojo的mybatis实现 ============
+
+step1, 配置xml映射文件, 取自定义pojo属性值
+<select id="findUserList" parameterType="cn.itcast.mybatis.po.QueryVo" resultType="cn.itcast.mybatis.po.UserCustom">
+	SELECT * FROM USER WHERE user.sex = #{userCustom.sex} AND user.username LIKE '%${userCustom.username}%'
+	# 如果要取QueryVo下的属性, 比如也有个username: 直接${username}
+	# 查询出来的列名和pojo的属性名必须一致
+</select>
+
+step2, 建立对应的接口
+public interface UserMapper {
+	public List<UserCustom> findUserList(QueryVo queryVo) throws Exception;
+}
+
+step3, 测试实现
+@Test
+public void testFindUserList() throws Exception {
+	SqlSession sqlSession = sqlSessionFactory.openSession();
+	UserMapper userMapper = sqlSession.getMapper(UserMapper.class);
+	
+	//创建包装对象，设置查询条件
+	UserCustom userCustom = new UserCustom();
+	userCustom.setSex("1");
+	userCustom.setUsername("小明");
+	
+	QueryVo queryVo = new QueryVo();
+	queryVo.setUserCustom(userCustom);
+	
+	List<UserCustom> list = userMapper.findUserList(queryVo);
+	sqlSession.close();
+	System.out.println(list.get(0).getUsername());
+}
+
+============ 28 resultMap 处理查询结果列名和pojo属性名不一致 ============
+
+如果查询出来的列名和pojo的属性名不一致, 可以通过定义一个resultMap对列名和pojo属性名之间作一个映射关系
+
+step1, 在UserMapper.xml中定义resultMap对应关系
+<mapper>
+	<resultMap type="user" id="userResultMap">				<!-- type： resultMap最终映射的java对象类型, 这里使用了别名 -->
+		<id column="id_" property="id"/>					<!-- id:查询结果集中的唯一标识. 组合主键时用多个id节点表示 -->
+		<result column="username_" property="username"/>	<!-- result:查询结果集中的普通属性 -->
+	</resultMap>
+</mapper>
+
+step2, 配置xml文件, 注意查询结果列名和pojo属性故意设置为不同
+<select id="findUserByIdResultMap" parameterType="int" resultMap="userResultMap">
+	SELECT id id_,username username_ FROM USER WHERE id=#{value}
+</select>
+
+step3, 建立对应的接口
+public interface UserMapper {
+	public User findUserByIdResultMap(int id) throws Exception;
+}
+
+step4, 测试
+@Test
+public void testFindUserByIdResultMap() throws Exception {
+	SqlSession sqlSession = sqlSessionFactory.openSession();
+
+	UserMapper userMapper = sqlSession.getMapper(UserMapper.class);
+	User user = userMapper.findUserByIdResultMap(16);
+	sqlSession.close();
+	
+	System.out.println(user.getUsername());
+}
+
+============ 29 动态sql <where> <if> ============
+
+原配置: 未对输入参数进行检测
+<select id="findUserList" parameterType="cn.itcast.mybatis.po.QueryVo" resultType="cn.itcast.mybatis.po.UserCustom">
+	SELECT * FROM USER WHERE user.sex = #{userCustom.sex} AND user.username LIKE '%${userCustom.username}%'
+</select>
+
+动态配置where部分:
+<select id="findUserList" parameterType="cn.itcast.mybatis.po.QueryVo" resultType="cn.itcast.mybatis.po.UserCustom">
+	SELECT * FROM USER
+	<where>					<!-- where可以自动去掉条件中的第一个AND -->
+		<if test="userCustom!=null">				<!--test="" 是一个参数, 必须有-->
+			<if test="userCustom.sex!=null and userCustom.sex!=''">
+				AND user.sex = #{userCustom.sex}
+			</if>
+
+			<if test="userCustom.username!=null and userCustom.username!=''">
+				AND user.username LIKE '%${userCustom.username}%'
+			</if>
+		</if>
+	</where>
+</select>
+
+============ 30 动态sql <sql> <include> ============
+
+大量使用相同sql片段时, 可用<include>指向引用
+经验: sql片段基于单表定义时可重用性高; sql片段中不要包括where;
+<sql id="query_user_where">
+	<if test="userCustom!=null">
+		<if test="userCustom.sex!=null and userCustom.sex!=''">
+			AND user.sex = #{userCustom.sex}
+		</if>
+
+		<if test="userCustom.username!=null and userCustom.username!=''">
+			AND user.username LIKE '%${userCustom.username}%'
+		</if>
+	</if>
+</sql>
+
+<select id="findUserCount" parameterType="cn.itcast.mybatis.po.QueryVo" resultType="int">
+	SELECT count(*) FROM USER
+	<where>
+		<include refid="query_user_where"></include>
+		<!-- <include refid="query_goods_where"></include> 假设对goods表有一个sql片段, 则同样可以在这里导入 -->
+	</where>
+</select>
+
+============ 31 动态sql 传递List <foreach> ============
+
+需求:
+SELECT * FROM USER WHERE 1=1 AND (id=1 OR id=10 OR id=16)
+SELECT * FROM USER WHERE 1=1 AND id IN(1,10,16)
+
+step1, 用pojo接收数据
+public class QueryVo {
+	private List<Integer> ids;
+	//getters(); setters();
+}
+
+step2, 拼接 AND (id=1 OR id=10 OR id=16) 部分
+<sql id="query_user_idList">
+	<if test = "ids!=null">
+		<foreach collection="ids" item="user_id" open="AND (" close=")" separator="OR">
+		<!-- collection指明输入List对象名; item代表从List读取内容的当前条临时存放在user_id中; open代表开始遍历时拼接的串-->
+			id=#{user_id}						<!-- 每个循环需要填写的内容, 例如id=16. 值16从user_id中读取 -->
+		</foreach>
+	</if>
+</sql>
+
+<select id="findUserList" parameterType="cn.itcast.mybatis.po.QueryVo" resultType="cn.itcast.mybatis.po.UserCustom">
+	SELECT * FROM USER
+	<where>
+		<include refid="query_user_idList"></include>
+	</where>
+</select>
+
+step3, 测试
+@Test
+public void testFindUserList() throws Exception {
+	SqlSession sqlSession = sqlSessionFactory.openSession();
+	UserMapper userMapper = sqlSession.getMapper(UserMapper.class);
+	
+	List<Integer> ids = new ArrayList<Integer>();
+	ids.add(1);
+	ids.add(10);
+	ids.add(16);
+
+	QueryVo queryVo = new QueryVo();
+	queryVo.setIds(ids);
+
+	List<UserCustom> list = userMapper.findUserList(queryVo);
+	System.out.println(list.get(0).getUsername());
+}
+
+============ 4 一对一查询的 resultType 实现 直接映射 ============
+
+需求: 从订单信息查询用户信息
+
+step1, 实现sql语句
+1. 确定主表: cart
+SELECT 
+	* 
+FROM 
+	cart;
+
+2. 确定关联表: user
+SELECT
+	*
+FROM
+		cart
+	JOIN
+		user 
+	ON
+		cart.user_id = user.id;
+
+3. 去除冗余查询结果
+SELECT
+	cart.*,
+	user.username,
+	user.sex,
+	user.address 
+FROM
+		cart
+	JOIN
+		user 
+	ON
+		cart.user_id = user.id;
+
+step2, 根据查询结果集, 准备对应的pojo用于接收结果集
+public class Cart {
+	private int id;
+	private int user_id;
+	private String number;
+	private Date createtime;
+	private String note;
+	//getters(); setters();
+}	
+public class CartCustom extends Cart{
+	private String username;
+	private String sex;
+	private String address;
+	//getters(); setters();
+}
+
+step3, 准备mapper查询接口
+public interface CartCustomMapper {
+	public List<CartCustom> findCartUser() throws Exception;
+}
+
+step4, 准备xml映射文件
+<mapper namespace="cn.itcast.mybatis.mapper.CartCustomMapper">
+	<select id="findCartUser" resultType="CartCustom">	<!-- 测试, 暂时不使用输入参数parameterType -->
+		SELECT
+			cart.*,
+			user.username,
+			user.sex,
+			user.address 
+		FROM
+				cart
+			JOIN
+				user 
+			ON
+				cart.user_id = user.id;
+	</select>
+</mapper>
+SqlMapConfig中使用<package name="cn.itcast.mybatis.mapper"/>自动扫描, 不需要再配置mapper了
+
+step5, 测试
+public class CartCustomMapperTest {
+	private SqlSessionFactory sqlSessionFactory;
+
+	@Before
+	public void setUp() throws Exception {
+		String resource = "SqlMapConfig.xml";
+		InputStream inputStream = Resources.getResourceAsStream(resource);
+		sqlSessionFactory = new SqlSessionFactoryBuilder().build(inputStream);
+	}
+
+	@Test
+	public void testFindCartUser() throws Exception {
+		SqlSession sqlSession = sqlSessionFactory.openSession();
+		CartCustomMapper cartCustomMapper = sqlSession.getMapper(CartCustomMapper.class);
+
+		List<CartCustom> list = cartCustomMapper.findCartUser();
+		System.out.println(list.get(0).getUsername());
+
+		sqlSession.close();
+	}
+}
+
+============ 5 一对一查询的resultMap实现 单个关联属性的注入 <resultMap> <association> ============
+
+需求:
+Cart类中添加user属性
+用resultMap将查询结果集映射到Cart类中
+将其中用户信息映射到user属性中
+
+step1, 实现sql语句. 同之前
+
+step2, 修改Cart pojo, 添加user属性
+public class Cart {
+    private Integer id;
+    private Integer userId;				//注意此处故意修改成和查询结果不同名: cart.user_id
+    private String number;
+    private Date createtime;
+    private String note;
+    
+    private User user;
+	//getters(); setters();
+}
+
+step3, 准备查询接口
+public interface CartCustomMapper {
+	public List<Cart> findCartUserResultMap() throws Exception;
+}
+
+step4, 准备xml映射文件
+<mapper namespace="cn.itcast.mybatis.mapper.CartCustomMapper">
+	<select id="findCartUserResultMap" resultMap="CartUserResultMap">			<!--这里将使用<resultMap>指定映射, 注意参数不再是resultType-->
+		SELECT
+			cart.*,
+			user.username,
+			user.sex,
+			user.address 
+		FROM
+				cart
+			JOIN
+				user 
+			ON
+				cart.user_id = user.id;
+	</select>
+</mapper>
+
+step5, 准备<resultMap> CartUserResultMap, 用<association>节点指定关联属性user, 这样user对象结果也能正确注入/映射
+<mapper namespace="cn.itcast.mybatis.mapper.CartCustomMapper">
+	<resultMap type="cn.itcast.mybatis.po.Cart" id="CartUserResultMap">		<!-- type指定最终映射对象 -->
+		<id column="id" property="id"/>											<!-- id和result指定查询结果集, property指定属性 -->
+		<result column="user_id" property="userId"/>
+		<result column="number" property="number"/>
+		<result column="createtime" property="createtime"/>
+		<result column="note" property="note"/>
+		
+		<association property="user" javaType="cn.itcast.mybatis.po.User">		<!-- property指定映射到相关属性, javaType是该属性的类型 -->
+			<id column="user_id" property="id"/>								<!-- 这里id和result都是相对于user而言 -->
+			<result column="username" property="username"/>
+			<result column="sex" property="sex"/>
+			<result column="address" property="address"/>
+		</association>
+	</resultMap>
+</mapper>
+数据库查询的结果可以看成简单的value key map, 需要通过一个 resultMap 指定如何对应到pojo结构中去
+
+step6, 测试
+public class OrdersMapperCustomTest {
+	private SqlSessionFactory sqlSessionFactory;
+
+	@Before
+	public void setUp() throws Exception {...}
+
+	@Test
+	public void testFindCartUserResultMap() throws Exception {
+		SqlSession sqlSession = sqlSessionFactory.openSession();
+		CartCustomMapper cartCustomMapper = sqlSession.getMapper(CartCustomMapper.class);
+
+		List<Cart> list = cartCustomMapper.findCartUserResultMap();
+		System.out.println(list.get(0).getUser().getUsername());
+
+		sqlSession.close();
+	}
+}
+
+============ 6 一对多查询的resultMap实现 List关联属性的注入 <collection> ============
+
+需求: 查询订单cart及订单明细cartdetail的信息
+用resultMap将查询结果集映射到Cart类中
+将其中订单明细的信息映射到List<Cart>属性中
+
+step1, 实现sql语句
+1. 确定主表: cart
+SELECT 
+	* 
+FROM 
+	cart;
+
+2. 确定关联表: cartdetail
+SELECT 
+	cart.*,
+	user.username,
+	user.sex,
+	user.address,
+	cartdetail.id cartdetail_id,
+	cartdetail.item_id,
+	cartdetail.item_num,
+	cartdetail.cart_id
+FROM
+		cart
+	JOIN
+		user
+	ON
+		cart.user_id = user.id
+	JOIN
+		cartdetail
+	ON
+		cartdetail.cart_id=cart.id
+
+step2, 修改Cart pojo, 添加List<Cartdetail>属性
+public class Cart {
+    private Integer id;
+    private Integer userId;
+    private String number;
+    private Date createtime;
+    private String note;
+    private User user;
+	
+	private List<Cartdetail> cartdetailList;
+	//getters(); setters();
+}
+public class Cartdetail {
+	int id;
+	int cart_id;
+	int item_id;
+	int item_num;
+	//getters(); setters();
+}
+
+step3, 准备查询接口
+public interface CartCustomMapper {
+	public List<Cart> findCartAndCartDetailResultMap() throws Exception;
+}
+
+step4, 准备xml映射文件
+<mapper namespace="cn.itcast.mybatis.mapper.CartCustomMapper">
+	<select id="findCartAndCartDetailResultMap" resultMap="CartAndCartDetailResultMap">
+		SELECT 
+			cart.*,
+			user.username,
+			user.sex,
+			user.address,
+			cartdetail.id cartdetail_id,
+			cartdetail.item_id,
+			cartdetail.item_num,
+			cartdetail.cart_id
+		FROM
+				cart
+			JOIN
+				user
+			ON
+				cart.user_id = user.id
+			JOIN
+				cartdetail
+			ON
+				cartdetail.cart_id=cart.id
+	</select>
+</mapper>
+
+step5, 准备 CartAndCartDetailResultMap, 用<collection>节点指定关联属性List<Cartdetail>
+<mapper namespace="cn.itcast.mybatis.mapper.CartCustomMapper">
+	<resultMap type="cn.itcast.mybatis.po.Cart" id="CartAndCartDetailResultMap" extends="CartUserResultMap">  <!--用extends略去order和user信息相同代码-->
+		<collection property="cartdetailList" ofType="cn.itcast.mybatis.po.Cartdetail">		<!-- ofType是List集合中pojo的类型, 注意不是association中javaType -->
+			<id column="cartdetail_id" property="id"/>										<!-- 同之前, 这里所有id和result都是相对于cartdetail而言-->
+			<result column="item_id" property="item_id"/>
+			<result column="item_num" property="item_num"/>
+			<result column="cart_id" property="cart_id"/>
+		</collection>
+	</resultMap>
+</mapper>
+
+step6, 测试
+public class OrdersMapperCustomTest {
+	private SqlSessionFactory sqlSessionFactory;
+
+	@Before
+	public void setUp() throws Exception {...}
+	
+	@Test
+	public void testFindCartAndCartDetailResultMap() throws Exception {
+		SqlSession sqlSession = sqlSessionFactory.openSession();
+		CartCustomMapper cartCustomMapper = sqlSession.getMapper(CartCustomMapper.class);
+
+		List<Cart> list = cartCustomMapper.findCartAndCartDetailResultMap();
+		System.out.println(list.get(0).getCartdetails().get(0).getItem_id());
+
+		sqlSession.close();
+	}
+}
+
+============ 7 多对多查询的resultMap实现 (综合运用<association>和<collection>) ============
+
+需求: 查询用户及用户购买商品信息
+
+step1, 实现sql语句
+1. 确定主表: user
+SELECT * 
+FROM user;
+
+2. 确定关联表: cart, cartdetail, item
+SELECT
+	cart.*,
+	user.username,
+	user.sex,
+	user.address,
+	cartdetail.id cartdetail_id,
+	cartdetail.item_id,
+	cartdetail.item_num,
+	cartdetail.cart_id,
+	item.name item_name,
+	item.detail item_detail,
+	item.price item_price
+FROM
+		cart
+	JOIN
+		user
+	ON
+		cart.user_id = user.id
+	JOIN
+		cartdetail
+	ON
+		cartdetail.cart_id=cart.id
+	JOIN
+		item
+	ON
+		cartdetail.item_id = item.id
+
+step2a, 因为需求的主题是用户, 所以首先修改User pojo, 添加直接关联的属性 List<Cart> 一对多
+public class User {
+	private int id;
+	private String username;
+	private String sex;
+	private Date birthday;
+	private String address;
+
+	private List<Cart> cartList;
+	//getters(); setters();
+}
+
+step2b, 继续在Cart pojo中, 添加关联的属性List<Cartdetail> 一对多
+public class Cart {
+    private Integer id;
+    private Integer userId;
+    private String number;
+    private Date createtime;
+    private String note;
+	
+    private List<Cartdetail> cartdetailList;
+	//getters(); setters();
+}
+
+step2c, 继续在Cartdetail pojo中, 添加关联的属性Item item 一对一
+public class Cartdetail {
+    private Integer id;
+    private Integer cartId;
+    private Integer itemsId;
+    private Integer itemsNum;
+	
+    private Item item;
+	//getters(); setters();
+}
+
+step3, 准备查询接口
+public interface CartCustomMapper {
+	public List<User> findUserAndItemResultMap() throws Exception;
+}
+
+step4, 准备xml映射文件
+<mapper namespace="cn.itcast.mybatis.mapper.CartCustomMapper">
+	<select id="findUserAndItemResultMap" resultMap="UserAndItemResultMap">
+		SELECT
+			cart.*,
+			user.username,
+			user.sex,
+			user.address,
+			cartdetail.id cartdetail_id,
+			cartdetail.item_id,
+			cartdetail.item_num,
+			cartdetail.cart_id,
+			item.name item_name,
+			item.detail item_detail,
+			item.price item_price
+		FROM
+				cart
+			JOIN
+				user
+			ON
+				cart.user_id = user.id
+			JOIN
+				cartdetail
+			ON
+				cartdetail.cart_id=cart.id
+			JOIN
+				item
+			ON
+				cartdetail.item_id = item.id
+	</select>
+</mapper>
+
+step5, 准备UserAndItemResultMap, 用<collection>节点指定关联属性List<Orderdetail>
+<mapper namespace="cn.itcast.mybatis.mapper.CartCustomMapper">
+	<resultMap type="cn.itcast.mybatis.po.User" id="UserAndItemResultMap">
+		<id column="user_id" property="id"/>				<!-- User -->
+		<result column="username" property="username"/>
+		<result column="sex" property="sex"/>
+		<result column="address" property="address"/>
+		
+		 <collection property="cartList" ofType="cn.itcast.mybatis.po.Cart">		<!-- 开始映射List<Cart>变量, 所有的property都是对应Cart而言 -->
+		 	<id column="id" property="id"/>
+		 	<result column="user_id" property="userId"/>
+			<result column="number" property="number"/>
+			<result column="createtime" property="createtime"/>
+			<result column="note" property="note"/>
+			
+		  	<collection property="cartdetailList" ofType="cn.itcast.mybatis.po.Cartdetail">		<!-- 开始映射List<Cartdetail>变量 -->
+				<id column="orderdetail_id" property="id"/>
+				<result column="item_id" property="item_id"/>
+				<result column="item_num" property="item_num"/>
+				<result column="cart_id" property="cart_id"/>
+				 	
+		  	 	<association property="item" javaType="cn.itcast.mybatis.po.Item">		<!-- 开始映射Item变量, 单关联时用<association> -->
+		  	 		<id column="item_id" property="id"/>
+		  	 		<result column="items_name" property="name"/>
+		  	 		<result column="items_detail" property="detail"/>
+		  	 		<result column="items_price" property="price"/>
+		  	 	</association>
+		  	</collection>
+		 </collection>
+	</resultMap>
+</mapper>
+
+step6, 测试
+public class OrdersMapperCustomTest {
+	private SqlSessionFactory sqlSessionFactory;
+
+	@Before
+	public void setUp() throws Exception {...}
+	
+	@Test
+	public void testFindUserAndItemResultMap() throws Exception {
+		SqlSession sqlSession = sqlSessionFactory.openSession();
+		CartCustomMapper cartCustomMapper = sqlSession.getMapper(CartCustomMapper.class);
+
+		List<User> list = cartCustomMapper.findUserAndItemResultMap();
+		System.out.println(list.get(0).getCartList().get(0).getCartdetails().get(0).getItem().getName());
+
+		sqlSession.close();
+	}
+}	
+
+============ 9 延迟加载 LazyLoading 子查询的分段执行 ============		NO CALIBERATION
+
+延迟加载: 先从单表查询, 需要时再从关联表去关联查询. 例如查询orders并且关联查询user信息, 如果先查询orders即可满足要求, 则当需要查询user时再查询user
+
+step1, 用子查询方法表达之前查询语句: SELECT * FROM orders JOIN user ON orders.user_id = user.id;
+SELECT orders.*,
+	(	SELECT username
+		FROM user
+		WHERE orders.user_id = user.id
+	) username,
+	
+	(	SELECT sex
+		FROM user
+		WHERE orders.user_id = user.id
+	) sex
+FROM orders
+
+step2, 接收pojo依然是Orders, 含User user
+
+step3, 准备查询接口
+public interface OrdersMapperCustom {
+	public List<Orders> findOrdersUserLazyLoading() throws Exception;
+}
+
+step4, 准备xml映射文件
+<mapper namespace="cn.itcast.mybatis.mapper.OrdersMapperCustom">
+	<select id="findOrdersUserLazyLoading" resultMap="OrdersUserLazyLoadingResultMap">
+		SELECT * FROM orders
+	</select>
+</mapper>
+
+step5, 准备ResultMap, 
+<mapper namespace="cn.itcast.mybatis.mapper.OrdersMapperCustom">
+	<resultMap type="cn.itcast.mybatis.po.Orders" id="OrdersUserLazyLoadingResultMap">
+		<id column="id" property="id"/>
+		<result column="user_id" property="userId"/>
+		<result column="number" property="number"/>
+		<result column="createtime" property="createtime"/>
+		<result column="note" property="note"/>
+		
+		<association property="user" javaType="cn.itcast.mybatis.po.User"		<!-- 实现User的LazyLoading. 这里只有单个关联属性, 所以使用association, 也可connection -->
+			select="cn.itcast.mybatis.mapper.UserMapper.findUserById"			<!-- 通过UserMapper.findUserById接口对User进行映射/注入 -->
+			column="user_id">													<!-- 提供findUserById需要的输入int参数 -->	
+		</association>
+	</resultMap>
+</mapper>
+
+step6, 检查cn.itcast.mybatis.mapper.UserMapper.findUserById 接口及xml配置是否正确
+public interface UserMapper {
+	public User findUserById(int id) throws Exception;
+}
+<mapper namespace="cn.itcast.mybatis.mapper.UserMapper">
+	<select id="findUserById" parameterType="int" resultType="user">
+		SELECT * FROM USER WHERE id=#{value}
+	</select>
+</mapper>
+
+step7, 在SqlMapConfig.xml中开启LazyLoading, 关闭aggressiveLazyLoading
+<configuration>
+	<settings>
+		<setting name="lazyLoadingEnabled" value="true"/>		<!-- 打开全局延迟加载 -->
+		<setting name="aggressiveLazyLoading" value="false"/>	<!-- 有多个LazyLoading项时, 激活其中任何一项, 会同时激活所有其他所有项 API pdf page9 -->
+	</settings>
+</configuration>
+
+step8, 测试
+1. 执行 findOrdersUserLazyLoading, 只查询Orders单表信息
+2. 调用Orders中的getUser()时, 观察执行findUserById的运行情况
+
+public class OrdersMapperCustomTest {
+	private SqlSessionFactory sqlSessionFactory;
+
+	@Before
+	public void setUp() throws Exception {...}
+
+	@Test
+	public void testFindOrdersUserLazyLoading() throws Exception {
+		SqlSession sqlSession = sqlSessionFactory.openSession();
+		OrdersMapperCustom ordersMapperCustom = sqlSession.getMapper(OrdersMapperCustom.class);
+		
+		List<Orders> list = ordersMapperCustom.findOrdersUserLazyLoading();		// 1. 只查询Orders单表信息
+
+		for (Orders orders : list) {
+			User user = orders.getUser();			// 2. 调用Orders中的getUser(). 内含一级缓存的使用!
+			System.out.println(user);
+		}
+	}
+}
+
+============ 10-12 一级缓存 ============
+
+一级缓存: 在sqlSession对象中有一个数据结构(HashMap)用于存储缓存数据. 不同的sqlSession之间的缓存数据区域互不影响
+mybatis默认开启一级缓存
+
+@Test
+public void testCache1() throws Exception {
+	SqlSession sqlSession = sqlSessionFactory.openSession();
+	UserMapper userMapper = sqlSession.getMapper(UserMapper.class);
+
+	User user1 = userMapper.findUserById(1);	// 第一次发起请求
+	System.out.println(user1);
+
+	user1.setUsername("测试用户22");
+	userMapper.updateUser(user1);
+	sqlSession.commit();						// commit操作清空SqlSession中的一级缓存
+
+	User user2 = userMapper.findUserById(1);	// 第二次发起请求, 和第一次使用同一个session. 如果执行了上段commit程序, 从DB新读; 如果没执行, 从缓存读
+	System.out.println(user2);
+
+	sqlSession.close();
+}
+
+============ 13 二级缓存 ============		NO CALIBERATION
+
+二级缓存: 多个SqlSession操作同一个Mapper的sql语句, 这些SqlSession可以共用该Mapper的二级缓存
+如果两个Mapper的namespace相同, 这两个Mapper查询到的数据将储存在相同的二级缓存中
+
+step1, 在SqlMapConfig.xml中开启全局二级缓存(注意, 默认是开启状态)
+<configuration>
+	<settings>
+		<setting name="cacheEnabled" value="true"/>
+	</settings>
+</configuration>
+
+step2, 在具体的mapper.xml中开启二级缓存(二级缓存是mapper级别的缓存)
+<mapper namespace="cn.itcast.mybatis.mapper.UserMapper">
+	<cache />
+</mapper>
+
+step3, 由于二级缓存存储介质多种多样, 可能在硬盘, 网络中其他电脑上, 所以需要将pojo类序列化
+public class User implements Serializable {
+	private int id;
+	private String username;
+	private String sex;
+	private Date birthday;
+	private String address;
+	//getters(); setters();
+}
+
+step4, 测试
+@Test
+public void testCache2() throws Exception {
+	SqlSession sqlSession1 = sqlSessionFactory.openSession();
+	SqlSession sqlSession2 = sqlSessionFactory.openSession();
+	SqlSession sqlSession3 = sqlSessionFactory.openSession();
+
+	UserMapper userMapper1 = sqlSession1.getMapper(UserMapper.class);	// 所有session都使用UserMapper
+	User user1 = userMapper1.findUserById(1);							// 第一次查询结果在close时储存在二级缓存中
+	System.out.println(user1);
+	sqlSession1.close();												// 如果不关闭, 该session数据不写入二级缓存!
+	
+	UserMapper userMapper3 = sqlSession3.getMapper(UserMapper.class);
+	user1.setUsername("张明明");
+	userMapper3.updateUser(user1);
+	sqlSession3.commit();												// commit操作在close时清空UserMapper的二级缓存
+	sqlSession3.close();
+
+	UserMapper userMapper2 = sqlSession2.getMapper(UserMapper.class);
+	User user2 = userMapper2.findUserById(1);							// 第二次查询, 来源取决于是否执行了上段commit
+	System.out.println(user2);
+	sqlSession2.close();
+}
+
+
+需求: 在已开启2nd level cache的mapper中, 某些statement不使用二级cache		API pdf page26
+<mapper namespace="cn.itcast.mybatis.mapper.UserMapper">
+	<cache />
+	<select id="findUserById" parameterType="int" resultType="user" useCache="false">
+		SELECT * FROM USER WHERE id=#{value}
+	</select>
+</mapper>
+
+
+需求: 取消insert, update, delete后默认清空缓存功能 (会产生脏读)
+<mapper namespace="cn.itcast.mybatis.mapper.UserMapper">
+	<cache />
+	<update id="updateUser" parameterType="cn.itcast.mybatis.po.User" flushCache="true">
+		update user set username=#{username},birthday=#{birthday},sex=#{sex},address=#{address} 
+		 where id=#{id}
+	</update>
+</mapper>
+
+============ 14 分布式缓存 ehcache ============				NO CALIBERATION
+
+ehcache 是一个分布式缓存框架, 帮助mybatis实现分布式缓存
+如果要实现自己的缓存逻辑, 实现mybatis提供的cache接口即可: org.apache.ibatis.cache.Cache.class
+public interface Cache {
+  String getId();
+  void putObject(Object key, Object value);
+  Object getObject(Object key);
+  Object removeObject(Object key);
+  void clear();
+  int getSize();
+  ReadWriteLock getReadWriteLock();
+}
+
+参考mybatis的默认实现: PerpetualCache implements Cache 
+打开方法: 在interface Cache上control, 选择任一方法, 选择Open Implementation, 选PerpetualCache
+
+============ 14 mybatis整合ehcache ============				NO CALIBERATION
+
+step1, 复制 ehcache-core-2.6.8.jar, mybatis-ehcache-1.0.3.jar
+
+step2, 找到 mybatis-ehcache-1.0.3.jar >> org.mybatis.caches.ehcache包 >> EhcacheCache.class
+
+step3, 指定cache的实现类为ehcache:
+<mapper namespace="cn.itcast.mybatis.mapper.UserMapper">
+	<cache type="org.mybatis.caches.ehcache.EhcacheCache"/>
+</mapper>
+
+step4, 在config下建立ehcache的配置文件ehcache.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="../config/ehcache.xsd">
+	<diskStore path="F:\develop\ehcache" />
+	<defaultCache 
+		maxElementsInMemory="1000" 
+		maxElementsOnDisk="10000000"
+		eternal="false" 
+		overflowToDisk="false" 
+		timeToIdleSeconds="120"
+		timeToLiveSeconds="120" 
+		diskExpiryThreadIntervalSeconds="120"
+		memoryStoreEvictionPolicy="LRU">
+	</defaultCache>
+</ehcache>
+
+diskStore :指定数据在磁盘中的存储位置
+defaultCache :当借助CacheManager.add("demoCache")创建Cache时, EhCache便会采用<defalutCache/>指定的的管理策略
+
+以下属性是必须的:
+maxElementsInMemory - 在内存中缓存的element的最大数目 
+maxElementsOnDisk - 在磁盘上缓存的element的最大数目, 若是0表示无穷大
+eternal - 设定缓存的elements是否永远不过期. 如果为true, 则缓存的数据始终有效. 如果为false那么还要根据timeToIdleSeconds, timeToLiveSeconds判断
+overflowToDisk - 设定当内存缓存溢出的时候是否将过期的element缓存到磁盘上
+以下属性是可选的:
+timeToIdleSeconds - 当缓存在EhCache中的数据前后两次访问的时间超过timeToIdleSeconds的属性取值时, 这些数据便会删除. 默认值是0, 也就是可闲置时间无穷大
+timeToLiveSeconds - 缓存element的有效生命期. 默认是0, 也就是element存活时间无穷大
+diskSpoolBufferSizeMB - 设置DiskStore(磁盘缓存)的缓存区大小. 默认是30MB. 每个Cache都应该有自己的一个缓冲区.
+diskPersistent - 在VM重启的时候是否启用磁盘保存EhCache中的数据. 默认是false.
+diskExpiryThreadIntervalSeconds - 磁盘缓存的清理线程运行间隔, 默认是120秒. 每隔120s, 相应的线程会进行一次EhCache中数据的清理工作
+memoryStoreEvictionPolicy - 当内存缓存达到最大, 有新的element加入的时候, 移除缓存中element的策略. 默认是LRU(最近最少使用), 可选的有LFU(最不常使用)和FIFO(先进先出)
+
+============ 16 - 18 mybatis整合spring ============
+
+mybatis与spring整合步骤:
+spring管理 SqlSessionFactory
+mapper由spring进行管理
+
+
+step1, lib复制jar包, 加入Build Path
+mybatis-3.3.0.jar 及其依赖包若干
+spring4.1.6 若干
+mybatis-spring-1.2.3.jar
+
+mysql_connector_java_5.1.31_bin.jar
+commons-dbcp2-2.1.jar
+commons-pool2-2.4.1.jar
+
+可选:
+ehcache-core-2.6.8.jar
+mybatis-ehcache-1.0.3.jar
+
+aspectjweaver-1.8.5.jar
+aopalliance.jar
+
+
+step2, 建立配置文件
+2.1 config source folder下:
+db.properties
+log4j.properties
+内容和之前一样
+
+2.2 config/spring/目录下applicationContext.xml, 用于存放spring配置
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context.xsd
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop.xsd">
+	
+	<context:property-placeholder location="classpath:db.properties"/>			<!--mybatis写法video20; spring中学习的写法spring video26; 对比这里spring写法 -->
+	<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">		<!--dbcp2和dbcp对比, spring video25 -->
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="maxTotal" value="10" />
+		<property name="maxIdle" value="5" />
+	</bean>
+			
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">		<!--对比Hibernate配置 spring video27-->
+		<property name="configLocation" value="mybatis/SqlMapConfig.xml"/>
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+</beans>
+
+2.3 config/mybatis/目录下SqlMapConfig.xml, 用于存放mybatis配置.
+
+
+step3, 建立项目框架package
+cn.itcast.ssm.mapper
+cn.itcast.ssm.po
+
+
+step4, 创建mapper.xml映射文件: config/sqlmap/User.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="test">
+	<select id="findUserById" parameterType="int" resultType="cn.itcast.ssm.po.User">
+		SELECT * FROM USER WHERE id=#{value}
+	</select>
+</mapper>
+
+在 SqlMapConfig 中加载User.xml
+<configuration>
+	<mappers>
+		<mapper resource="sqlmap/User.xml"/>
+	</mappers>
+</configuration>
+
+
+step5, 实现mapper中的接收po类
+public class User {
+	private int id;
+	private String username;
+	private String sex;
+	private Date birthday;
+	private String address;
+	//getters(); setters();
+}
+
+
+step6, 实现mapper中的查询接口 (开发时使用方法3)
+方法0: 不使用spring管理SqlSessionFactory(使用构造方法接收, 参考video16)
+public interface UserDao {
+	public User findUserById(int id) throws Exception;
+}
+public class UserDaoImpl implements UserDao {
+	private SqlSessionFactory sqlSessionFactory;
+	public UserDaoImpl(SqlSessionFactory sqlSessionFactory) {
+		this.sqlSessionFactory = sqlSessionFactory;
+	}
+
+	@Override
+	public User findUserById(int id) throws Exception {
+		SqlSession sqlSession = sqlSessionFactory.openSession();
+
+		User user = sqlSession.selectOne("test.findUserById", id);
+		sqlSession.close();
+		return user;
+	}
+}
+
+方法1: Dao开发方式: 继承Dao接收实现类SqlSessionDaoSupport. 其有一个setSqlSessionFactory和getSqlSession方法
+<beans>
+	<bean id="userDao" class="cn.itcast.ssm.dao.UserDaoImpl">
+		<property name="sqlSessionFactory" ref="sqlSessionFactory"/>
+	</bean>
+</beans>
+
+public class UserDaoImpl extends SqlSessionDaoSupport implements UserDao {
+	@Override
+	public User findUserById(int id) throws Exception {
+		SqlSession sqlSession = this.getSqlSession();
+		
+		User user = sqlSession.selectOne("test.findUserById", id);
+		return user;				//不用手动关闭sqlSession, 由spring管理
+	}
+}
+
+测试
+public class UserDaoImplTest {
+	private ApplicationContext applicationContext;
+
+	@Before
+	public void setUp() throws Exception {
+		applicationContext = new ClassPathXmlApplicationContext("classpath:spring/applicationContext.xml");
+	}
+
+	@Test
+	public void testFindUserById() throws Exception {
+		UserDao userDao=(UserDao) applicationContext.getBean("userDao");
+		
+		User user=userDao.findUserById(1);
+		System.out.println(user.getUsername());
+	}
+}
+
+方法2: mapper代理方式: 通过 MapperFactoryBean 创建mapper代理对象
+public interface UserMapper {
+	public User findUserById(int id) throws Exception;
+}
+
+同package下: UserMapper.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.itcast.ssm.mapper.UserMapper">
+	<select id="findUserById" parameterType="int" resultType="cn.itcast.ssm.po.User">		<!--简写User无效, 这里mybatis配置不生效-->
+		SELECT * FROM USER WHERE id=#{value}
+	</select>
+</mapper>
+
+由spring的 applicationContext.xml 对mapper代理进行管理 (不用spring或用Dao开发方式时, 在SqlMapConfig中配置<mappers/>)
+<beans>
+	<bean id="userMapper" class="org.mybatis.spring.mapper.MapperFactoryBean">
+		<property name="mapperInterface" value="cn.itcast.ssm.mapper.UserMapper"/>
+		<property name="sqlSessionFactory" ref="sqlSessionFactory"/>
+	</bean>
+</beans>
+
+在sqlMapConfig中批量加载mapper
+<configuration>
+	<mappers>
+		<package name="cn.itcast.ssm.mapper"/>
+	</mappers>
+</configuration>
+
+测试
+public class UserMapperTest {
+	private ApplicationContext applicationContext;
+
+	@Before
+	public void setUp() throws Exception {
+		applicationContext = new ClassPathXmlApplicationContext("classpath:spring/applicationContext.xml");
+	}
+
+	@Test
+	public void testFindUserById() throws Exception {
+		UserMapper userMapper = (UserMapper) applicationContext.getBean("userMapper");
+		
+		User user=userMapper.findUserById(1);
+		System.out.println(user.getUsername());
+	}
+}
+
+方法3: Spring通过 MapperScannerConfigurer 对Mapper批量扫描: 自动从mapper包中 扫描接口, 创建代理对象, 在spring容器中注册 
+mapper.java和mapper.xml映射文件同目录同名
+容器中mapper的bean的id为mapper类名首字母小写
+
+在 applicationContext.xml 中:
+<beans>
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="cn.itcast.ssm.mapper"/>					<!--扫描多个包时用逗号分隔-->
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>		<!--注意是value-->
+	</bean>
+</beans>
+
+接口, 映射文件UserMapper.xml及测试 同方法2
+然后直接spring调用例如本例userMapper
+
+============ 19 逆向工程 ============ 		SKIPPED
+
+
+
+
+
+
+
+

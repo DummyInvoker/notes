@@ -1,0 +1,429 @@
+============ 12 project3 项目初始化 ============
+
+# 建立项目fastrecord_p3, 进入目录后运行 express 初始化项目结构
+完成后terminal中 npm install 或者右键"run npm update"
+在node_modules中应该可以看到下载的库文件夹
+
+
+============ 13-14 project3 界面原型 ============
+
+# users.js中添加/register 和/login的get方法的route
+var express = require('express');
+var router = express.Router();
+
+router.get('/', function(req, res, next) {
+  res.send('respond with a resource');
+});
+
+router.get('/register', function(req, res, next) {
+  res.render('register', { title: 'Register' });
+});
+router.get('/login', function(req, res, next) {
+  res.render('login', { title: 'Log In' });
+});
+
+module.exports = router;
+
+
+# 如之前准备layout.jade
+doctype html
+html(lang='en')
+  head
+    meta(charset='utf-8')
+    meta(http-equiv='X-UA-Compatible', content='IE=edge')
+    meta(name='viewport', content='width=device-width, initial-scale=1')
+    title #{title}: Sweet Home
+    link(href='/stylesheets/bootstrap.css', rel='stylesheet')
+    link(href='/stylesheets/style.css', rel='stylesheet')
+    script(src='/javascripts/jquery-3.1.0.js')
+    script(src='/javascripts/bootstrap.js')
+  body
+    nav.navbar.navbar-inverse.navbar-fixed-top
+      .container
+        .navbar-header
+          button.navbar-toggle.collapsed(type='button', data-toggle='collapse', data-target='#navbar', aria-expanded='false', aria-controls='navbar')
+            span.icon-bar
+            span.icon-bar
+            span.icon-bar
+          a.navbar-brand(href='#') Project name
+        #navbar.collapse.navbar-collapse
+          ul.nav.navbar-nav
+            li(class = (title === 'Members' ? 'active':''))
+              a(href='/') Members
+            li(class = (title === 'Register' ? 'active':''))
+              a(href='/users/register') Register
+            li(class = (title === 'Log In' ? 'active':''))
+              a(href='/users/login') Log In
+          ul.nav.navbar-nav.navbar-right
+            li
+              a(href='/users/logout') Logout
+    block content
+
+    footer
+      p &copy; 2016, All right Reserved
+
+
+# 添加register.jade 和login.jade 模板  
+extends layout
+
+block content
+  .container
+    h1 #{title} Area
+    p Nulla sed condimentum mi. Mauris nec tincidunt leo, in gravida lacus.
+    form(method="post", action="/users/register", enctype="multipart/form-data")
+      .form-group
+        label Name
+        input.form-control(name="name", type="text", placeholder="Enter Name")
+      .form-group
+        label Email
+        input.form-control(name="email", type="email", placeholder="Enter Email")
+      .form-group
+        label Username
+        input.form-control(name="username", type="text", placeholder="Enter Username")
+      .form-group
+        label Password
+        input.form-control(name="password", type="password", placeholder="Enter Password")
+      .form-group
+        label Confirm Password
+        input.form-control(name="password2", type="password", placeholder="Confirm Password")
+      .form-group
+        label Profile Image
+        input.form-control(name="profileImage", type="file")
+       input.btn.btn-primary(type="submit" value="Register")
+	   
+	   
+extends layout
+
+block content
+  .container
+    h1 #{title} Area
+    p Nulla sed condimentum mi. Mauris nec tincidunt leo, in gravida lacus.
+    form(method="post", action="/users/login", enctype="multipart/form-data")
+      .form-group
+        label Username
+        input.form-control(name="username", type="text", placeholder="Enter Username")
+      .form-group
+        label Password
+        input.form-control(name="password", type="password", placeholder="Enter Password")
+      input.btn.btn-primary(type="submit" value="Log In")
+	  
+# 测试
+将jquery, bootstrap放入public目录中合适位置后, npm start
+浏览器访问 http://localhost:3000 可以看到静态效果
+
+
+============ 15 project3 register模块 express validator ============
+
+# package.json中配置需要的express-validator库
+{
+  "dependencies": {
+    "body-parser": "~1.15.1",
+    "cookie-parser": "~1.4.3",
+    "debug": "~2.2.0",
+    "express": "~4.13.4",
+    "jade": "~1.11.0",
+    "morgan": "~1.7.0",
+    "serve-favicon": "~2.3.0",
+
+    "express-validator":"*"
+  }
+}
+完成后terminal中 npm install
+在node_modules中应该可以看到下载的库文件夹
+
+# app.js中启用并配置 express validator
+var app = express();
+// >> add middleware express-validator
+var expressValidator = require('express-validator');
+app.use(expressValidator({
+  errorFormatter: function(param, msg, value) {
+    var namespace = param.split('.')
+        , root    = namespace.shift()
+        , formParam = root;
+
+    while(namespace.length) {
+      formParam += '[' + namespace.shift() + ']';
+    }
+    return {
+      param : formParam,
+      msg   : msg,
+      value : value
+    };
+  }
+}));
+
+# users.js 中实现验证
+router.post('/register', function(req, res, next) {
+  // get form values
+  var name = req.body.name;
+  var email = req.body.email;
+  var username = req.body.username;
+  var password = req.body.password;
+  var password2 = req.body.password2;
+
+  // express-validator: form validation
+  req.checkBody('name','Name filed is required').notEmpty();
+  req.checkBody('email','Email is not valid').isEmail();
+  req.checkBody('username','Username filed is required').notEmpty();
+  req.checkBody('password','Password filed is required').notEmpty();
+  req.checkBody('password2','Passwords do not match').equals(password);
+
+  // check for errors
+  var errors = req.validationErrors();
+  if(errors){
+    res.render('register', {
+      title: 'Register',
+      errors: errors,		// 错误信息列表, 之后修改模板显示: each error, i in errors
+      name:name,   			// 以免用户提交时候有错误所有项都需要重新输入
+      email:email,
+      username:username
+    })
+  } else {
+    res.redirect('/');
+  }
+});
+
+# 修改register.jade, 添加显示错误信息部分
+extends layout
+
+block content
+  .container
+    h1 #{title} Area
+    p Nulla sed condimentum mi. Mauris nec tincidunt leo, in gravida lacus.
+    if errors
+      ul
+        each error, i in errors
+          li.alert.alert-danger #{i + 1}: #{error.msg}
+    form(method="post", action="/users/register", enctype="multipart/form-data")
+	...
+	
+# 测试
+在 http://localhost:3000/users/register 中什么都不填就点确定, 出现验证失败提示信息
+
+
+============ 15 project3 register模块 multer TODO:　未完成该模块xxx ============
+
+# package.json中配置需要的express-validator库
+{
+  "dependencies": {
+    "express-validator":"*",
+	"multer":"*"
+  }
+}
+完成后terminal中 npm install
+在node_modules中应该可以看到下载的库文件夹
+
+# users.json中添加 multer配置并实现上传文件功能
+var express = require('express');
+var router = express.Router();
+
+var multer = require('multer');
+var upload = multer({ dest: 'uploads/'});	// multer usage ref: https://github.com/expressjs/multer
+
+router.post('/register', upload.single('avatar'), function(req, res, next) {
+  // get form values
+  var name = req.body.name;
+  var email = req.body.email;
+  var username = req.body.username;
+  var password = req.body.password;
+  var password2 = req.body.password2;
+
+  // check for image field
+  if(req.file){
+    console.log('uploading file ...');
+    var profileImageName = req.file.originalname;
+    var profileImageMime = req.file.mimetype;
+    var profileImagePath = req.file.path;
+    var profileImageExt = req.file.extension;
+    var profileImageSize = req.file.size;
+  } else {
+    // set a default avatar
+    var profileImageName = 'noAvatar.png';
+  }
+});
+
+# 项目目录下建立相应的uploads目录
+
+============ 16 project3 register模块 mongoose ============
+
+# 保存到db的过程
+routes/users.js中, 创建符合UserSchema的newUser对象:  var newUser = new User({ name:name, email:email...})
+routes/users.js中, 调用User的createUser方法: User.createUser(newUser, function(err, user){...})
+由于newUser符合UserSchema, 其具有save()方法: newUser.save(callback);
+完成save后, 调用callback, 其内容在routes/users.js中定义
+
+# package.json中配置需要的mongodb, mongoose库
+{
+  "dependencies": {
+    "express-validator":"*",
+	"multer":"*",
+	"mongodb":"*",
+    "mongoose":"*"
+  }
+}
+完成后terminal中 npm install
+在node_modules中应该可以看到下载的库文件夹
+
+# users.js中在validate无误后部分添加存储db功能
+var multer = require('multer');
+var upload = multer({ dest: 'uploads/'});
+
+var User = require('../models/user');	// User 是起名惯例, 代表单例?
+
+router.post('/register', upload.single('avatar'), function(req, res, next) {
+  // check for errors
+  var errors = req.validationErrors();
+  if(errors){
+    res.render('register', {
+      title: 'Register',
+      errors: errors,
+      name:name,
+      email:email,
+      username:username
+    })
+  } else {
+    var newUser = new User({
+      name:name,
+      email:email,
+      username:username,
+      password:password,
+      profileImage: profileImageName
+    })
+
+    User.createUser(newUser, function(err, user){
+      if(err) throw err;
+      console.log(user);
+    });
+
+    res.redirect('/');
+  }
+}
+
+# 实现users.js中用到的/models/user.js文件, 也就是User对象
+var mongoose = require('mongoose');
+mongoose.connect('mongodb://localhost/nodeauth')
+
+var UserSchema = mongoose.Schema({
+    username:{type: String},
+    password:{type: String},
+    email:{type:String},
+    name:{type:String},
+    profileImage:{type:String}
+});
+
+module.exports = mongoose.model('User', UserSchema);
+
+module.exports.createUser = function(newUser, callback){
+    newUser.save(callback);
+}
+
+# 测试
+在 http://localhost:3000/users/register 中填入能通过validate的内容, 提交后观察数据库
+c:\mongodb\bin\mongo
+use nodeauth
+db.users.find().pretty()
+
+
+============ 17 project3 register模块 bcryptjs ============
+
+# package.json中配置需要的bcryptjs库
+{
+  "dependencies": {
+	"mongodb":"*",
+    "mongoose":"*"
+	"bcryptjs":"*"
+  }
+}
+完成后terminal中 npm install
+在node_modules中应该可以看到下载的库文件夹
+
+# users.js中在保存密码前进行处理
+module.exports.createUser = function(newUser, callback){
+  bcrypt.hash(newUser.password, 10, function (err, result) {	// 第二个参数是salt, 参考:https://www.npmjs.com/package/bcryptjs
+        if(err) throw err;
+        // set hashed password
+        newUser.password = result;
+        // create user
+        newUser.save(callback);      // nodejs非阻断性特征, 如果放耗时任务后面将不等待直接执行, 所以放bcrypt的callback中
+    });
+}
+
+# 测试
+在 http://localhost:3000/users/register 中填入能通过validate的内容, 提交后观察数据库中密码部分
+
+
+============ 18 project3 login模块 passport ============
+
+# 用户验证流程
+
+
+# package.json中配置需要的passport库
+{
+  "dependencies": {
+    "bcryptjs":"*",
+    "express-session":"*",
+    "passport":"*",
+    "passport-local":"*",
+  }
+}
+完成后terminal中 npm install
+在node_modules中应该可以看到下载的库文件夹
+
+# app.js中配置express-session
+// >> add express session middle ware
+var session = require('express-session');
+app.use(session({
+  secret:'secret',
+  saveUninitialized: true,
+  resave: true
+}));
+
+# users.js中配置并初始化passport
+var passport = require('passport');      // http://passportjs.org/docs
+var LocalStrategy = require('passport-local').Strategy;
+var app = express();
+app.use(passport.initialize());
+app.use(passport.session());
+
+# users.js中添加login地址的响应
+// local strategy called by 'login' router
+passport.use(new LocalStrategy(
+    function(username, password, done){
+      // get user from db
+      User.getUserByUsername(username, function(err, user){
+        if(err) throw err;
+        if(!user){
+          console.log('Unknown user');
+          return done(null, false, {message: 'Unknown user'});
+        }
+        // authenticate input user content
+        // User.comparePassword(password, user.password, function(err, isMatch){
+        //   if(err) throw err;
+        //   if(isMatch) return done(null, user);
+        //   else {
+        //     console.log('Invalid password');
+        //     return done(null, false, {message: 'Invalid password'});
+        //   }
+        // });
+      });
+    }
+));
+
+router.post('/login',
+    passport.authenticate('local',
+        {
+          failureRedirect: '/users',
+          failureFlash:'invalid username or password',successRedirect:'/'}
+    ),
+    function(req, resp){    // authenticated call back
+      console.log('=======authenticated=======');
+      req.flash('success', 'You are logged in.');
+      resp.redirect('/');
+    }
+);
+
+# user.js中实现getUserByUsername()方法
+module.exports.getUserByUsername = function(username, callback){
+    var query = {username: username};
+    User.findOne(query, callback);		//
+}

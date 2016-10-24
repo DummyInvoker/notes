@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video17</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+    </head>
+    
+    
+    <body>
+    	<p>The Histogram Layout (1-2)</p>
+    </body>
+    
+    
+    <script>
+		var canvas = d3.select("body")
+			.append("svg")
+			.attr("width", 500)
+			.attr("height", 500)
+    
+		d3.csv("video17ages.csv", function(resp){
+			var map = resp.map(function(r){return parseInt(r.age)})	// 取出部分attribute, 转化成数字
+
+			var histogram = d3.layout.histogram()		//将map变量中所有数据分成5组
+				.bins(5)
+				(map)		//x:该组开始位置, dx:组宽度, y:组内样本数量
+			
+			var bars = canvas.selectAll(".bar")
+				.data(histogram)
+				.enter()
+					.append("g")
+				
+			bars.append("rect")
+				.attr("x", function(h){return h.x})
+				.attr("y", 0)
+				.attr("width", function(h){return h.dx})
+				.attr("height", function(h){return h.y})
+				.attr("fill", "steelblue")
+    	})
+    </script>
+</html>

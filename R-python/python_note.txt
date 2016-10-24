@@ -1,0 +1,765 @@
+===================== 2 =====================
+进入控制台: python
+>>> print 'hello world'
+退出python控制台:
+>>> exit()
+
+vim hello.py
+#!/usr/bin/python
+print 'hello world'
+
+调用python运行:
+python hello.py
+
+解释运行:
+给1.py可执行权限: chmod +x hello.py
+hello.py
+
+编译运行:
+vim mycompile.py
+import py_compile
+py_compile.compile('hello.py')
+
+python mycompile.py
+可以看到编译后的hello.py: hello.pyc
+
+优化的编译:
+python -O -m py_compile hello.py
+可以看到编译后的hello.py: hello.pyo
+
+===================== 3 变量 =====================
+
+变量名不能以数字开头, 不能使用关键字
+a=123
+
+查看内存中地址编码
+id(a)
+
+a=456
+id(a)
+与java中不同, 此时a在内存中地址已经改变
+
+a=123
+b=123
+id(a)
+id(b)
+虽然两个变量分别定义, 但是在内存中地址相同. 一个数据包含多个标签
+
+===================== 4 运算符 =====================
+
+>>>3/2
+由于3和2都是int类型, 所以结果也存为int类型, 也就是1
+>>>3.0/2
+
+整数除法
+>>>3.0//2
+
+幂运算
+>>>3**2
+
+布尔运算
+>>> 1<2
+
+逻辑运算
+>>> False and False
+>>> False and not False
+
+移位运算
+>>>1<<2
+转换1的2进制码为01, 左移2位后变100, 也就是10进制的8
+
+#!/usr/bin/python
+num1 = int(raw_input("input num1: "))
+num2 = int(raw_input("input num2: "))
+print 'num1 + num2 =', num1+num2
+
+===================== 5 字符串 =====================
+
+>>>num = 123
+>>>type(num)
+>>>num = 123L
+>>>f1 = 12.3
+
+复数类型:
+>>>c=3.14j
+
+>>>print "let's go"
+>>>print '\n hello'
+
+三重引号可以保存编辑格式:
+>>> mail="""tom:
+... 	i am jack
+... good bye
+... """
+
+>>> a = '0123456'
+>>> a[1]
+>>> a[1:4]
+'123'
+注意这里是取到[4]之前, 不包含[4]的内容
+>>> a[0::2]
+'0246'
+>>> a[-1:-4:-1]
+'-'表示从后面开始取, 步长中的'-'表示从后向前方向
+'654'
+
+===================== 6 元组tuple() =====================
+
+序列: 列表, 元组, 字符串
+str1="abcde"*3	重复abcde字符串3次
+'c' in str1
+len(str1)	求长度
+max(str1)	求最大(字典字符)
+
+str2="12345"
+cmp(str1, str2)	比较字符串大小, 这里认为str1比str2长, 所以返回1; 如果str1小, 返回-1; 相同返回0
+
+t=("milo", 30, "male")
+name, age, gender = t		一次用三个变量取出tuple中的值
+t[0]	与字符串一样的取值操作
+
+定义单一元素的元组时, 必须有一个',':
+t1=(2,)	类型为tuple
+t2=(2)	类型为int
+
+===================== 7 列表list[] =====================
+
+mylist = ["milo", 30, "male"]
+
+mylist[0] = "newName"		修改了list中的元素(tuple类型中的元素不可修改)
+mylist.append("teacher")
+mylist.remove(mylist[3])	如果有多个"teacher", 将删除第一次出现的那个"teacher"
+
+===================== 8 字典dict{} =====================
+
+字典使用哈希表存储映射关系
+字典无序, key不可变, value可变
+
+mydict = {123:1234, 'str':'hello', 456:'keys can be any hashable types'}
+mydict['str']
+
+>>> for k in mydict:
+...     print k
+...     print mydict[k]
+... 
+注意: 这里print前的缩进不是美观效果, 而是必须. 缩进等级代表同一等级
+
+mydict['tel']=123456
+mydict['tel']=654321
+
+mydict.keys()		读取key列表
+mydict.pop(123)		读取key=123对应的value, 并在字典中删除
+mydict.get('fookey', 'err')	用[]取不存在的key会报错. 用get()取, 可以指定key不存在时的返回值, 默认为null
+
+mydict.clear()		清空字典内容
+del(mydict)			删除字典
+
+===================== 9-10 if elif else =====================
+
+#!/usr/bin/python
+def func():
+	return 1
+if func:
+	print "via function call"
+
+	
+#!/usr/bin/python
+def func():
+	myinput = raw_input("you choose A/B/C:\n")
+	if myinput=='A' or myinput=='a':
+		print 'you selected A'
+	elif myinput=='B' or myinput=='b':
+		print 'you selected B'
+	elif myinput=='C' or myinput=='c':
+		print 'you selected C'
+	else:
+		myinput = raw_input('wrong input, do you want retry? Y/N\n')
+		if myinput=='Y' or myinput=='y':
+			func()
+		else:
+			print 'bye'
+func()
+
+===================== 11-12 for, range =====================
+
+#!/usr/bin/python
+for i in 'abcd':
+	print i
+for i in [0,1,2,3]
+	print i
+
+	
+#!/usr/bin/python
+sum = 0
+for i in range(1,101,1):
+	sum = sum + i
+print sum
+
+
+#!/usr/bin/python
+str = 'hello'
+for i in range(len(str)):
+	print i,':',str[i]
+
+
+#!/usr/bin/python
+mylist = [1,2,3, 'a', 'b']
+for i in mylist:
+	if i>=3:
+		print i
+这里'a'先转化成ascii码, 然后和数字2进行比较
+
+
+#!/usr/bin/python
+mydict = {123:1234, 'str':'hello', 456:'keys can be any hashable types'}
+for i in mydict:
+	print i
+遍历不是dict本身, 而是其keys
+
+
+#!/usr/bin/python
+mydict = {123:1234, 'str':'hello', 456:'keys can be any hashable types'}
+mytuple = mydict.items()
+for k, v in mytuple:
+	print k,':',v
+先将字典转换成为元组
+
+===================== 13 for ending, break, continue, pass, exit() =====================
+
+#!/usr/bin/python
+str = 'hello'
+for i in range(len(str)):
+	print i,':',str[i]
+else:
+	print 'execute else segment when for loop is ended normally'
+
+
+#!/usr/bin/python
+import time
+for i in range(1, 11):
+	time.sleep(1)
+	if i == 3:
+		print 'use continue to skip rest of this loop'
+		continue
+	print i
+	if i == 6:
+		pass	# place holder
+	if i == 9:
+		print 'use break to end all rest loops'
+		break
+	if i == 12:
+		print 'use exit to end everything below: including segments below loop'
+		exit()
+else:
+	print 'EOF'
+
+===================== 14 while =====================
+
+#!/usr/bin/python
+myinput = ''
+while myinput != 'q' and myinput != 'Q':
+	myinput = raw_input('input your content, q for quit:\n')
+	if not myinput:
+		print 'you have inputted nothing, breaking out loops'
+		break
+	print '>>> your input is:', myinput
+else:
+	print 'loops ended normally by inputting letter Q'
+
+===================== 15-19 函数 def, global, return =====================
+
+#!/usr/bin/python
+def func():
+	print 'string from function'
+if func():
+	print 'string from main'
+在if的条件输入时候, 执行了func()内容
+同时func()的返回值是void, 所以相当于if void, 所以if下面的内容不被执行
+
+
+#!/usr/bin/python
+#coding:utf8
+def func(arg1='形参1的默认值', arg2='形参2的默认值'):
+	print '你输入的是:',arg1,'和',arg2
+func()										#不传值时使用默认值
+func(raw_input('input your arg1:\n'))		#只传一个值时赋给arg1, 另外形参使用默认值
+func(arg2=raw_input('input your arg2:\n'))	#只传值给arg2时必须指明形参
+func(None, 'input2')
+func('input1', 'input2')
+
+
+#!/usr/bin/python
+myVar = 'global var'
+def func():
+	myVar = 'inside a function'
+	print myVar		# 局部变量和全局变量重名, 使用局部变量的值
+	global myGlobalVar
+	myGlobalVar = "force a var to be a global var"
+print myVar			# 调用全局变量
+func()
+print myGlobalVar	# 调用function内强制定义的全局变量
+
+用关键字global强制一个function内的变量为全局变量, 在外部调用前, function必须已经初始化
+
+
+#!/usr/bin/python
+def f(x,y):
+	print "%s:%d" % (x, y)	#%s, %d 类似用printf对打印格式进行控制
+f(y=32, x='name')			#指定形参值
+
+t = ('name', 32)			#转换tuple为输入, 按顺序映射
+f(*t)
+
+d = {'y':32, 'x':'name'}	#转换dict为输入, 按key映射, 所以key必须与形参名对应
+f(**d)
+
+#!/usr/bin/python
+def f(arg, *args):			#用*args tuple方式接收冗余传参
+	print 'expected input:',arg
+	print 'redundant inputs as tuple:',args
+f(1,2,3)
+
+
+#!/usr/bin/python
+def f(arg, **args):			#用**args dict方式接收冗余传参
+	print 'expected input:',arg
+	print 'redundant inputs as dict:',args
+f(redun1=1,arg=2,redun2=3)
+
+
+#!/usr/bin/python
+def f(arg, *tuple, **dict):
+	print 'expected input:',arg
+	print 'redundant inputs as tuple:',tuple
+	print 'redundant inputs as dict:',dict
+#f(1,2,3, redun1=1,arg=2,redun2=3) 	#TypeError: f() got multiple values for keyword argument 'arg', 不会用arg=2自动覆盖1
+#f(redun1=1,arg=2,redun2=3, 1,2,3)	#SyntaxError: non-keyword arg after keyword arg
+f(1,2,3)
+f(redun1=1,arg=2,redun2=3)
+f(1,2,3, redun1=1,redun2=3) 
+
+===================== 20 lambda 函数 reduce =====================
+
+g = lambda x,y:x*y
+g(2,3)
+冒号前是参数, 用逗号隔开; 冒号后是返回值
+
+#!/usr/bin/python
+def f(n):
+	if n>1:
+		return n*f(n-1)
+	return 1
+print f(10)
+
+
+#!/usr/bin/python
+l = range(1,11)
+def f(x,y)
+	return x*y
+reduce(f,l)
+从一个列表中从左到右逐个取值参与计算
+
+
+reduce(lambda x,y: x*y, range(1,11))
+
+===================== 21 switch =====================
+
+#!/usr/bin/python
+#coding:utf8
+from __future__ import division	#现在5/2可以有正确答案了. なに!!!
+
+def myAdd(x,y):
+	return x+y
+def myMinus(x,y):
+	return x-y
+def myMultple(x,y):
+	return x*y
+def myDivide(x,y):
+	return x/y
+operator = {'+':myAdd, '-':myMinus, '*':myMultple, '/':myDivide}		#key=str, value=object, 类似IOC, 这里是函数作为对象
+
+def f(op, arg1, arg2):
+	print operator.get(op, myDivide)(arg1,arg2)
+
+f('%',1,2)
+
+
+#!/usr/bin/python
+from __future__ import division
+x=1
+y=2
+op='/'
+result={'+':x+y, '-':x-y, '*':x*y, '/':x/y}
+print result.get(op)
+
+===================== 22-24 内置函数 =====================
+
+# abs(), max(), min(), len(), divmod(), pow(), round()
+divmod(9,4)		#(2, 1) 以tuple格式返回商和余
+
+# callable(), isinstance(), cmp(), range(), xrange()
+foo=100
+callable(foo)		#False
+callable(min)
+mylist = range(1,11)
+isinstance(mylist, list)
+isinstance(mylist, tuple)
+
+# str.capitalize(), str.replace(), str.split()
+str = 'hello world hello world'
+str.capitalize()
+str.replace('hello', 'my', 1)		#str中内容不改变, return值改变, 可以存到变量中
+str.split(' ')
+
+# filter(), zip(), map(), reduce()
+def f(x):
+	if x>5:
+		return True
+l = range(1, 11, 2)
+filter(f, l)
+按function定义的方式处理list中每个元素, 如果处理的返回值是True, 则保留该元素
+
+name=['jane','jone','doe']
+age=[20,30,40]
+tel=['222','333','444']
+zip(name, age, tel)
+addr=['rd','lane','dr','blvd']		# zip按照最短可以组合的进行合并, 如果addr只有2项, 则丢弃其他list的第3项
+zip(name, age, tel, addr)
+
+map(None, name, age, tel)
+map(None, name, age, tel, addr)		# map会用None填充不足的内容, 例如这里的:(None, None, None, 'blvd')
+
+a=range(1,4)
+b=range(5,8)
+def mf(x,y):
+	return x*y
+map(mf,a,b)
+
+l = range(1,101)
+filter(lambda x:x%3==0, l)
+
+===================== 25 import =====================
+
+rpm -ql python
+
+vim v21.py
+#!/usr/bin/python
+#coding:utf8
+from __future__ import division
+def myAdd(x,y):
+	return x+y
+def myMinus(x,y):
+	return x-y
+def myMultple(x,y):
+	return x*y
+def myDivide(x,y):
+	return x/y
+operator = {'+':myAdd, '-':myMinus, '*':myMultple, '/':myDivide}
+
+def f(op, arg1, arg2):
+	print operator.get(op, myDivide)(arg1,arg2)
+
+if __name__=='__main__':                #直接调用本函数的情况, 执行if内容. 被其他程序调用情况时, 不执行
+	f('%',1,2)
+
+	
+vim 25.py
+import v21					# v21.py和25.py在同一目录下
+v21.f('+',4, 7)
+
+vim 25.py
+import v21 as myCal
+myCal.f('+',4, 7)
+
+vim 25.py
+from v21 import f
+f('+',4, 7)
+
+被import的模块会被自动编译为pyc. 寻找路径顺序为: 同一目录>library>site
+
+
+包:
+文件夹名 = 包名
+文件夹下建一个__init__.py空文件
+根据需要存放文件
+导入时: import pack.module
+
+cd /root/csvtpy
+touch __init__.py
+cd ..
+vim testpack.py
+import csvtpy.v21
+csvtpy.v21.f('+',4, 7)	
+
+===================== 26-29 正则表达式 =====================
+
+import re
+r = r'abc'
+string = 'aaaaaaaabc'
+re.findall(r,string)
+
+string = 'tip, top, tep, tit, tot, tiop, toit'
+r = r'to\w*?[pt]'
+re.findall(r,string)
+
+r = r'^\^abc'
+re.findall(r, '^abcde')
+
+r = r'^\d{3,4}-?\d{8}'
+re.findall(r, '0577-87654321')
+
+#编译方式 compile, findall(), match(), search(), finditer(), next(), group()
+pattern = re.compile(r)
+pattern.findall('01087654321')
+
+r = r'csvt'
+pattern_ignoreCase = re.compile(r, re.I)
+pattern_ignoreCase.findall('cSvT hello')
+
+pattern_ignoreCase.match('hello cSvT')		# 没有匹配. match要求匹配内容开头
+pattern_ignoreCase.match('cSvT hello')
+
+pattern_ignoreCase.search('hello cSvT')		# search可以匹配任何位置的内容
+
+it = pattern_ignoreCase.finditer('hello cSvT hello csvT')
+it.next().group()							# 迭代器
+
+# sub(), subn()
+r = r'c..t'
+pattern = re.compile(r, re.I)
+string = 'hello cSvT hello csvT'
+pattern.sub('world', string)
+pattern.subn('world', string)
+
+# split()
+string = '123.456+789-987'
+r = r'\W'
+re.split(r, string)
+
+# 查看命令清单
+dir(re)
+
+# 参数控制
+r = r'csvt.net'
+re.findall(r, 'csvt\nnet')
+re.findall(r, 'csvt\nnet' re.S)		# 现在'.'也可以适配\n了
+
+string = '''
+	hello csvt
+	csvt hello
+	hello csvt hello
+	csvt hehe
+	'''
+r = r'^csvt'
+re.findall(r, string)
+实际string的存储内容为: '\nhello csvt\ncsvt hello\nhello csvt hello\ncsvt hehe\n', 所以没有以csvt开头的行
+re.findall(r, string, re.M)			# 现在可以多行匹配了
+
+rtel = r'''
+	\d{3,4}
+	-?
+	\d{8}
+	'''
+re.findall(rtel, '0577-12345678', re.X)		# 多行正则规则
+
+# 分组()
+remail = r'\w{3}@\w+(\.com|\.cn)'		#(\.com|\.cn)分为一个组
+re.match(remail, 'zzz@csvt.com')
+re.findall(remail, 'zzz@csvt.com')		# 当pattern中有分组时, 只返回分组数据
+
+string = '''
+hhsdj jskk hello src=csvt yes jjjdk
+ddkak src=123 yes jfdk
+src=234 yes
+hello src=python yes kda
+'''
+r = r'hello src=(.+) yes'
+re.findall(r, string)
+
+===================== 30 图片Crawler =====================
+
+mkdir jpg
+cd jpg
+vim getJpg.py
+#!/usr/bin/python
+import re
+import urllib
+def getHtml(url):
+	pageObj = urllib.urlopen(url)
+	return pageObj.read()
+
+def getImgUrlList(html):
+	reg = r'src="(.+?\.jpg)"'
+	imgUrlPattern = re.compile(reg)
+	return imgUrlPattern.findall(html)
+	
+def getImg(imgUrlList):
+	for imgUrl in imgUrlList:
+		imgName = re.findall(r'\w+?\.jpg', imgUrl)
+		print 'starting download:', imgName
+		urllib.urlretrieve(imgUrl, imgName)
+
+html = getHtml('file:///root/csvtpy/jpg/foopage.html')
+imgUrlList = getImgUrlList(html)
+getImg(imgUrlList)
+
+===================== 31 浅拷贝, 深拷贝 =====================
+
+浅拷贝: 对标签/对象的拷贝, 只拷贝父对象
+深拷贝: 对对象完整资源的拷贝
+
+a = [1,2,3,'a','b','c']
+b = a
+a.append('d')
+b		# 这时候b中竟然也多了一个d
+b.append('e')
+a		# 这时候b中竟然也多了一个e
+
+import copy
+a = [1,2,3, ['a','b','c']]
+b = a
+c = copy.copy(a)
+a.append('d')
+c					# c不随a,b增加新数据
+id(a[0])
+id(c[0])			# 但是之前的资源的地址是一致的
+a[3].append('d')	# 列表类型可以修改
+c					# c的老(父对象)的数据随a改变
+
+
+d = copy.deepcopy(a)
+a[3].append('e')
+d					# 深拷贝时, d与a完全没有依赖
+
+===================== 32-33 IO操作 =====================
+
+# 读文件
+fileObj = open('/root/csvtpy/1.py')
+print fileObj.read()
+fileObj.close()
+
+fileObj = file('/root/csvtpy/1.py')
+print fileObj.read()
+fileObj.close()
+
+# 写文件
+# r		只读
+# r+	读写, 需要先读取目标文件, 写的内容才会追加. 否则从头开始覆盖
+# w		只写, 先删除原文件所有内容, 再写入新内容. 没有文件则创建
+# w+	读写
+# a		追加写
+# a+	读写
+fileObj = file('/root/csvtpy/test.txt', 'w')
+fileObj.write('www.csvt.net\ni am milo\nhello\n')
+fileObj.flush()
+fileObj.close()
+
+视频少内容:
+w: 	新建只写, 将原文件内容清零
+w+: 可读可写. 若文件不存在, 创建
+r+: 可读可写. 若文件不存在则报错
+a+: 附加读写方式打开, 需注意指针
+
+
+# 逐行读
+fileObj = open('test.txt')
+for line in fileObj:				# fileObj也可以直接迭代
+	print line
+
+fileObj = open('test.txt')
+fileObj.readline()					# 执行一次读取一行, 指针下移一行
+fileObj.next()						# readline()到最后不停读最后一行, next()到最后一行不再读取
+fileObj.close
+
+fileObj = open('test.txt')
+lineList = fileObj.readlines()		# 输出(一行为一个元素)的列表
+fileObj.close
+
+# 逐行写
+list = ['one\n', 'two\n', 'three\n']
+fileObj = open('/root/csvtpy/test.txt', 'a')
+fileObj.writelines(list)
+fileObj.flush()
+fileObj.close()
+
+# 指针控制
+fileObj = open('/root/csvtpy/test.txt', 'r+')
+fileObj.read()			# 开始时指针在最前, 完成后指针在最后
+fileObj.read()			# 指针在最后所以读不出内容
+fileObj.seek(0,0)		# 重置指针位置
+fileObj.read()
+fileObj(0,2)			# 重置指针到最后, 第二个选项: 0:从头部开始偏移; 1:从当前位置开始偏移; 2: 从末尾开始向前偏移
+
+# 统计hello个数
+vim hello.txt
+hello world
+hello hello world
+
+import re
+fileObj = open('hello.txt')
+count = 0
+for line in fileObj:
+	list = re.findall(r'hello', line)
+	count = count + len(list)
+print count
+fileObj.close()
+
+# 替换hello为csvt, 另存为csvt.txt
+import re
+fileObj = open('hello.txt')
+fileObjW = open ('csvt.txt', 'a')
+for line in fileObj:
+	str = line.replace('hello', 'csvt')
+	fileObjW.write(str)
+	fileObjW.flush()
+fileObj.close()
+fileObjW.close()
+
+===================== 34-35 OS操作 =====================
+
+import os
+os.mkdir('/root/csvtpy/osTest')
+os.rmdir('/root/csvtpy/osTest')
+os.makedirs('/root/csvtpy/osTest/a/b')
+os.removedirs('/root/csvtpy/osTest/a/b')		# 只能删空目录
+list = os.listdir('/root/csvtpy/osTest')
+str = os.getcwd()
+os.chdir('/')
+
+genObj = os.walk('/root/csvtpy/osTest')
+for i in genObj:
+	print i
+
+
+# 遍历一个目录, 返回每个目录和文件的绝对路径
+#!/usr/bin/python
+#coding:utf8
+import os
+def listCurrent(path):
+	list = os.listdir(path)
+	for dir in list:
+		absdir = path +'/'+dir			#absdir = os.path.join(path, dir)
+		print absdir
+		if os.path.isdir(absdir):
+			listCurrent(absdir)
+
+listCurrent('/root/csvtpy/osTest')
+
+===================== 36 Exception处理 =====================
+
+#!/usr/bin/python
+#coding:utf8
+fileName = raw_input('input a file name:')
+try:
+	fileObj = open(fileName)			# 注意: 这里的fileObj直接是全局变量, 可在finally中被调用
+	if True:
+		raise TypeError('同java的throws')
+except IOError, e1:
+	print '文件不存在:', e1
+except TypeError, e2:
+	pass
+finally:
+	try:
+		fileObj.close()
+	except NameError, e3:
+		pass

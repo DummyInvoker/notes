@@ -1,0 +1,571 @@
+
+===R=========================================================================================
+
+# ubuntu安装默认版本R
+sudo apt-get update
+sudo apt-get install r-base
+
+# ubuntu14.04安装最新版本R
+修改/etc/apt/sources.list文件
+添加: deb https://cran.r-project.org/bin/linux/ubuntu trusty/
+
+运行: 
+sudo apt-get update
+sudo apt-get install r-base
+
+
+# 运行R
+R
+
+#退出R
+q()
+
+===Logistic Regression=========================================================================================
+http://www.ats.ucla.edu/stat/r/dae/logit.htm
+http://www.r-tutor.com/elementary-statistics/logistic-regression/estimated-logistic-regression-equation
+
+# R计算Logistic Regression
+mydata <-read.csv("/home/ricky/Desktop/data.csv")
+mylogit <- glm(formula=class ~ var1 + var2 + var3 + var4, data=mydata, family=binomial)
+summary(mylogit)
+
+# 预测新数据(概率)
+newData = data.frame(var1=5, var2=2, var3=2, var4=1)
+prop=predict(mylogit, newData, type="response")
+
+# 输出结果 (好像概念不是很正确)
+prop
+
+===Matrix=========================================================================================
+
+# 制备矩阵
+m <- cbind(1, 1:7)
+# 效果同 m <- cbind(1:1, 1:7). 第一列都是1, 第二列从1到7, 然后两列合并
+m <- cbind(m, 8:14)[, c(1, 3, 2)]
+# 将内容为8到14的列与之前矩阵合并. 然后调整顺序
+cbind(1:7, diag(3))
+# 先生成一个3阶对角线矩阵, 然后和一个内容为1到7的列合并
+cbind(0, rbind(1, 1:3))
+cbind(I = 0, X = rbind(a = 1, b = 1:3))
+# 先行合并出第一行都是1, 第二行为1到3的矩阵, 然后和一个内容都为0的列进行合并
+xx <- data.frame(I = rep(0,2))
+cbind(xx, X = rbind(a = 1, b = 1:3))
+# 先生成一个内容为2个0的行, 然后转为列 ???not sure???
+# 然后与同之前的矩阵进行合并
+cbind(0, matrix(1, nrow = 3, ncol = 4))
+dim(cbind(0, matrix(1, nrow = 2, ncol = 4)))
+# 先生成一个1填充的3行4列矩阵, 然后与一列0合并
+# 测试矩阵的行列数
+
+===KNN=========================================================================================
+http://stat.ethz.ch/R-manual/R-devel/library/class/html/knn.html
+
+# 安装KNN模块
+install.packages("FNN")
+
+# 使用KNN模块分离分界线附近点
+library("FNN")	#每次都要载入
+mydata <-read.csv("/home/ricky/Desktop/data.csv")
+mydata <-read.csv("E:/graduate project/wk2 logit/data.csv")
+
+train <- rbind(iris3[1:5,,1], iris3[1:5,,2], iris3[1:5,,3])
+train <- rbind(mydata[,1:4])
+#iris3[1:5,,1]意思是iris3表的1到5行, 所有列, 第一层
+
+cl <- factor(c(rep("s",5), rep("c",5), rep("v",5)))
+cl <-rbind(mydata[,5])
+
+test <- rbind(iris3[6:10,,1], iris3[6:10,,2], iris3[6:10,,3])
+test <- cbind (2, 3, 4, 5)
+
+pr.test <- knn(train, test, cl, k = 5, prob=TRUE)
+
+#JAVA中导出KNN结果集
+String pr=re.eval("unlist(attributes(pr), use.names=FALSE)[3]").asString();
+
+===RMySQL=========================================================================================
+
+#R连接MySQL
+http://playingwithr.blogspot.com/2011/05/accessing-mysql-through-r.html
+ubuntu下先安装软件:
+libmysqlclient-dev
+
+R中安装:
+install.packages("RMySQL")
+
+每次使用需加载:
+library(RMySQL)
+
+mydb = dbConnect(MySQL(), user='root', password='', dbname='health', host='127.0.0.1')
+rs = dbSendQuery(mydb, 'select * from data')	#此时数据为resultset指针
+data = fetch(rs, n=-1)							#此时为读取到的数据本体
+
+===JAVA=========================================================================================
+
+# ubuntu安装JAVA
+step1，
+下载解压到一个目录，例如：
+/usr/jdk1.8
+
+step2，
+sudo gedit /etc/profile
+在最前添加：
+# set java environment
+export JAVA_HOME=/usr/jdk1.8
+export JRE_HOME=${JAVA_HOME}/jre
+export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib  
+export PATH=${JAVA_HOME}/bin:$PATH
+
+step3，使新配置生效，并测试
+. /etc/profile
+which java
+
+step4，设置为默认JDK版本
+sudo update-alternatives --install /usr/bin/java java /usr/jdk1.8/bin/java 300
+sudo update-alternatives --install /usr/bin/javac javac /usr/jdk1.8/bin/javac 300
+
+sudo update-alternatives --config java
+(如果安装了多个jdk)在跳出窗口中选jdk1.8
+
+step5，
+测试一下： java -version
+出现以下为安装成功：
+java version "1.8.0_25"
+Java(TM) SE Runtime Environment (build 1.8.0_25-b17)
+Java HotSpot(TM) 64-Bit Server VM (build 25.25-b02, mixed mode)
+
+===JRI=========================================================================================
+
+----------- JRI JAVA DOC -----------
+https://rforge.net/org/docs/
+
+----------- JRI安装 -----------
+#在任何系统下的R环境中(前提: JDK如上部署完成)
+install.packages("rJava")	
+然后选择一个镜像开始安装, 注意错误提示, 如果java环境没有配置正确会出错
+
+#ubuntu下也可:
+sudo apt-get install r-cran-rjava 
+
+----------- ubuntu下的JAVA程序 -----------	完全测试通过
+step1, 引入JRI.jar
+安装完成后, R环境中:
+system.file("jri",package="rJava")
+得知JRI文件所在, 例如:
+/usr/local/lib/R/site-library/rJava/jri/JRI.jar
+然后导入Reference libraries中
+项目右键>build path>add external archive
+
+step2, 设置VM环境变量
+项目右键>Run As>Run configurations>左侧选择菜单里选择/确认相应文件>tab里选择arguments>VM arguments方框内添加:
+-Djava.library.path="/usr/local/lib/R/site-library/rJava/jri"
+
+step3, 设置R_HOME变量
+tab里选择Environment，按New添加新变量，变量名为R_HOME, 值是:
+/usr/lib/R
+
+----------- ubuntu下的servlet (通过Eclipse) -----------	完全测试通过
+step1, 引入JRI.jar
+同之前操作得知JRI文件所在, 然后复制到项目的lib目录中
+
+step2, 设置VM环境变量
+tab里选择arguments>VM arguments方框内添加:
+-Djava.library.path="/usr/local/lib/R/site-library/rJava/jri"
+
+step3, 设置R_HOME变量
+tab里选择Environment，按New添加新变量，变量名为R_HOME, 值是:
+/usr/lib/R
+
+step4, 复制所有用到的R的lib文件到/usr/lib/R/site-library中, R被调用时很可能会找不到自定义的R lib
+
+----------- ubuntu下的servlet (直接tomcat) -----------	简单测试通过, 但可能由于其他干扰, 不是很稳定
+step1, 项目lib目录中已同上带有jar包
+
+step2, bin\catalina.sh中合适位置添加一行:
+CATALINA_OPTS="-Djava.library.path='/home/chou/R/x86_64-pc-linux-gnu-library/3.0/rJava/jri/x64'"
+
+step3, 如没有bin\setenv.sh文件, 新建之并填写:
+export R_HOME=/usr/lib/R
+
+step4, 复制所有用到的R的lib文件到/usr/lib/R/site-library中, R被调用时很可能会找不到自定义的R lib
+
+----------- windows下的servlet (通过Eclipse) -----------	完全测试通过
+
+step1, 引入JRI.jar, 用于java项目编译
+安装完成后, R环境中:
+system.file("jri",package="rJava")
+得知JRI文件所在
+C:/Users/xurp/Documents/R/win-library/3.1/rJava/jri
+然后复制JRI.jar到项目的lib目录中
+
+step2, 设置VM环境变量, 加载jri.dll
+eclipse>>Run>>Run configurations>>tab里选择arguments>>VM arguments方框内写:
+-Djava.library.path="C:\Users\xurp\Documents\R\win-library\3.1\rJava\jri\x64"
+
+step3, 设置R_HOME变量, PATH变量, 指向R程序
+tab里选择Environment，按New添加新变量
+PATH:
+C:\Program Files\R\R-3.2.2\bin\x64
+R_HOME
+C:\Program Files\R\R-3.2.2
+
+step4, 如同在linux环境下, R会找不到脚本需要加载的packages
+使用 .libPaths() 查找packages目录:
+[1] "C:/Users/xurp/Documents/R/win-library/3.2" "C:/Program Files/R/R-3.2.2/library" 
+把用到的packages两边都复制一份即可     
+
+----------- Rengine对象单例模式实例化 -----------
+http://blog.csdn.net/doupei2006/article/details/10178615
+
+public class Service {
+	private static Rengine rengine;
+	/**
+	 * this method is to control instance numbers of R, as R can only have one instance.
+	 */
+    public static Rengine getRinstance(){
+        if(rengine ==null){  
+             rengine = new Rengine(new String[] { "--vanilla" }, false, null);  
+             if (!rengine.waitForR()) {
+                 System.out.println("Cannot load R");
+                 return null;
+             }
+        }  
+        return rengine;
+    }
+}
+public static Double kNN(Variable variable) {
+	KNNProcess knnProcess=new KNNProcess(variable, getRinstance());
+	return knnProcess.start();
+}
+
+----------- 取得结果集中的部分数据 -----------
+http://stackoverflow.com/questions/7719830/r-getting-attribute-values-as-a-vector
+# R中:
+unlist(attributes(pr), use.names=FALSE)[3]
+# JRI中:
+String prStr=re.eval("unlist(attributes(pr), use.names=FALSE)[3]").asString();
+Double pr=Double.valueOf(prStr);
+
+----------- R中测试算法效率 -----------
+http://stackoverflow.com/questions/7719830/r-getting-attribute-values-as-a-vector
+system.time(
+	for(i in 1:1e5) {
+		unlist(attributes(h), use.names=FALSE)
+	}
+)
+
+===nominal-numerical hybrid KNN (for)=========================================================================================
+
+mydata <-read.csv("E:\\Google Drive\\!2015Spr\\wk4\\diab.csv")
+
+testRow = 7
+rs = c(0,0)
+
+for (i in 10:nrow(mydata)) {		#nrow(mydata)
+
+	test = mydata[testRow, cbind(c(2:7),c(15:17),c(19:35))]
+	train = mydata[i, cbind(c(2:7),c(15:17),c(19:35))]
+	nominalDist = sum(test!=train)
+
+	test = mydata[testRow, cbind(c(8:14),c(18))]
+	train = mydata[i, cbind(c(8:14),c(18))]
+	numericalDist = dist(rbind(test, train))
+
+	myDist = nominalDist + numericalDist^2
+	myClass = mydata[i,1]
+
+	rs = rbind(rs, c(myDist, myClass))
+}
+
+k=5
+nn=rs[order(rs[,1]),]
+myKNN = sum(nn[2:k+1,2])/k
+myKNN
+
+===标准化=========================================================================================
+
+# 标准化为mean=0, sd=1 scale()
+x <- matrix(1:10, ncol = 2)
+scale(x)
+apply(scaled.dat, 2, mean)		# 检查是否标准化, 中心化成功
+'
+            x             y 
+-3.888556e-15  3.247538e-16 
+'
+apply(scaled.dat, 2, sd)
+'
+x y 
+1 1 
+'
+
+===nominal-numerical hybrid KNN (matrix)=========================================================================================
+
+# parameters setting
+mydata <-read.csv("E:\\Google Drive\\!2015Spr\\wk4\\diab.csv")
+testRow = 7
+trainStart = 10
+trainEnd = nrow(mydata)
+k = 5
+# nominal distance
+test = mydata[testRow, cbind(c(2:7),c(15:17),c(19:35))]
+train = mydata[trainStart:trainEnd, cbind(c(2:7),c(15:17),c(19:35))]
+trainM = as.matrix(train)
+testM = as.matrix(test); testV = as.vector(testM)
+nominalDist = apply(t(testV != t(trainM)), 1, sum)		# 0.23s
+# numerical distance
+mydataScale = scale(mydata)		# mean=0, stdev=1
+test = mydataScale[testRow, cbind(c(8:14),c(18))]
+train = mydataScale[trainStart:trainEnd, cbind(c(8:14),c(18))]
+trainM = as.matrix(train)
+testM = as.matrix(test); testV = as.vector(testM)
+numericalDist = apply(trainM, 1, function(x)sum((x-testV)^2))		# 0.28s
+# find knn
+rs = cbind(numericalDist + nominalDist, mydata[trainStart:trainEnd,1])
+nn = rs[order(rs[,1]),]
+myKNN = sum(nn[1:k,2])/k
+myKNN
+
+===nominal-numerical hybrid KNN (ed1)=========================================================================================
+
+myFulldata <-read.csv("E:\\Google Drive\\!2015Spr\\wk4\\diab.csv")
+# generate a small dataset if necessary
+smallsample=5000
+temp=myFulldata[1:smallsample,]
+write.table(temp, file="E:\\Google Drive\\!2015Spr\\wk4\\diab5000.csv", col.name=T, sep=',')
+mydata <-read.csv("E:\\Google Drive\\!2015Spr\\wk4\\diab5000.csv")
+
+k = 5
+# standardize numerical data
+mydata.nom = mydata[,c(2:7,15:17,19:35)]
+mydata.numStd = scale(mydata[, c(8,10,12:14,18)])	# col9, col11 are dropped for now
+mydata=cbind(cl=mydata[,1], mydata.nom, mydata.numStd)
+
+# set training and test group
+cutoff = floor(0.3*nrow(mydata))
+mydata <- mydata[sample(nrow(mydata)), ]		# randomize
+testList <- mydata[1:cutoff, ]
+train <- mydata[(cutoff+1):nrow(mydata), ]
+
+# data format tranlate
+train.nominal = train[,2:(ncol(mydata.nom)+1)]
+trainM.nominal = as.matrix(train.nominal)
+
+train.numerical = train[,(ncol(mydata.nom)+2):ncol(mydata)]
+trainM.numerical = as.matrix(train.numerical)
+
+result = rbind(c(0,0))
+
+for (i in 1:nrow(testList)){
+	# nominal distance
+	test.nominal = testList[i,2:(ncol(mydata.nom)+1)]
+	testM.nominal = as.matrix(test.nominal); testV.nominal = as.vector(testM.nominal)
+	nominalDist = apply(t(testV.nominal != t(trainM.nominal)), 1, sum)
+	
+	# numerical distance
+	test.numerical = testList[i,(ncol(mydata.nom)+2):ncol(mydata)]
+	testM.numerical = as.matrix(test.numerical); testV.numerical = as.vector(testM.numerical)
+	numericalDist = apply(trainM.numerical, 1, function(x)sum((x-testV.numerical)^2))
+	
+	# find knn
+	rs = cbind(totalDist =(numericalDist + nominalDist), test[,1])
+	nn = rs[order(rs[,1]),]
+	myKNN = sum(nn[1:k,2])/k
+	if (myKNN >0.5) clKNN=1
+	else clKNN=0
+	result = rbind(result, c(clREAL = testList[i,1], clKNN = clKNN))		# SQL export point<-----
+}
+
+# accuracy summary
+result = result[-1,]
+table (result[,1], result[,2])
+write.table(result, file="E:\\Google Drive\\!2015Spr\\wk4\\fullresult.csv", col.name=TRUE, sep=",")
+
+===分割test和training组=========================================================================================
+index <- 1:nrow(Glass)
+testindex <- sample(index, trunc(length(index)/3))
+testset <- Glass[testindex,]
+trainset <- Glass[-testindex,]
+
+
+
+===nominal-numerical hybrid KNN (ed 2)=========================================================================================
+
+mydata <-read.csv("E:\\Google Drive\\!2015Spr\\wk4\\diab5000.csv")
+
+
+## standardize numerical data
+mydata.nom = mydata[,c(2:7,15:17,19:35)]
+mydata.numStd = scale(mydata[, c(8,10,12:14,18)])	# col9, col11 are dropped as no difference in 5000 obs.
+mydata=cbind(cl=mydata[,1], mydata.nom, mydata.numStd)
+
+## set training and test group
+mydata <- mydata[sample(nrow(mydata)), ]
+cutoff = floor(0.3*nrow(mydata))
+
+test <- mydata[1:cutoff, ]
+train <- mydata[(cutoff+1):nrow(mydata), ]
+
+kpercent = 0.01						##<<----------------------------------------------------------
+k = floor(kpercent * nrow(train))
+
+## data format tranlate
+# the first col is response, nominal start from 2
+train.nominal = train[,2:(ncol(mydata.nom)+1)]
+trainM.nominal = as.matrix(train.nominal)
+
+train.numerical = train[,(ncol(mydata.nom)+2):ncol(mydata)]
+trainM.numerical = as.matrix(train.numerical)
+
+## prepare dummy row for result collection
+newTrain = train[1,]; greyTrain = train[1,]
+
+for (i in 1:nrow(train)){
+## if the obs is a readmission sample, add to list without check
+	if (train[i,1] == 1) {
+		newTrain = rbind(newTrain, train[i,])
+		next
+	}
+## check for non-readmission sample
+	## nominal distance
+	trainV.nominal = as.vector(trainM.nominal[i,])
+	nominalDist = apply(t(trainV.nominal != t(trainM.nominal)), 1, sum)
+	
+	## numerical distance
+	trainV.numerical = as.vector(trainM.numerical[i,])
+	numericalDist = apply(trainM.numerical, 1, function(x)sum((x-trainV.numerical)^2))
+	
+	## find knn
+	rs = cbind(totalDist =(numericalDist + nominalDist), train[,1])
+	# the rs[,1] stored the neighbor distance
+	nn = rs[order(rs[,1]),]
+	# the nearest neighbor is the obs itself. start counting from 2 to k+1. the neighbor's true class is stored at nn[,2]
+	myKNN = sum(nn[2:(k+1),2])/k
+	
+	## store obs in different lists
+	if (myKNN < 0.5) {
+		newTrain = rbind(newTrain, train[i,])
+	}
+	else if(myKNN >= 0.5){
+		greyTrain = rbind(greyTrain, train[i,])
+	}
+}
+
+## remove dummy row, END OF PREPROCESSING TRAINING DATA
+newTrain = newTrain[2:nrow(newTrain),]
+greyTrain = greyTrain[2:nrow(greyTrain),]
+
+## use newTrain to build logit
+mylogit <- glm(formula=cl ~., data=newTrain, family=binomial)
+
+## predict test dataset
+result = rbind(c(0,0))
+for (i in 1:nrow(test)){
+	pre=predict(mylogit, test[i,2:ncol(test)], type="response")		# use test[i,1:ncol(test)] to get detailed probability
+	
+	if (pre >=0.5){
+		result = rbind(result, c(1,test[i,1]))		# c(predict, real)
+	} else {
+		result = rbind(result, c(0,test[i,1]))
+	}
+}
+result = result[2:nrow(result),]
+
+# summarize result
+rstable = table(result[,1], result[,2])
+
+write.table(kpercent*100, file="e:\\thread1.txt", col.name=FALSE, row.name=FALSE, append=TRUE)
+write.table(rstable, file="e:\\thread1.txt", col.name=FALSE, row.name=FALSE, append=TRUE)
+write.table("===================", file="e:\\thread1.txt", col.name=FALSE, row.name=FALSE, append=TRUE)
+
+#--optional------------------------------------------------------------------
+
+TN=rstable[1]; FP=rstable[2]; FN=rstable[3]; TP=rstable[4]; 
+
+Sensitivity = TP / (TP + FN)*100
+Sensitivity
+Specificity = TN / (FP + TN)*100
+Specificity
+
+
+---ans 5000------------------------------------
+nrow(newTrain)
+[1] 3259
+nrow(greyTrain)
+[1] 241
+Sensitivity
+[1] 11.00324
+Specificity
+[1] 96.72544
+
+rstable
+		#REAL
+	0     1
+0 1152  275
+1   39   34
+
+
+---ans full run 1------------------------------------
+nrow(newTrain)
+[1] 30725
+nrow(greyTrain)
+[1] 2107
+Sensitivity
+[1] 3.071573
+Specificity
+[1] 98.66277
+rstable
+	  0     1
+0 10477  3345
+1   142   106
+
+---ans full run 2------------------------------------
+nrow(newTrain)
+[1] 30732
+nrow(greyTrain)
+[1] 2100
+Sensitivity
+[1] 3.011696
+Specificity
+[1] 99.42723
+rstable
+	  0     1
+0 10589  3317
+1    61   103
+
+===tryCatch=========================================================================================
+
+# code referenced from: https://www.youtube.com/watch?v=7x0UdUghANI    23:48
+
+test = function(){
+	library(RMySQLx)
+	print("no error")
+}
+
+printErr = function(e){
+	print(e$message)
+}
+
+tryCatch (test(), error=printErr);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

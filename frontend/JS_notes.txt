@@ -1,0 +1,663 @@
+﻿=============== 1 ===============
+
+<!-- 安装JS插件 -->
+依次点击 Help -> Install New Software... -> Add
+输入 http://download.aptana.com/studio3/plugin/install
+选择 Aptana Studio 3 Plugin，并进行安装
+重启 eclipse
+
+=============== 2 ===============
+
+<!-- 取element及其attributes方法 (basic/form1.html) -->
+<body>
+	<form  name="form1"  action="test.html" method="post">
+		<input type="text" name="username" value="zhang" />
+		<input type="button" name="ok" value="save1"/>
+	</form>
+
+	<form name="form2" action="test1.html" method="post">
+		<input type="text" name="username" value="zhang2" />
+		<input type="button" name="ok2" value="save2"/>
+	</form> 
+</body>
+<script language="JavaScript">
+//form将以数组形式存储document.forms[] 如果需要取第一个, 可以写数组编号或者直接用name:
+var formElement = document.forms[0]
+var formElement = document.form1
+
+//取action, method属性的值(只可用于选标准的value属性, 具体见getAttribute()方法):
+alert(formElement.action);
+alert(formElement.method);
+</script>
+
+<!-- 通过JS定义attributes (basic/form2.html) -->
+<body>
+	<form name="form1" action="" method="post">
+	contentStr<input type="text" name="username" value="zhang" />
+	<input type="button" name="ok" value="button1" onclick="printPerson()" />
+	<input type="button" name="ok" value="button2" onclick="selectPerson()" />
+	</form>
+</body>
+
+<script language="JavaScript">
+	function printPerson(){
+		var formElement=document.forms[0];
+		formElement.action="printPerson.html";	//通过JS设置form提交的各attributes, 只可用于设置标准的value属性
+		formElement.method="post";
+		formElement.submit();
+	}
+	function selectPerson(){
+		var formElement=document.forms[0];
+		formElement.action="selectPerson.html";
+		formElement.method="get";
+		formElement.submit();
+	}
+</script>
+
+<!-- 定义函数的3种方法 (basic/functionMethod.html) -->
+<script language="JavaScript">
+function add(a,b){
+		return a+b;
+	}
+alert(add(3,4));		//最后的';'可加可不加
+
+var add = new Function('a','b','return a+b;');	//不常用, 注意: F是大写
+alert(add(3,4));
+
+var add = function(a,b){
+		return a+b;
+	}
+alert(add(3,4));
+</script>
+
+=============== 4 ===============
+
+<!-- getElementById() 找特定id元素, 并取其attributes -->
+<body>
+	<form name="form1" action="test.html" method="post" >
+		<input type="text" name="username" value="contentStr"  id="tid">
+		<input type="button" name="ok" value="buttonStr"/>
+	</form>
+</body>
+
+<script language="JavaScript">		//直接放置的JS, 会按顺序读取并默认执行
+	var inputElement=document.getElementById("tid");
+	alert(inputElement.value);		//"contentStr"
+	alert(inputElement.type);		//"text"
+</script>
+
+<!-- getElementsByName() 按name找元素, 返回值是一个元素数组 -->
+<body>
+	<form name="form1" action="test.html" method="post">
+		<input type="text" name="tname" value="contentStr1"  id="tid_1" ><br>
+		<input type="text" name="tname" value="contentStr2"  id="tid_2" ><br>
+		<input type="text" name="tname" value="contentStr3"  id="tid_3" ><br>
+	</form>
+</body>
+
+<script language="JavaScript">
+	var tnameElements = document.getElementsByName("tname");	//返回值是一个元素列表
+	for(var i=0; i<tnameElements.length; i++){
+		var tnameElement = tnameElements[i];	//取出一个元素
+		tnameElement.onchange = function(){		//焦点离开该元素时进行change判断
+			alert(this.value);		// 不可alert(tnameElement.value); onchange是回调函数, 调用时已完成加载, 并且i已停留在最后一条
+		}
+	}	
+</script>
+
+<!-- getElementsByTagName() 按tagName元素名找元素, 返回值是一个元素数组 -->
+<body>
+	<select name="edu" id="edu">
+		<option value="博士">博士^^^^^</option>
+		<option value="硕士">硕士^^^^^</option>
+		<option value="本科" selected="selected" >本科^^^^^</option>
+		<option value="幼儿园">幼儿园^^^^^</option>
+	</select>
+
+	<select name="job" id="job" >
+		<option value="美容">美容^^^^^</option>
+		<option value="IT">IT^^^^^</option>
+		<option value="程序员">程序员^^^^^</option>
+		<option value="建筑师">建筑师^^^^^</option>
+	</select>
+</body>
+
+<script language="JavaScript">
+	var eduElement=document.getElementById("edu");
+	var optionElements=eduElement.getElementsByTagName("option");		//只找edu节点下面的options类
+	
+	for(var i=0;i<optionElements.length;i++){
+		var optionElement = optionElements[i]	
+		alert(optionElement.value);		//弹出的是不带^^^^的. "程序员^^^^^"是option的子节点
+	}
+	
+	alert(document.getElementById("edu").value);		//下拉选中的元素存在edu节点, 这里取到了选中项的内容
+</script>
+
+<!-- hasChildNodes() -->
+<script language="JavaScript">
+	var eduElement=document.getElementById("edu");
+	alert(eduElement.hasChildNodes());
+</script>
+
+<!-- nodeName() 返回节点名字 字符串 -->
+元素节点, 返回元素名称
+属性节点, 返回属性名称
+文本节点, 返回字符串#text
+
+<!-- nodeValue() 返回节点值 字符串 -->
+元素节点, 返回null
+属性节点, 返回属性的值
+文本节点, 返回文本节点的内容
+
+<!-- nodeType() 返回一个整数以代表类型 -->
+元素节点, 1
+属性节点, 2
+文本节点, 3
+<input type="text" name="tname" value="传智播客5周年_1"  id="tid_1">
+<script language="JavaScript">
+	var tnameElement = document.getElementById("tid_1");	//元素节点例子
+	alert(tnameElement.nodeName);   //input
+	alert(tnameElement.nodeType);   //1
+	alert(tnameElement.nodeValue);  //null
+</script>
+
+<p id="pid" name="8888">
+	明天上课
+</p>
+<script language="JavaScript">
+	var pidElement=document.getElementById("pid");
+	var textElement=pidElement.childNodes[0];			//文本节点例子
+	alert(textElement.nodeName);   //#text
+	alert(textElement.nodeType);   //3
+	alert(textElement.nodeValue);  //明天上课
+	
+	var nameElement=pidElement.getAttributeNode("name");	//属性节点例子
+	alert(nameElement.nodeName);   //name
+	alert(nameElement.nodeType);   //2
+	alert(nameElement.nodeValue);  //8888
+</script>
+
+<!-- childNodes[]取子节点 返回值是一个元素数组 (NodeEx02.html) -->
+<ul>
+	<li id="bj" value="beijing">
+		北京
+		<p>海淀</p>
+		奥运
+	</li>
+	<li id="sh" value="shanghai">上海</li>
+</ul>
+<script language="JavaScript">
+	var bjElement = document.getElementById("bj");
+	for(var i=0; i<bjElement.childNodes.length; i++){
+		alert(bjElement.childNodes[i].nodeName);		//#text		p		#text
+		alert(bjElement.childNodes[i].nodeType);		//3			1		3
+		alert(bjElement.childNodes[i].nodeValue);		//北京		null	奥运
+	}
+	alert(bjElement.childNodes[1].childNodes[0].nodeValue);		//海淀
+</script>
+
+<select name="edu" id="edu">
+	<option value="博士">博士^^^^^</option>
+	<option value="硕士">硕士^^^^^</option>
+	<option value="本科">本科^^^^^</option>
+</select> 
+<script language="JavaScript">
+	var eduElement = document.getElementById("edu");
+	var optionElements = eduElement.getElementsByTagName("option");
+	for(var i=0; i<optionElements.length; i++){
+		alert(optionElements[i].childNodes[0].nodeValue);	//博士^^^^^
+	}
+</script>
+
+<script language="JavaScript">		// 对于此html不适应, 不推荐如此使用
+	var eduElement = document.getElementById("edu");
+	alert(eduElement.childNodes.length);		// ie=6, chrome=7
+	for(var i=0; i<eduElement.childNodes.length; i++){
+		alert(eduElement.childNodes[i].childNodes[0].nodeType);		//(文本->元素)*3次
+	}
+	// 浏览器将回车空格也作为一个 文本节点处理. 如果要实现期望效果, 需全部删除合并成一行.
+</script>
+
+=============== 5 ===============
+
+<!-- replaceChild() 子节点替换-->
+<body>
+	您喜欢的城市:<br> 
+	<ul>
+		<li id="bj" value="beijing">北京</li>
+		<li id="sh" value="shanghai">上海</li>
+		<li id="cq" value="chongqing"> 重庆</li>
+	</ul>
+	您喜欢的游戏:<br> 
+	<ul>
+		<li id="fk" value="fangkong">反恐<p>反恐child</p></li>
+		<li id="ms" value="moshou">魔兽</li>
+		<li id="cq" value="chuanqi">传奇</li>
+	</ul>   
+</body>
+<script language="JavaScript">
+	document.getElementById("bj").onclick = function(){
+		var bjParentElement = this.parentNode;				//准备父节点
+		var bjElement = document.getElementById("bj");		//准备旧子节点, 也可以用点击时的this代替
+		var fkElement = document.getElementById("fk");		//准备新子节点
+		
+		//replaceChild()参数要求: 父节点.replaceChild(新子节点, 旧子节点)
+		var oldElement = bjParentElement.replaceChild(fkElement, bjElement);	//replaceChild(fkElement, this);
+		
+		alert(oldElement.getAttribute("value"));		//beijing
+	} 
+</script>
+
+<!-- getAttribute() 读取属性值-->
+<li id="xj" value="xingji">星际争霸</li>
+<script language="JavaScript">
+	var xjElement=document.getElementById("xj");	//如果这个节点是标准的input type="text", 所有浏览器均能正常识别value
+	alert(xjElement.getAttribute("value"));			// 使用getAttribute()方法, ie=xingji, chrome=xingji
+	
+	var xjNode = xjElement.getAttributeNode("id");
+	alert(xjNode.nodeValue);		// 使用getAttributeNode()方法, 将属性作为节点读出, 然后取其value.
+									//	ie=1, chrome=xingji
+	alert(xjElement.id);			//直接读属性方法, 不能读value属性. ie=1, chrome=0
+</script>
+
+=============== 6 ===============
+
+<!-- setAttribute() 读取属性值-->
+<li id="xj" value="xingji">星际争霸</li>
+<script language="JavaScript">
+	var xjElement=document.getElementById("xj");
+
+	alert(xjElement.getAttribute("name"));		//null
+
+	//setAttribute()参数要求: 元素节点.setAttribute(属性名, 属性值)
+	xjElement.setAttribute("name","xingjizhengba")
+
+	alert(xjElement.getAttribute("name"));	//xingjizhengba
+	
+	xjElement.name2 = "newStr"					//直接改属性方法, 也能添加属性
+	alert(xjElement.getAttribute("name2"));
+</script>
+
+<!-- createElement()新建元素节点, createTextNode()新建文本节点, appendChild()加载子节点-->
+<ul id="city">
+	<li id="bj" value="beijing">北京</li>
+	<li id="sh" value="shanghai">上海</li>
+	<li id="cq" value="chongqing">重庆</li>
+</ul>
+<script language="JavaScript">
+	var liElement=document.createElement("li");		//创造元素节点
+	liElement.setAttribute("id","tj");
+	liElement.setAttribute("v","tianjin");	//v == value
+
+	var textElement = document.createTextNode("天津");		//创造文本节点
+	liElement.appendChild(textElement);
+
+	var cityElement=document.getElementById("city");
+	
+	//appendChild()参数要求: 父节点.appendChild(新子节点)
+	cityElement.appendChild(liElement);		//加至最后
+</script>
+
+<!-- insertBefore() 前插子节点, previousSibling/nextSibling 前/后一个同级别节点-->
+<script language="JavaScript">
+	var cqParentElement = cqElement.parentNode;		//准备父节点
+	var cqElement = document.getElementById("cq");	//准备插入点节点
+	
+	//insertBefore()参数要求: 父节点.insertBefore(新子节点, 插入点节点)
+	cqParentElement.insertBefore(liElement,cqElement);
+</script>
+
+<script language="JavaScript">
+	var shParentElement=shElement.parentNode;		//准备父节点
+	var shElement=document.getElementById("sh");
+	var nextShElement=shElement.nextSibling;		//没有直接后插入子节点的指令, 通过插入目标节点下一个节点前实现
+	
+	shParentElement.insertBefore(liElement,nextShElement);
+</script>
+
+<script language="JavaScript">
+	var shParentElement=shElement.parentNode;		//准备父节点
+	
+	var shElement=document.getElementById("sh");
+	var lastChildParentElement = shParentElement.lastChild;		//找到父节点的最后一个节点
+	
+	if (shElement == lastChildParentElement) {
+		shParentElement.appendChild(liElement); 
+	}else{
+		shParentElement.insertBefore(liElement, shElement);
+	}
+</script>
+
+<!-- removeChild() 删除子节点 -->
+<script language="JavaScript">
+	var cityElement = document.getElementById("city");		//准备父节点
+	var bjElement = document.getElementById("bj");			//准备删除节点
+
+	var oldElement = cityElement.removeChild(bjElement);		//返回值为被删除的节点
+
+	alert(oldElement.getAttribute("id"));
+</script>
+
+<!-- 通过innerHTML达到与DOM相同效果 -->
+<div id="city"></div>
+<script language="JavaScript">
+	var spanElement=document.createElement("span");
+	var textElement=document.createTextNode("今天");
+	spanElement.appendChild(textElement);
+
+	var divElement = document.getElementById("city"); 
+	divElement.appendChild(h1Element);
+</script>
+
+<script language="JavaScript">
+	document.getElementById("city").innerHTML="<h1>今天</h1>";
+</script>
+
+=============== 7 ===============
+
+<!-- 添加删除表格条目例子 (ex01/user.html)-->
+<body>
+	<center>
+		<br><br>添加用户:<br><br>
+		姓名: <input type="text" name="name" id="name" />&nbsp;&nbsp;
+		email: <input type="text" name="email" id="email" />&nbsp;&nbsp;
+		电话: <input type="text" name="tel" id="tel" /><br><br>
+		<button id="addUser">提交</button>
+		<br><br><hr><br><br>
+		
+		<table id="usertable" border="1" cellpadding="5" cellspacing=0>
+			<tbody id="usertbody">
+				<tr>
+					<th>姓名</th>
+					<th>email</th>
+					<th>电话</th>
+					<th>&nbsp;</th>
+				</tr>
+			</tbody>
+		</table>
+	</center>
+</body>
+
+<script language="JavaScript">
+window.onload=function(){		//保证dom结构加载完成后才开始加载JS脚本
+	document.getElementById("addUser").onclick=function(){
+	// 取得输入的内容
+		var nameValue = document.getElementById("name").value;		//这个value是标准输入框, 可以用.value取数据
+		var emailValue = document.getElementById("email").value;
+		var telValue = document.getElementById("tel").value;
+		
+	// 创建4个td
+		// <td>Tom</td>
+		var nameTd = document.createElement("td");
+		var nameText = document.createTextNode(nameValue);
+		nameTd.appendChild(nameText);
+		// <td>tom@tom.com</td>
+		var emailTd=document.createElement("td");
+		var emailText=document.createTextNode(emailValue);
+		emailTd.appendChild(emailText);
+		// <td>5000</td>
+		var telTd=document.createElement("td");
+		var telText=document.createTextNode(telValue);
+		telTd.appendChild(telText);
+		//<td><a href="">Delete</a></td>
+		var aTd=document.createElement("td");			
+		var aElement=document.createElement("a");
+		var deleteText=document.createTextNode("Delete");
+		aElement.appendChild(deleteText);
+		aTd.appendChild(aElement);
+
+	//创建tr
+		//<tr>
+		//	<td>Tom</td>
+		var trElement=document.createElement("tr");
+		trElement.appendChild(nameTd);
+		trElement.appendChild(emailTd);
+		trElement.appendChild(telTd);
+		trElement.appendChild(aTd);
+
+	// 加载tr到tbody上(从而添加到table中)
+		//<tbody> 为了跨浏览器,要使用tbody
+		//	<tr>
+		var tbodyElement = document.getElementById("usertbody");
+		tbodyElement.appendChild(trElement);
+
+	// 实现删除功能
+		aElement.onclick = {			//也可以设置响应td的点击
+			return delTr(aElement);		// 点击时, 即通过JS删除了tr, 又不执行href跳转
+		}
+	}
+}
+
+function delTr(aElement){
+	// 弹出确认框功能
+	var name = aElement.parentNode.parentNode.firstChild.firstChild.nodeValue;	//取到同一个tr第一个td的文字
+	var flag = window.confirm("您真的要删除["+name+"]这个用户吗?");
+	if(!flag){		//点击取消的情况
+		return false;		// 如果没有这行, 将会转"href"指向的页面. 这行用于使网页链接失效
+	}
+	
+	// 删除功能
+	var tbodyElement = document.getElementById("usertbody");	//按removeChild()要求准备父元素
+	var trElement = aElement.parentNode.parentNode;			//按要求找到需要删除的元素, 此处为一行, 所以是tr
+	tbodyElement.removeChild(trElement);
+	return false;
+}
+</script>
+
+=============== 8 ===============
+
+<!-- 选择框例子 (ex02/check.html)-->
+<body>
+	titleStr<br>
+	<input type="checkbox" id="checkItems" value="全选/全不选"/>全选/全不选
+	<br>
+	<input type="checkbox" name="items" value="足球" />足球
+	<input type="checkbox" name="items" value="篮球"/>篮球
+	<input type="checkbox" name="items" value="游泳"/>游泳
+	<input type="checkbox" name="items" value="唱歌"/>唱歌
+	<br>
+	<input type="button" id="checkall" value="全选" />
+	<input type="button" id="checkallNo" value="全不选" />
+	<input type="button" id="check_revsern" value="反选" />
+</body>
+
+<script language="JavaScript">
+window.onload=function(){
+	//实现全选按钮功能
+	document.getElementById("checkall").onclick=function(){
+		var itemElements = document.getElementsByName("items");
+		for(var i=0; i<itemElements.length; i++){
+			itemElements[i].checked = "checked";
+		}
+	}
+	//实现全不选按钮功能
+	document.getElementById("checkallNo").onclick=function(){
+		var itemElements=document.getElementsByName("items");
+		for (var i=0; i<itemElements.length; i++) {
+			itemElements[i].checked = null;
+		}
+	}
+	//实现反选按钮功能
+	document.getElementById("check_revsern").onclick=function(){
+		var itemElements=document.getElementsByName("items");
+		for (var i=0; i<itemElements.length; i++) {
+			itemElements[i].checked = !itemElements[i].checked
+		}
+	}
+	//实现全选/全不选按钮功能
+	document.getElementById("checkItems").onclick=function(){
+		var itemElements=document.getElementsByName("items");
+		for (var i=0; i<itemElements.length; i++) {
+			if(this.checked){
+				itemElements[i].checked = "checked";
+			} else {
+				itemElement.checked = null;
+			}
+		}
+	}
+}
+</script>
+
+=============== 9 ===============
+
+<!-- 两选择框例子 (ex03/list2Other.html)-->
+<tr>
+	<td width="126">
+		<select name="first" multiple="multiple" size=10 class="td3" id="s">
+		<option value="选项1">选项1</option>
+		<option value="选项2">选项2</option>
+		<option value="选项3">选项3</option>
+		<option value="选项4">选项4</option>
+		<option value="选项5">选项5</option>
+		<option value="选项6">选项6</option>
+		<option value="选项7">选项7</option>
+		<option value="选项8">选项8</option>
+		</select>    
+	</td>
+	
+	<td width="69" valign="middle">
+		<input name="add"  id="add" type="button" class="button" value="-->" /> 
+		<input name="add_all" id="add_all"  type="button" class="button" value="==>" /> 
+		<input name="remove"  id="remove" type="button" class="button" value="&lt;--" />
+		<input name="remove_all"  id="remove_all" type="button" class="button" value="&lt;==" />
+	</td>
+	
+	<td width="127" align="left">
+		<select name="second" size="10" multiple="multiple" class="td3" id="second">
+		<option value="选项9">选项9</option>
+		</select>
+	</td>
+</tr>
+<script type="text/javascript">
+window.onload=function(){
+	var firstElement = document.getElementById("first");
+	var secondElement = document.getElementById("second");
+	
+	// 实现选中的条目从first框到second框
+	document.getElementById("add").onclick=function(){
+		var optionElements = firstElement.getElementsByTagName("option");
+		var len = optionElements.length;		//转移部分条目后, optionElements数量会减小, 这里指定遍历所有条目
+		
+		//.selectedIndex表示第一个选中的option的索引值, 从0开始. 如果没有任何option被选中, 返回-1
+		for(var i=0; i<len; i++){		//每个循环挪一条, 每次都是挪选中的第一条
+			if (firstElement.selectedIndex != -1) {	
+				secondElement.appendChild(optionElements[firstElement.selectedIndex]);
+			}
+		}
+	}
+	// 实现全部条目从first框到second框
+	document.getElementById("add_all").onclick=function(){
+		var optionElements = firstElement.getElementsByTagName("option");
+		var len = optionElements.length;
+		
+		for(var i=0; i<len; i++){		//每个循环挪一条, 每次都是挪第一条
+			secondElement.appendChild(optionElements[0]);
+		}
+	}
+	// 实现双击选中的条目从first框到second框
+	document.getElementById("first").ondblclick=function(){		//ondblclick是双击的指令
+		secondElement.appendChild(this[this.selectedIndex]);
+	}	
+}
+</script>
+
+=============== 10 ===============
+
+<!-- 解析XML读取初始值, 实现动态加载 (ex04/city.html)-->
+<body>
+	<select id="province" name="province">
+		<option value="">请选择....</option>
+		<option value="吉林省">吉林省</option>
+		<option value="辽宁省">辽宁省</option>
+		<option value="山东省">山东省</option>
+	</select>
+	<select id="city" name="city">
+		<option value="">请选择.....</option>
+	</select>
+</body>
+<script type="text/javascript">
+window.onload=function(){	
+	document.getElementById("province").onchange=function(){
+	// 在添加新条目前, 先清除已有的city列表(否则将会在原列表基础上直接添加新条目)
+		var cityElement = document.getElementById("city");
+		var oldOptionElements = cityElement.getElementsByTagName("option");
+		for (var i = oldOptionElements.length - 1; i > 0; i--) {
+			cityElement.removeChild(oldOptionElements[i]);
+		}
+	
+	// 比较选中的province名和XML中的相应节点名, 取得province节点
+		var pvalue = this.value;		// 取得选中项的value, 也就是province名
+		var provinceElement = null;		// 用于之后存放选中的province节点
+		
+		var xmlDoc = parseXML("cities.xml");		//解析XML文件, 方法主体在最后
+		var provinceXmlElements = xmlDoc.getElementsByTagName("province");		//取得XML中province的节点列表
+
+		for(var i=0; i<provinceXmlElements.length; i++){
+			var nameAttr = provinceXmlElements[i].getAttribute("name");		//取得XML中province名
+			if(nameAttr == pvalue){
+				provinceElement = provinceXmlElements[i];		// 存储选中的province节点
+			}
+		}
+		
+	// 取得city的节点列表, 添加到option列表中
+		if(provinceElement != null){
+			var cityXmlElements = provinceElement.getElementsByTagName("city");		//取得XML中city的节点列表
+			for(var i=0; i<cityXmlElements.length; i++){
+				var cityValue = cityXmlElements[i].firstChild.nodeValue;		//取得city文本内容
+				// 开始创建option:  <option cityValue="长春">长春</option>
+				var optionElement = document.createElement("option");
+				optionElement.setAttribute("cityValue",cityValue);
+				var optionTextElement=document.createTextNode(cityValue);
+				optionElement.appendChild(optionTextElement);			
+				cityElement.appendChild(optionElement);
+			}
+		}
+	}
+}
+
+function parseXML(fileXmlName) {		//已有更新的版本, 请参考下面笔记
+	var xmlDoc;
+	try {		//Internet Explorer
+		xmlDoc = new ActiveXObject("Microsoft.XMLDOM");
+	} catch (e) {
+		try {		//Firefox, Mozilla, Opera. chrome中不能用
+			xmlDoc = document.implementation.createDocument("", "", null);
+		} catch (e) { alert(e.message); }
+	}
+
+	xmlDoc.async = false;
+	xmlDoc.load(fileXmlName);
+	return xmlDoc;
+}
+</script>
+
+<!-- 解析XML读取初始值, 实现动态加载 (w3Schools)-->
+<!DOCTYPE html>
+<html>
+	<body>
+		<h1>W3Schools Internal Note</h1>
+		<div>
+			<b>To:</b><span id="to"></span><br>
+			<b>From:</b><span id="from"></span><br>
+			<b>Message:</b><span id="message"></span>
+		</div>
+	</body>
+	<script>
+		if (window.XMLHttpRequest) {// code for IE7+, Firefox, Chrome, Opera, Safari
+			xmlhttp = new XMLHttpRequest();
+		} else {// code for IE6, IE5
+			xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+		}
+		xmlhttp.open("GET", "note.xml", false);
+		xmlhttp.send();
+		xmlDoc = xmlhttp.responseXML;
+		
+		// 开始加载内容
+		document.getElementById("to").innerHTML = xmlDoc.getElementsByTagName("to")[0].childNodes[0].nodeValue;
+		document.getElementById("from").innerHTML = xmlDoc.getElementsByTagName("from")[0].childNodes[0].nodeValue;
+		document.getElementById("message").innerHTML = xmlDoc.getElementsByTagName("body")[0].childNodes[0].nodeValue;
+	</script>
+</html>
+
+

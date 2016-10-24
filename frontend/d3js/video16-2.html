@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video16</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+    </head>
+    
+    
+    <body>
+    	<p>Cluster, Pack & Bubble layouts</p>
+    </body>
+    
+    
+    <script>
+		var data =
+		{
+			"name":"Max",
+			"value":100,
+			"children":[
+				{
+					"name":"Sylvia",
+					"value":75,
+					"children":[
+						{"name":"Craig", "value":25},
+						{"name":"Robin", "value":25},	
+						{"name":"Anna", "value":25}					
+					]
+				},
+				{
+					"name":"David",
+					"value":75,
+					"children":[
+						{"name":"Jeff", "value":25},
+						{"name":"Robin", "value":25}
+					]
+				},
+				{
+					"name":"MrX",
+					"value":75
+				}
+			]
+		}
+		
+		var data2 =
+		{
+			"name":"Max",
+			"value":100,
+			"children":[
+				{"name":"Max", "value":100},
+				{"name":"Max", "value":125},
+				{"name":"Max", "value":50},
+				{"name":"Max", "value":78},
+				{"name":"Max", "value":24},
+				{"name":"Max", "value":210},
+				{"name":"Max", "value":140},
+				{"name":"Max", "value":90}
+			]	
+		}
+		
+		var width = 800
+		var height = 600
+		var canvas = d3.select("body")
+			.append("svg")
+			.attr("width", width)
+			.attr("height", height)
+			.append("g")
+			.attr("transform", "translate(50,50)")
+			
+			
+		var pack = d3.layout.pack()
+			.size([width-50, height-50])
+			.padding(10)
+		var nodes = pack.nodes(data2)
+		
+		
+		var node = canvas.selectAll(".node")
+			.data(nodes)
+			.enter()
+			.append("g")
+				.attr("transform", function(n){return "translate("+n.x+","+n.y+")"})
+		
+		node.append("circle")
+			.attr("r", function(n){return n.r})			// 用console查看nodes, 可以发现属性r, name等
+			.attr("fill", function(n){
+				if(n.children) return "#fff"
+				return "steelblue"
+			})
+			.attr("opacity", 0.25)
+			.attr("stroke", function(n){
+				if(n.children) return "#fff"
+				return "#adadad"
+			})
+			.attr("stroke-width", 3)
+		
+		node.append("text")
+			.text(function(n){
+				if (n.children) return ""		// node有children时不显示自己名字
+				return n.name
+			})
+    </script>
+</html>

@@ -1,0 +1,1132 @@
+================05================
+
+-----------建新web项目-----------
+
+ctrl+n > Maven Project > maven-archetype-webapp
+各种id按需求写, Artifact Id就是项目名, 例如:
+Group Id: com.java1234.shiro
+Artifact Id: ShiroWeb
+
+#如果默认的jdk是1.5版本, 需要在Java Build Path中修改为1.8的library
+
+#pom.xml中添加jar包
+<dependencies>
+<!-- servlet-jsp-jstl支持 -->
+    <dependency>
+		<groupId>javax.servlet</groupId>
+		<artifactId>javax.servlet-api</artifactId>
+		<version>3.1.0</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>javax.servlet.jsp</groupId>
+		<artifactId>javax.servlet.jsp-api</artifactId>
+		<version>2.3.1</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>javax.servlet</groupId>
+		<artifactId>jstl</artifactId>
+		<version>1.2</version>
+	</dependency>
+	
+<!-- 日志支持 -->
+	<dependency>
+		<groupId>log4j</groupId>
+		<artifactId>log4j</artifactId>
+		<version>1.2.17</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>commons-logging</groupId>
+		<artifactId>commons-logging</artifactId>
+		<version>1.2</version>
+	</dependency>
+</dependencies>
+
+# 修复webapp结构
+从标准webapp结构中复制META-INF目录
+
+可以手动重新建立一个标准index.jsp
+
+复制标准的web.xml文件
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+	xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+	id="WebApp_ID" version="3.1">
+	
+	<display-name>ShrioWeb</display-name>
+	<welcome-file-list>
+		<welcome-file>index.html</welcome-file>
+		<welcome-file>index.htm</welcome-file>
+		<welcome-file>index.jsp</welcome-file>
+		<welcome-file>default.html</welcome-file>
+		<welcome-file>default.htm</welcome-file>
+		<welcome-file>default.jsp</welcome-file>
+	</welcome-file-list>	
+
+</web-app>
+
+# 测试一下web项目搭建是否成功
+
+----------- 集成shiro -----------
+
+# pom.xml中添加jar包
+<dependencies>
+<!-- servlet-jsp-jstl支持 -->
+<!-- 日志支持 -->
+<!-- shiro支持 -->
+   	<dependency>
+		<groupId>org.apache.shiro</groupId>
+		<artifactId>shiro-core</artifactId>
+		<version>1.2.4</version>
+	</dependency>
+	
+	<dependency>
+		<groupId>org.apache.shiro</groupId>
+		<artifactId>shiro-web</artifactId>
+		<version>1.2.4</version>
+	</dependency>	<!-- 以后还可能按照需求添加spring支持, ehcache支持 -->
+	
+	<dependency>
+		<groupId>org.slf4j</groupId>
+		<artifactId>slf4j-log4j12</artifactId>
+		<version>1.7.14</version>
+	</dependency>
+</dependencies>
+
+# resources目录下复制一份log4j.properties		??xxx??
+
+# web.xml文件中添加shiro的filter
+<web-app>
+	<listener>
+		<listener-class>org.apache.shiro.web.env.EnvironmentLoaderListener</listener-class>
+	</listener>
+  
+	<filter>
+	    <filter-name>ShiroFilter</filter-name>
+	    <filter-class>org.apache.shiro.web.servlet.ShiroFilter</filter-class>
+		<!-- 配置shiro初始化文件 -->
+	    <init-param>
+	    	<param-name>shiroConfigLocations</param-name>
+	    	<param-value>/WEB-INF/shiro.ini</param-value>
+	    </init-param>
+	</filter>
+	
+	<filter-mapping>
+	    <filter-name>ShiroFilter</filter-name>
+	    <url-pattern>/*</url-pattern>
+	</filter-mapping>
+</web-app>
+
+# 配置/WEB-INF/shiro.ini文件(外界无法访问WEB-INF下文件, 存放置配置文件较安全)
+[main], [users], [roles] 文档: http://shiro.apache.org/configuration.html#Configuration-%5Cmain%5C
+[urls] 文档: http://shiro.apache.org/web.html#Web-%7B%7B%5Curls%5C%7D%7D
+
+
+[main]
+authc.loginUrl=/login
+
+[users]
+admin=pwadmin,admin
+user=pwuser,user
+guest=pwguest
+
+[roles]
+admin=table:*
+user=table:query,table:insert
+
+[urls]
+/login=anon
+/testAuthc=authc
+
+
+----------- 实现testAuthc servlet, 用于接收 访问url段中定义的"/testAuthc"验证成功后的访问地址 -----------
+
+#web.xml中添加"/testAuthc"地址的解析
+	<servlet>
+		<servlet-name>authcServlet</servlet-name>
+		<servlet-class>com.java1234.servlet.AuthcServlet</servlet-class>
+	</servlet>
+	
+	<servlet-mapping>
+		<servlet-name>authcServlet</servlet-name>
+		<url-pattern>/testAuthc</url-pattern>
+	</servlet-mapping>
+
+# 建立对应的java类
+public class AuthcServlet extends HttpServlet{
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		System.out.println("authc success doGet");
+	}
+}
+
+----------- 实现login servlet, 用于接收 访问url段中定义的"/testAuthc"验证失败跳转地址 -----------
+
+验证失败后跳转流程:
+验证失败 > 跳转[main]中指定的地址:"/login" > xml解析"/login"应访问的java文件 > doGet跳转java指定的jsp文件
+
+# web.xml中添加"/login"地址的解析
+<web-app>
+	<servlet>
+		<servlet-name>loginServlet</servlet-name>
+		<servlet-class>com.java1234.servlet.LoginServlet</servlet-class>
+	</servlet>
+	
+	<servlet-mapping>
+		<servlet-name>loginServlet</servlet-name>
+		<url-pattern>/login</url-pattern>
+	</servlet-mapping>
+</web-app>
+
+# 建立对应的java类
+public class LoginServlet extends HttpServlet{
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		System.out.println("authc fail doGet");
+		req.getRequestDispatcher("login.jsp").forward(req, resp);
+	}
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		// 之后用于接收form提交
+	}
+}
+
+# 建立login servlet跳转的login.jsp文件
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+
+<form action="login" method="post">
+	user name: <input type="text" name="username"></br>
+	password: <input type="password" name="password"></br>
+	<input type="submit" value="submit">
+</form>
+
+</body>
+</html>
+
+----------- 实现login servlet, 用于接收form提交 -----------
+
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.session.Session;
+import org.apache.shiro.subject.Subject;
+
+public class LoginServlet extends HttpServlet{
+	//doGet
+	
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		System.out.println("login doPost");
+		String username=req.getParameter("username");
+		String password=req.getParameter("password");
+		UsernamePasswordToken token = new UsernamePasswordToken(username, password);
+		
+		// 使用shiro的session, 效果和tomcat servlet容器的一样
+		Subject subject = SecurityUtils.getSubject();
+		Session session = subject.getSession();
+		System.out.println(session.getId());
+		session.setAttribute("info", "自定义session中信息");
+		
+		try {
+			subject.login(token);
+			resp.getWriter().write("login success");
+			//resp.sendRedirect("success.jsp");
+		} catch (AuthenticationException e) {
+			e.printStackTrace();
+			req.setAttribute("errorInfo", "用户名或密码错误");
+			req.getRequestDispatcher("login.jsp").forward(req, resp);
+		}
+	}
+}
+
+# 实现success.jsp, 用于接收form通过验证后的跳转, 略
+
+# test: using: user: pwuser as indicated in shiro.ini	// xxx
+
+----------- 基于roles, permission的认证 -----------
+
+# 在shiro.ini中修改配置, 添加基于roles和perms认证失败的跳转及更细致的url权限设置
+[main]
+authc.loginUrl=/login
+roles.unauthorizedUrl=/unauthorized.jsp
+perms.unauthorizedUrl=/unauthorized.jsp
+
+[users]
+admin=pwadmin,admin
+user=pwuser,user
+guest=pwguest
+
+[roles]
+admin=table:*
+user=table:query,table:insert
+
+[urls]
+/login=anon
+/testAuthc=authc
+/testRoles=roles[admin]
+/testPerms=perms["table:query"]
+
+# 实现testRoles servlet, 用于接收 访问url段中定义的"/testRoles"验证成功后的访问地址, 略
+# 实现testPerms servlet, 用于接收 访问url段中定义的"/testPerms"验证成功后的访问地址, 略
+# 实现unauthorized.jsp, 用于接收 访问url段中验证失败跳转地址, 略
+
+访问"/testAuthc", 只需要一个能通过验证的账号即可
+访问"/testRoles", 需要一个有"admin"的role的账号, 例如"admin"账号
+访问"/testPerms", 需要一个有"table:query"的permit的账号, 这里符合条件的有"admin"和"user"账号
+
+# test: 
+	login using: admin: pwadmin, then visit testRoles	// should show authorized info as in implementation
+	login using: user: pwuser, then visit testRoles		// should show failed info as in implementation
+
+================ 06 url匹配方式详解 ================
+
+'?'代表一个字符
+'*'代表0或多个字符
+"**"代表多层路径
+/testAuthc?	可以代表地址:testAuthc1, testAuthcA等, 此时/testAuthc无法访问
+/testAuthc*	可以代表地址:testAuthc123, testAuthcABC等, 此时/testAuthc也可以访问
+/testAuthc**	可以代表多层地址:testAuthc123/ABC, 此时/testAuthc123这种单路径无法访问
+/testAuthc*/**	可以解决上行问题
+
+================ 06 jsp tag ================
+
+jsp tag library: http://shiro.apache.org/web.html#Web-JSP%2FGSPTagLibrary
+
+# 修改success.jsp, 对不同的role或perm登陆用户显示不同信息
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib prefix="shiro" uri="http://shiro.apache.org/tags"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+${info}</br>
+登陆成功!</br>
+
+<shiro:hasRole name="admin">欢迎有admin role的用户登陆: <shiro:principal/><br/></shiro:hasRole>
+<shiro:hasPermission name="table:query">欢迎有table:query perm的用户登陆: <shiro:principal/><br/></shiro:hasPermission>
+
+</body>
+</html>
+
+================ 07 自定义realm (从数据库读取认证和权限信息) ================
+
+# 建立权限数据库
+账号user和role是一对多关系
+role和perm是一对多关系
+
+建立如下关系的数据库:
+[users]
+java1234=123456,admin
+jack=123,teacher
+marry=234
+json=345
+
+[roles]
+admin=user:*
+teacher=user:query
+teacher=user:insert
+
+# pom.xml添加jdbc jar包
+	<dependency>
+		<groupId>mysql</groupId>
+		<artifactId>mysql-connector-java</artifactId>
+		<version>5.1.38</version>
+	</dependency>
+
+# 准备连接db的util
+package com.java1234.util;
+public class DbUtil {
+	public Connection getCon() throws Exception{
+		Class.forName("com.mysql.jdbc.Driver");
+		Connection con=DriverManager.getConnection("jdbc:mysql://localhost:3306/db_shiro", "root", "root");
+		return con;
+	}
+	
+	public void closeCon(Connection con) throws Exception{
+		if(con!=null){
+			con.close();
+		}
+	}
+	
+	public static void main(String[] args) {	//用于测试连接
+		DbUtil dbUtil=new DbUtil();
+		try {
+			dbUtil.getCon();
+			System.out.println("conn success");
+		} catch (Exception e) {
+			e.printStackTrace();
+			System.out.println("conn fail");
+		}
+	}
+}
+
+# 实现自定义realm的接口
+package com.java1234.realm;
+
+import java.sql.Connection;
+
+import org.apache.shiro.authc.AuthenticationException;
+import org.apache.shiro.authc.AuthenticationInfo;
+import org.apache.shiro.authc.AuthenticationToken;
+import org.apache.shiro.authc.SimpleAuthenticationInfo;
+import org.apache.shiro.authz.AuthorizationInfo;
+import org.apache.shiro.authz.SimpleAuthorizationInfo;
+import org.apache.shiro.realm.AuthorizingRealm;
+import org.apache.shiro.subject.PrincipalCollection;
+
+import com.java1234.dao.UserDao;
+import com.java1234.entitiy.User;
+import com.java1234.util.DbUtil;
+
+public class MyRealm extends AuthorizingRealm{		//需要重写AuthorizingRealm的两个方法
+	private DbUtil dbUtil = new DbUtil();
+	private UserDao userDao = new UserDao();		//稍后实现
+
+	/* 检查账号是否存在, 检查结果的跳转同之前用本地realm: shiro.ini一样 */
+	@Override
+	protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+		String userName = (String) token.getPrincipal();	//从token获取userName
+		
+		Connection con=null;
+		try {
+			con = dbUtil.getCon();
+			User user = userDao.getByUserName(con, userName);		//从user表中获取对应的id和password
+			
+			if (user != null){
+				AuthenticationInfo authcInfo = new SimpleAuthenticationInfo(user.getUserName(), user.getPassword(),"db_shiro");
+				return authcInfo;		// 将db中取来的正确的userName和password包装成规范格式
+			} else return null;
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try{
+				dbUtil.closeCon(con);
+			} catch (Exception e){
+				e.printStackTrace();
+			}
+		}
+		return null;
+	}
+	
+	/* 赋予正确的账号对应的权限 */	
+	@Override
+	protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
+		String userName = (String) principals.getPrimaryPrincipal();	//从principals获取userName
+		SimpleAuthorizationInfo authorizationInfo = new SimpleAuthorizationInfo();
+		
+		Connection con = null;
+		try {
+			con = dbUtil.getCon();
+			authorizationInfo.setRoles(userDao.getRoles(con, userName));
+			authorizationInfo.setStringPermissions(userDao.getPermissions(con, userName));
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			try{
+				dbUtil.closeCon(con);
+			} catch (Exception e){
+				e.printStackTrace();
+			}
+		}
+		return authorizationInfo;
+	}
+}
+
+# 实现UserDao中的方法
+package com.java1234.dao;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.util.HashSet;
+import java.util.Set;
+
+import com.java1234.entitiy.User;
+
+public class UserDao {
+	public User getByUserName(Connection con, String userName) throws Exception{
+		String sql = "select * from t_user where userName = ?";
+		PreparedStatement pstmt = con.prepareStatement(sql);
+		pstmt.setString(1, userName);
+		ResultSet rs = pstmt.executeQuery();
+		
+		User resultUser = null;
+		if(rs.next()) resultUser = new User(rs.getInt("id"), rs.getString("userName"), rs.getString("password"));
+
+		return resultUser;
+	}
+
+	public Set<String> getRoles(Connection con, String userName) throws Exception{
+		String sql = "select * from t_user join t_role on t_user.roleId = t_role.id where userName =?";
+		PreparedStatement pstmt = con.prepareStatement(sql);
+		pstmt.setString(1, userName);
+		ResultSet rs = pstmt.executeQuery();
+		
+		Set<String> roles = new HashSet<String>();
+		while(rs.next()){
+			roles.add(rs.getString("roleName"));
+		}
+		
+		return roles;
+	}
+
+	public Set<String> getPermissions(Connection con, String userName) throws Exception{
+		String sql = "select * from t_user join t_role join t_perm on (t_user.roleId = t_role.id) and (t_role.id = t_perm.rowId) where userName = ?";
+		PreparedStatement pstmt = con.prepareStatement(sql);
+		pstmt.setString(1, userName);
+		ResultSet rs = pstmt.executeQuery();
+		
+		Set<String> permissions = new HashSet<String>();
+		while(rs.next()){
+			permissions.add(rs.getString("permName"));
+		}
+		
+		return permissions;
+	}
+}
+
+# 实现用到的entity bean
+package com.java1234.entitiy;
+
+public class User {
+	private Integer id;
+	private String userName;
+	private String password;
+	
+	//getters(); setters();
+	
+	public User(Integer id, String userName, String password) {
+		super();
+		this.id = id;
+		this.userName = userName;
+		this.password = password;
+	}
+}
+
+# 修改shiro.ini中realm的配置
+[main]
+authc.loginUrl=/login
+roles.unauthorizedUrl=/unauthorized.jsp
+perms.unauthorizedUrl=/unauthorized.jsp
+
+myRealm=com.java1234.realm.MyRealm
+securityManager.realms=$myRealm
+
+[urls]
+/login=anon
+/admin=authc
+/student=roles[teacher]
+/teacher=perms["user:create"]
+
+================ 08 加密解密 ================
+
+# 创建加密解密模块
+package com.java1234.util;
+
+import org.apache.shiro.codec.Base64;
+import org.apache.shiro.crypto.hash.Md5Hash;
+
+public class CryptographyUtil {
+	
+	//Base64加密为对称加密, 即可以解密
+	public static String encBase64(String str){
+		return Base64.encodeToString(str.getBytes());
+	}
+	
+	public static String decBase64(String str){
+		return Base64.decodeToString(str);
+	}
+	
+	//MD5加密为非对称加密
+	public static String md5(String str, String salt){
+		return new Md5Hash(str, salt).toString();
+	}
+	
+	//测试
+	public static void main(String[] args) {
+		String password="123456";
+		String encoded=encBase64(password);
+		
+		System.out.println("base64加密: "+encoded);
+		System.err.println("base64解密: "+decBase64(encoded));
+		
+		System.out.println("md5加密: "+md5(password, "salt"));	//salt规范应该放在配置文件中
+	}
+}
+
+# 在需要使用加密的地方使用
+public class LoginServlet extends HttpServlet{
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		System.out.println("login doPost");
+		String username=req.getParameter("username");
+		String password=req.getParameter("password");
+		
+		Subject subject = SecurityUtils.getSubject();
+		UsernamePasswordToken token = new UsernamePasswordToken(username, CryptographyUtil.md5(password, "dataorta"));
+		
+		try {
+			subject.login(token);
+			resp.sendRedirect("success.jsp");
+		} catch (AuthenticationException e) {
+			e.printStackTrace();
+			req.setAttribute("errorInfo", "用户名或密码错误");
+			req.getRequestDispatcher("login.jsp").forward(req, resp);
+		}
+	}
+}
+
+================ 09 cookie ================
+
+public class LoginServlet extends HttpServlet{
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		System.out.println("login doPost");
+		String username=req.getParameter("username");
+		String password=req.getParameter("password");
+		
+		Subject subject = SecurityUtils.getSubject();
+		UsernamePasswordToken token = new UsernamePasswordToken(username, CryptographyUtil.md5(password, "dataorta"));
+		
+		try {
+			if(subject.isRemembered()) System.out.println("cookie is remembered");
+			else token.setRememberMe(true);		//打开了cookie功能
+			
+			subject.login(token);
+			resp.sendRedirect("success.jsp");
+		} catch (AuthenticationException e) {
+			e.printStackTrace();
+			req.setAttribute("errorInfo", "用户名或密码错误");
+			req.getRequestDispatcher("login.jsp").forward(req, resp);
+		}
+	}
+}
+
+================ 10 shiro-spring ================
+
+-----------建新web项目-----------
+
+# 同05video中一样修复项目结构, Artifact Id: ShiroWeb2
+
+# pom.xml中添加jar包
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<groupId>com.java1234.shiro</groupId>
+	<artifactId>ShiroWeb2</artifactId>
+	<packaging>war</packaging>
+	<version>0.0.1-SNAPSHOT</version>
+	<name>ShiroWeb2 Maven Webapp</name>
+	<url>http://maven.apache.org</url>
+
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<version>3.8.1</version>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- 添加Servlet支持 -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>javax.servlet-api</artifactId>
+			<version>3.1.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>javax.servlet.jsp</groupId>
+			<artifactId>javax.servlet.jsp-api</artifactId>
+			<version>2.3.1</version>
+		</dependency>
+
+		<!-- 添加jstl支持 -->
+		<dependency>
+			<groupId>javax.servlet</groupId>
+			<artifactId>jstl</artifactId>
+			<version>1.2</version>
+		</dependency>
+
+		<!-- 添加Spring支持 -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-core</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-beans</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-tx</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-context-support</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-web</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-webmvc</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aop</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-aspects</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+			<version>4.1.7.RELEASE</version>
+		</dependency>
+
+
+		<!-- 添加日志支持 -->
+		<dependency>
+			<groupId>log4j</groupId>
+			<artifactId>log4j</artifactId>
+			<version>1.2.17</version>
+		</dependency>
+
+		<!-- 添加mybatis支持 -->
+		<dependency>
+			<groupId>org.mybatis</groupId>
+			<artifactId>mybatis</artifactId>
+			<version>3.3.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mybatis</groupId>
+			<artifactId>mybatis-spring</artifactId>
+			<version>1.2.3</version>
+		</dependency>
+
+		<!-- jdbc驱动包 -->
+		<dependency>
+			<groupId>mysql</groupId>
+			<artifactId>mysql-connector-java</artifactId>
+			<version>5.1.37</version>
+		</dependency>
+
+		<!-- 添加shiro支持 -->
+		<dependency>
+			<groupId>org.apache.shiro</groupId>
+			<artifactId>shiro-core</artifactId>
+			<version>1.2.4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-log4j12</artifactId>
+			<version>1.7.12</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.shiro</groupId>
+			<artifactId>shiro-web</artifactId>
+			<version>1.2.4</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.shiro</groupId>
+			<artifactId>shiro-spring</artifactId>
+			<version>1.2.4</version>
+		</dependency>
+	</dependencies>
+
+	<build>
+		<finalName>ShiroWeb2</finalName>
+	</build>
+</project>
+
+# 建立entity类, 同07video中User类
+
+-----------Mapper层-----------
+
+# 建立Dao接口(即mybatis的mapper接口)
+package com.java1234.dao;
+import java.util.Set;
+import com.java1234.entity.User;
+
+public interface UserDao {
+	public User getByUserName(String userName);
+	public Set<String> getRoles(String userName);
+	public Set<String> getPermissions(String userName);
+}
+
+#建立对应的UserMapper.xml配置		// ?? resource folder ??
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.java1234.dao.UserDao">
+	<resultMap type="User" id="UserResult">
+		<result property="id" column="id"/>
+		<result property="userName" column="userName"/>
+		<result property="password" column="password"/>
+	</resultMap>
+	
+	<select id="getByUserName" parameterType="String" resultMap="UserResult">
+		select * from t_user where userName = #{userName}
+	</select>
+	
+	<select id="getRoles" parameterType="String" resultType="String">
+		select * from t_user join t_role on t_user.roleId = t_role.id where userName = #{userName}
+	</select>
+	
+	<select id="getPermissions" parameterType="String" resultType="String">
+		select * from t_user join t_role join t_perm on (t_user.roleId = t_role.id) and (t_role.id = t_perm.rowId) where userName = #{userName}
+	</select>
+</mapper>
+
+-----------Service层-----------
+
+# 建立service接口
+package com.java1234.service;
+import java.util.Set;
+import com.java1234.entity.User;
+
+public interface UserService {
+	public User getByUserName(String userName);
+	public Set<String> getRoles(String userName);
+	public Set<String> getPermissions(String userName);
+}
+
+# 建立service的实现类
+package com.java1234.service.impl;
+import java.util.Set;
+import javax.annotation.Resource;
+import org.springframework.stereotype.Service;
+import com.java1234.dao.UserDao;
+import com.java1234.entity.User;
+import com.java1234.service.UserService;
+
+@Service("userService")
+public class UserServiceImpl implements UserService{
+	@Resource
+	private UserDao userDao;
+	
+	public User getByUserName(String userName) {
+		return userDao.getByUserName(userName);
+	}
+
+	public Set<String> getRoles(String userName) {
+		return userDao.getRoles(userName);
+	}
+
+	public Set<String> getPermissions(String userName) {
+		return userDao.getPermissions(userName);
+	}
+}
+
+-----------Realm组件实现 Authentication和Authorization具体标准-----------
+
+# 同07video中一样重写2个方法, 这里可以使用spring初始化service层
+public class MyRealm extends AuthorizingRealm {
+	@Resource
+	private UserService userService;
+
+	@Override
+	protected AuthorizationInfo doGetAuthorizationInfo(PrincipalCollection principals) {
+		String userName=(String)principals.getPrimaryPrincipal();
+		SimpleAuthorizationInfo authorizationInfo=new SimpleAuthorizationInfo();
+		authorizationInfo.setRoles(userService.getRoles(userName));
+		authorizationInfo.setStringPermissions(userService.getPermissions(userName));
+		return authorizationInfo;
+	}
+
+	@Override
+	protected AuthenticationInfo doGetAuthenticationInfo(AuthenticationToken token) throws AuthenticationException {
+		String userName=(String)token.getPrincipal();
+		User user=userService.getByUserName(userName);
+		if(user!=null){
+			AuthenticationInfo authcInfo=new SimpleAuthenticationInfo(user.getUserName(),user.getPassword(),"xxx");
+			return authcInfo;
+		}else{
+			return null;
+		}
+	}
+}
+
+-----------Controller层-----------
+
+package com.java1234.controller;
+import javax.servlet.http.HttpServletRequest;
+import org.apache.shiro.SecurityUtils;
+import org.apache.shiro.authc.UsernamePasswordToken;
+import org.apache.shiro.session.Session;
+import org.apache.shiro.subject.Subject;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import com.java1234.entity.User;
+
+@Controller
+@RequestMapping("/user")
+public class UserController {
+	@RequestMapping("/login")
+	public String login(User user, HttpServletRequest request){
+		Subject subject=SecurityUtils.getSubject();
+		UsernamePasswordToken token=new UsernamePasswordToken(user.getUserName(), user.getPassword());
+		try{
+			subject.login(token);
+			// Session session=subject.getSession();
+			// session.setAttribute("someMsg", "xxx");	//可以在这里取session然后保存验证后跳转地址
+			return "redirect:/success.jsp";		//也可以直接跳转
+		}catch(Exception e){
+			e.printStackTrace();
+			request.setAttribute("user", user);
+			request.setAttribute("someMsg", "xxx");		//可以存放失败提示信息
+			return "index";
+		}
+	}
+}
+
+-----------配置web.xml-----------
+
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://java.sun.com/xml/ns/javaee"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	id="WebApp_ID" version="2.5">
+	<display-name>ShiroWeb2</display-name>
+	<welcome-file-list>
+		<welcome-file>index.jsp</welcome-file>
+	</welcome-file-list>
+
+<!-- shiro过滤器定义 -->
+	<filter>
+		<filter-name>shiroFilter</filter-name>
+		<filter-class>org.springframework.web.filter.DelegatingFilterProxy</filter-class>
+		<init-param>
+			<!-- 该值缺省为false, 表示生命周期由SpringApplicationContext管理; 设置为true则表示由ServletContainer管理 -->
+			<param-name>targetFilterLifecycle</param-name>
+			<param-value>true</param-value>
+		</init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>shiroFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+
+<!-- Spring配置文件 -->
+	<context-param>
+		<param-name>contextConfigLocation</param-name>
+		<param-value>classpath:applicationContext.xml</param-value>
+	</context-param>
+	<!-- 编码过滤器 -->
+	<filter>
+		<filter-name>encodingFilter</filter-name>
+		<filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+		<!-- <async-supported>true</async-supported> -->
+		<init-param>
+			<param-name>encoding</param-name>
+			<param-value>UTF-8</param-value>
+		</init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>encodingFilter</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+	<!-- Spring监听器 -->
+	<listener>
+		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+	</listener>
+
+<!-- springmvc配置文件 -->
+	<servlet>
+		<servlet-name>springMVC</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<init-param>
+			<param-name>contextConfigLocation</param-name>
+			<param-value>classpath:spring-mvc.xml</param-value>
+		</init-param>
+		<!-- <load-on-startup>1</load-on-startup>
+			<async-supported>true</async-supported> -->
+	</servlet>
+	<servlet-mapping>
+		<servlet-name>springMVC</servlet-name>
+		<url-pattern>*.do</url-pattern>
+	</servlet-mapping>
+</web-app>
+
+----------- 配置resources目录下配置spring文件 applicationContext.xml -----------
+# 也可以参考过去笔记中web.xml扫描通配符, 然后放置多个spring配置文件分别管理
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:jee="http://www.springframework.org/schema/jee" xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="    
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+        http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-4.0.xsd  
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd">
+
+<!-- 自动扫描service类, 过去的手动设置使用哪种实现impl的扫描方式更优 -->
+	<context:component-scan base-package="com.java1234.service" />
+
+	
+<!-- 配置数据源, 过去的使用property-placeholder方式更优 -->
+	<bean id="dataSource"
+		class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/db_shiro" />
+		<property name="username" value="root" />
+		<property name="password" value="root" />
+	</bean>
+
+<!-- 配置mybatis的sqlSessionFactory, 手动设置了mapper xml文件和mybatis配置文件的位置, mapperLocations比之前优 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="mapperLocations" value="classpath:com/java1234/mappers/*.xml"></property>
+		<property name="configLocation" value="classpath:mybatis-config.xml"></property>
+	</bean>
+
+<!-- 配置mybatis的mapper接口位置 -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.java1234.dao" />
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+	</bean>
+
+	
+<!-- 配置事务管理 -->
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource" />
+	</bean>
+	
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="insert*" propagation="REQUIRED" />
+			<tx:method name="update*" propagation="REQUIRED" />
+			<tx:method name="edit*" propagation="REQUIRED" />
+			<tx:method name="save*" propagation="REQUIRED" />
+			<tx:method name="add*" propagation="REQUIRED" />
+			<tx:method name="new*" propagation="REQUIRED" />
+			<tx:method name="set*" propagation="REQUIRED" />
+			<tx:method name="remove*" propagation="REQUIRED" />
+			<tx:method name="delete*" propagation="REQUIRED" />
+			<tx:method name="change*" propagation="REQUIRED" />
+			<tx:method name="check*" propagation="REQUIRED" />
+			<tx:method name="get*" propagation="REQUIRED" read-only="true" />
+			<tx:method name="find*" propagation="REQUIRED" read-only="true" />
+			<tx:method name="load*" propagation="REQUIRED" read-only="true" />
+			<tx:method name="*" propagation="REQUIRED" read-only="true" />
+		</tx:attributes>
+	</tx:advice>
+
+	<aop:config>
+		<aop:pointcut id="serviceOperation" expression="execution(* com.java1234.service..*.*(..))" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="serviceOperation" />
+	</aop:config>
+
+	
+<!-- 配置自定义Realm, 本质就是代替本地shiro.ini[main]中securityManager配置 -->
+	<bean id="myRealm" class="com.java1234.realm.MyRealm" />
+
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<property name="realm" ref="myRealm" />
+	</bean>
+
+<!-- 配置自定义Realm, 本质就是代替本地shiro.ini[main]中失败跳转配置 -->
+	<bean id="shiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="securityManager" ref="securityManager" />
+		<property name="loginUrl" value="/index.jsp" />	<!--登陆authc失败, 默认是跳/login.jsp-->
+		<property name="unauthorizedUrl" value="/unauthor.jsp" />	<!--roles/perms授权失败-->
+		
+<!-- 配置自定义Realm, 本质就是代替本地shiro.ini[url]中过滤/拦截配置 -->
+		<property name="filterChainDefinitions">
+			<value>
+				/login=anon
+				/admin*=authc
+				/student=roles[teacher]
+				/teacher=perms["user:create"]
+			</value>
+		</property>
+	</bean>
+
+<!-- 不知何用, 贴了吧 -->
+	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
+
+<!-- 开启Shiro注解功能 ??myrealm用到的不是spring的注解么?? -->
+	<bean class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+		depends-on="lifecycleBeanPostProcessor" />
+	<bean class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+		<property name="securityManager" ref="securityManager" />
+	</bean>
+</beans>
+
+-----------配置resources目录下配置springMVC文件 spring-mvc.xml -----------
+
+<?xml version="1.0" encoding="UTF-8"?>    
+<beans xmlns="http://www.springframework.org/schema/beans"    
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"   
+    xmlns:p="http://www.springframework.org/schema/p"  
+    xmlns:aop="http://www.springframework.org/schema/aop"   
+    xmlns:context="http://www.springframework.org/schema/context"  
+    xmlns:jee="http://www.springframework.org/schema/jee"  
+    xmlns:tx="http://www.springframework.org/schema/tx"  
+    xsi:schemaLocation="    
+        http://www.springframework.org/schema/aop http://www.springframework.org/schema/aop/spring-aop-4.0.xsd  
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-4.0.xsd  
+        http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-4.0.xsd  
+        http://www.springframework.org/schema/jee http://www.springframework.org/schema/jee/spring-jee-4.0.xsd  
+        http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx-4.0.xsd">    
+
+<!-- 自动扫描controller -->
+	<context:component-scan base-package="com.java1234.controller" />
+
+<!-- 设置视图解析器 -->
+	<bean id="viewResolver" class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/" />
+		<property name="suffix" value=".jsp"></property>
+	</bean>
+</beans>  
+
+-----------配置resources目录下配置mybatis文件 mybatis-config.xml -----------
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<typeAliases>	<!-- 简化输入entity时前缀 -->
+		<package name="com.java1234.entity" />
+	</typeAliases>
+</configuration>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video15</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+    </head>
+    
+    
+    <body>
+    	<p>The Tree Layout (2-2)</p>
+    </body>
+    
+    
+    <script>
+		var data =
+		{
+			"name":"Max",
+			"value":100,
+			"children":[
+				{
+					"name":"Sylvia",
+					"value":75,
+					"children":[
+						{"name":"Craig", "value":25},
+						{"name":"Robin", "value":25},	
+						{"name":"Anna", "value":25}					
+					]
+				},
+				{
+					"name":"David",
+					"value":75,
+					"children":[
+						{"name":"Jeff", "value":25},
+						{"name":"Robin", "value":25},	
+					]
+				},
+				{
+					"name":"MrX",
+					"value":75
+				}
+			]
+		}
+
+		
+		var canvas = d3.select("body")
+			.append("svg")
+				.attr("width", 500)
+				.attr("height", 500)
+			.append("g")
+				.attr("transform", "translate(50,50)")
+	
+	
+		var tree = d3.layout.tree().size([400, 400])		//d3.layout.cluster()
+		var nodes = tree.nodes(data);
+		var links = tree.links(nodes);
+
+		var node = canvas.selectAll(".node")
+			.data(nodes)
+			.enter()
+			.append("g")
+				.attr("transform", function(n){return "translate("+n.y+","+n.x+")"})
+		
+		node.append("circle")
+			.attr("r", 5)
+			.attr("fill", "steelblue")
+			
+		node.append("text")
+			.text(function(n){return n.name})
+
+			
+		var diagonal = d3.svg.diagonal()
+			.projection(function(l){return [l.y, l.x]})					// 将links[i]对象转化source, target的x,y位置
+		
+		canvas.selectAll(".link")
+			.data(links)
+			.enter()
+			.append("path")
+				.attr("d", diagonal)
+				.attr("fill", "none")
+				.attr("stroke", "#adadad")
+    </script>
+</html>

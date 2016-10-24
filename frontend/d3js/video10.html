@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video10</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+    </head>
+    
+    
+    <body>
+    	<p>Loading External Data</p>
+    </body>
+    
+    
+    <script>
+		var bar_height = 50
+		var height = 500
+		var width = 500 
+	
+		var canvas = d3.select("body")
+			.append("svg")
+				.attr("width", width)
+				.attr("height", height)
+		
+		d3.json("video10data.json", function(resp){			//用d3.csv读csv文件
+		
+			var widthScale = d3.scale.linear()
+				.domain([0, d3.max(resp, function(person){return person.age})])
+				.range([0, height])	
+		
+			canvas.selectAll("rect")
+				.data(resp)
+				.enter()
+				.append("rect")
+					.attr("height", bar_height-1)
+					.attr("width", function(person){return widthScale(person.age)})
+					.attr("y", function(d,i){return i*bar_height})
+					.attr("fill", "steelblue")
+					
+			canvas.selectAll("text")
+				.data(resp)
+				.enter()
+				.append("text")
+					.text(function(person){return person.name})
+					.attr("y", function(d,i){return i*bar_height+bar_height/2})
+					.attr("fill", "white")
+		})
+    </script>
+</html>

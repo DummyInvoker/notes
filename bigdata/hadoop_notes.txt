@@ -1,0 +1,2748 @@
+lucene
+nutch
+
+===================== itcast 6 =====================
+
+------------- 虚拟机与宿主机网络连接方式 -------------
+http://www.superwu.cn/2013/10/06/653/
+
+host-only(主机模式): 宿主机做网关与虚拟机组局域网, 虚拟机之间互通
+安装virtualBox软件后, 在Control Panel\Network and Internet\Network Connections中可以看 VirtualBox Host-Only Network
+可以设置ipv4中参数, 改变宿主机的ip:192.168.56.1
+外部电脑无法访问到虚拟机(因为其在局域网内)
+
+bridge(桥接模式): 各虚拟机独立使用一个ip地址, 有如网中的一台独立的主机
+虚拟机直接使用宿主机的网卡配置. 虚拟机与宿主机处于同一网段时, 虚拟机宿主机互通.
+当宿主机的网络配置改变时, 虚拟机中需要手动相应改变
+
+NAT(网络地址转换模式): 让虚拟机通过NAT(网络地址转换)功能, 通过宿主机所在的网络来访问公网, 虚拟机与宿主机同ip
+虚拟机无法和局域网中的其他真实主机进行通讯, 宿主机就像一个路由器
+
+
+------------- 部分linux命令 -------------
+相对路径 . .. ~ /
+目录跳转 cd
+查看目录 ls –alR
+创建目录 mkdir -p
+显示当前路径 pwd
+
+创建文件 touch
+查看文件 more cat
+复制文件 cp
+删除文件 rm –r xxx
+
+修改文件权限 chmod –R 700
+修改文件(夹)的所有者 chown –R root:root xxx
+查看文件属性 stat
+
+解压缩文件 tar –xzvf xxx
+修改密码 passwd xxx
+查看磁盘空间 df -ah
+
+查看进程 ps -ef |grep
+杀掉进程 kill -9
+
+修改环境变量 vi /etc/profile
+
+查看主机名:
+hostname
+修改主机名:
+vi /etc/sysconfig/network
+HOSTNAME=hadoop
+修改主机表:
+vi /etc/hosts
+192.168.56.100 hadoop
+
+修改ip地址 vi /etc/sysconfig/network-scripts/ifcfg-eth0		<----ifcfg后内容按实际变化
+添加例如:
+IPADDR0=192.168.56.101
+GATEWAY0=192.168.56.1
+DNS0=192.168.56.1
+
+关闭防火墙 service iptables stop		chkconfig iptables off
+关闭selinux setenforce permissive		vi /etc/selinux/config
+
+------------- OS -------------
+使用附带的centos镜像的话, 使用root账号, 密码为itcast
+
+------------- ip -------------
+设置虚拟机网络连接方式为host-only
+进入系统后手动设置ip: 192.168.56.100
+gateway和dns都是宿主机地址: 192.168.56.1
+
+立即生效修改:
+service network restart
+如果ping不通, 检查两边的防火墙设置
+
+------------- hostname -------------
+用putty登陆虚拟机好用些
+
+查看主机名(hostname相当于域名, 方便记忆的作用): hostname
+修改主机名:
+vi /etc/sysconfig/network
+修改完重启电脑: reboot -h now
+
+绑定主机名和ip:
+vi /etc/hosts
+添加 192.168.56.100 hadoop
+
+------------- firewall -------------
+检查防火墙状态: service iptables status
+关闭防火墙: service iptables stop
+
+检查随系统启动的服务: chkconfig --list
+chkconfig --list | grep iptables
+关闭随系统启动: chkconfig iptables off
+
+
+===================== 7 =====================
+
+------------- SSH (seure shell) -------------
+本机生成密钥: ssh-keygen -t rsa
+产生的密钥位于 ~/.ssh文件夹中: id_rsa  id_rsa.pub
+产生用于验证的秘钥: cp id_rsa.pub authorized_keys
+测试免秘钥登陆本地: ssh localhost
+
+------------- jdk -------------
+使用winscp复制java和hadoop的jar包(也可以用ftp)
+
+cd /usr/local
+rm -rf
+cp /root/Down*/ * .
+
+chmod u+x jdk-6u24-linux-i586.bin	//对于bin格式, 添加当前用户的执行权限后才可执行
+./jdk-6u24-linux-i586.bin			//可用tab补全名字
+mv jdk1.6.0_24 jdk
+
+vi /etc/profile
+export JAVA_HOME=/usr/local/jdk
+export PATH=.:$JAVA_HOME/bin:$PATH			//:是连接符, $PATH是原来的PATH内容, .代表当前目录
+
+让新配置立即生效
+source /etc/profile
+java -version
+
+===================== 8 =====================
+
+------------- hadoop安装 -------------
+tar -zxvf hadoop*
+mv hadoop* hadoop-1.1.2 hadoop
+
+vi /etc/profile
+export HADOOP_HOME=/usr/local/hadoop
+export PATH=.:$HADOOP_HOME/bin:$JAVA_HOME/bin:$PATH
+
+source /etc/profile
+
+------------- hadoop分布式配置 -------------
+
+文件修改量太大, 不建议用vi, 可以用winscp中的edit(F4)
+
+cd /usr/local/hadoop/conf
+
+vi hadoop-env.sh
+export JAVA_HOME=/usr/local/jdk/
+
+
+vi core-site.xml
+<configuration>
+	<property>
+		<name>fs.default.name</name>
+		<value>hdfs://hadoop:9000</value>
+		<description>change your own hostname</description>
+	</property>
+	
+	<property>
+		<name>hadoop.tmp.dir</name>
+		<value>/usr/local/hadoop/tmp</value>
+	</property>
+</configuration>
+
+
+vi hdfs-site.xml
+<configuration>
+	<property>
+		<name>dfs.replication</name>
+		<value>1</value>
+	</property>
+	
+	<property>
+		<name>dfs.permissions</name>
+		<value>false</value>
+	</property>
+</configuration>
+
+
+vi mapred-site.xml
+<configuration>
+	<property>
+		<name>mapred.job.tracker</name>
+		<value>hadoop:9001</value>
+		<description>change your own hostname</description>
+	</property>
+</configuration>
+
+
+------------- hadoop格式化, 启动 -------------
+
+hadoop namenode -format
+start-all.sh
+stop-all.sh
+
+linux下检查是否启动
+jps
+应该有5个java进程类似如下:
+6092 NameNode
+6310 SecondaryNameNode
+6203 DataNode
+
+6383 JobTracker
+6488 TaskTracker
+
+windows下配置jdk路径(注意用jdk而不是jre)
+JAVA_HOME = C:\Program Files\Java\jdk1.8.0_45
+PATH = C:\Program Files\Java\jdk1.8.0_45\bin;...
+jps
+848 Jps
+
+windows下配置host文件 (文件复制出修改完复制回)
+C:\Windows\System32\drivers\etc\hosts
+添加 192.168.56.100 hadoop
+
+通过浏览器查看hdfs状态:		hadoop:50070
+通过浏览器查看map reduce状态:	hadoop:50030
+
+多次格式化hadoop报错的解决方法:
+删除 /usr/local/hadoop/tmp 文件夹, 重新格式化一遍
+
+===================== 9 查看hadoop源码 =====================
+
+复制hadoop\src下core, hdfs, mapred 三个目录到eclipse中
+Java Build Path中, Source页面, 全部remove, 然后Add Folder, 选中上面3个目录, 完成整理目录结构
+Libraries页面, Add External JARs, 添加hadoop\lib 下所有的jar包(除了lib下的jar文件, 还要jsp中的jar文件)
+Add External JARs, 添加ant.jar
+
+import sun.net.util.IPAddressUtil; 报错:
+Java Build Path中, Libraries页面, 选中JRE System Library, 进行编辑, 替换为jdk版本
+
+
+注意例如之前hdfs-site.xml中填写的内容:
+<!-- Put site-specific property overrides in this file. -->
+<configuration>
+	<property>
+		<name>dfs.replication</name>
+		<value>1</value>
+	</property>
+	<property>
+		<name>dfs.permissions</name>
+		<value>false</value>
+	</property>
+</configuration>
+
+其实就是override了src/hdfs下的hdfs-default.xml中内容
+
+===================== 10 去除start-all.sh 启动时报警告 =====================
+
+去除start-all.sh 启动时报警告: Warning: $HADOOP_HOME is deprecated.
+从start-all.sh 追踪到hadoop-config.sh, 发现 if [ "$HADOOP_HOME_WARN_SUPPRESS" = "" ] && [ "$HADOOP_HOME" != "" ]; then ...
+所以给$HADOOP_HOME_WARN_SUPPRESS赋值即可:
+vi /etc/profile
+export HADOOP_HOME_WARN_SUPPRESS=1
+
+source /etc/profile
+
+===================== 12 =====================
+
+------------- ls -------------
+查看根目录下文件: hadoop fs -ls /
+结果:
+Found 1 items
+drwxr-xr-x   - root supergroup          0 2015-10-13 09:20 /usr
+
+递归查看内容: hadoop fs -lsr /
+结果:
+drwxr-xr-x   - root supergroup          0 2015-10-13 09:20 /usr
+drwxr-xr-x   - root supergroup          0 2015-10-13 09:20 /usr/local
+drwxr-xr-x   - root supergroup          0 2015-10-13 09:20 /usr/local/hadoop
+drwxr-xr-x   - root supergroup          0 2015-10-13 09:20 /usr/local/hadoop/tmp
+drwxr-xr-x   - root supergroup          0 2015-10-13 23:12 /usr/local/hadoop/tmp/mapred
+drwx------   - root supergroup          0 2015-10-13 23:12 /usr/local/hadoop/tmp/mapred/system
+-rw-------   1 root supergroup          4 2015-10-13 23:12 /usr/local/hadoop/tmp/mapred/system/jobtracker.info
+
+1:    类型, 'd'=目录; '-'=文件
+2-10: 权限 
+11:   文件副本数量
+12:   owner
+13:   group
+14:   文件大小
+
+------------- mkdir, put -------------
+在根目录下创建一个目录: hadoop fs -mkdir /d1
+创建的文件在linux下看不到
+
+将linux下/root/install.log文件上传到hdfs的/d1目录下:
+hadoop fs -put /root/install.log /d1
+
+多次上传同一文件时候不会进行覆盖: already exists
+
+上传到一个不存在的路径:
+hadoop fs -put /root/install.log /d2
+install.log文件会被存为名字为"d2"的文件
+hadoop fs -put /root/install.log /d1/abc
+在d1目录下创建了"abc"文件
+
+------------- get, text -------------
+从hdfs中下载数据:
+hadoop fs -get /d1/install.log /root/Desk*
+多次下载同一文件时候不会进行覆盖: already exists
+
+查看文件(类似linux下的cat):
+hadoop fs -text /d1/install.log
+
+------------- rm, rmr -------------
+删文件
+hadoop fs -rm /d1/abc
+删目录及文件
+hadoop fs -rmr /d1
+
+------------- 查看command集 -------------
+
+hadoop
+hadoop fs
+-help [cmd]
+hadoop fs -help ls
+结果:
+-ls <path>:     List the contents that match the specified file pattern. If
+                path is not specified, the contents of /user/<currentUser>
+                will be listed. Directory entries are of the form
+                        dirName (full path) <dir>
+                and file entries are of the form
+                        fileName(full path) <r n> size
+                where n is the number of replicas specified for the file
+                and size is the size of the file, in bytes.
+
+支持正则表达式通配符;
+<path>尖括号表示可选, 默认为/user/<currentUser>;
+
+------------- 协议及地址的简写 -------------
+hadoop fs -ls hdfs://hadoop:9000/		
+由于在/usr/local/hadoop/conf/core-site.xml中定义了:
+<property>
+	<name>fs.default.name</name>
+	<value>hdfs://hadoop:9000</value>
+</property>
+所以本机可以简写为: hadoop fs -ls /
+
+------------- 部分command -------------
+-ls(r) <path>			//显示当前目录下所有文件
+-du(s) <path>			//显示目录中所有文件大小
+-count[-q] <path>		//显示目录中文件数量
+
+-mv <src> <dst>			//移动多个文件到目标目录
+-cp <src> <dst>			//复制多个文件到目标目录
+-rm(r) 					//删除文件(夹)
+-put <localsrc> <dst>	//本地文件复制到hdfs
+-copyFromLocal			//同put
+-moveFromLocal			//从本地文件移动到hdfs
+-get [-ignoreCrc] <src> <localdst>			//复制文件到本地，可以忽略crc校验
+-getmerge <src> <localdst>					//将源目录中的所有文件排序合并到一个文件中
+
+-cat <src>				//在终端显示文件内容
+-text <src>				//在终端显示文件内容
+
+-copyToLocal [-ignoreCrc] <src> <localdst>	//复制到本地
+-moveToLocal <src> <localdst>
+
+-mkdir <path>			//创建文件夹
+-touchz <path>			//创建一个空文件
+
+===================== 13 fsimage, edits =====================
+
+查看hdfs-default.xml 中节点:
+<property>
+  <name>dfs.name.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/name</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the name table(fsimage).  If this is a comma-delimited list
+      of directories then the name table is replicated in all of the
+      directories, for redundancy. </description>
+</property>
+
+继而在core-default.xml 中找到:
+<property>
+  <name>hadoop.tmp.dir</name>
+  <value>/tmp/hadoop-${user.name}</value>
+  <description>A base for other temporary directories.</description>
+</property>
+
+但本示例中在core-site.xml中配置了override内容:
+<configuration>
+	<property>
+		<name>hadoop.tmp.dir</name>
+		<value>/usr/local/hadoop/tmp</value>
+	</property>
+</configuration>
+
+所以fsimage文件存放于: /usr/local/hadoop/tmp/dfs/name
+fsimage: 元数据(在内存中)的镜像文件
+in_use.lock 表示该文件夹正在被NameNode使用, fsimage 在 current 目录下
+
+
+查看hdfs-default.xml 中节点:
+<property>
+  <name>dfs.name.edits.dir</name>
+  <value>${dfs.name.dir}</value>
+  <description>Determines where on the local filesystem the DFS name node
+      should store the transaction (edits) file. If this is a comma-delimited list
+      of directories then the transaction file is replicated in all of the 
+      directories, for redundancy. Default value is same as dfs.name.dir
+  </description>
+</property>
+edits: 上一次fsimage保存之后的操作的日志文件
+
+
+SecondaryNameNode:
+从NameNode内存中下载元数据信息: fsimage, edits
+合并二者, 生成新的fsimage
+本地硬盘保存一份, 推送到NameNode硬盘一份, 内存一份
+NameNode内存中的edits为上一次复制edits后的edits内容
+
+===================== 14 data node =====================
+
+查看hdfs-default.xml 中节点:
+<property>
+  <name>dfs.data.dir</name>
+  <value>${hadoop.tmp.dir}/dfs/data</value>
+  <description>Determines where on the local filesystem an DFS data node
+  should store its blocks.  If this is a comma-delimited
+  list of directories, then data will be stored in all named
+  directories, typically on different devices.
+  Directories that do not exist are ignored.
+  </description>
+</property>
+
+所以data block文件存放于: /usr/local/hadoop/tmp/dfs/data/current 目录下
+.meta 是校验数据
+
+
+hadoop fs -rmr hdfs://hadoop:9000/*  清除hadoop的data.
+在hadoop中删除全部文件后, linux下看不到blk及其.meta文件了
+如果用: hadoop fs -rmr / *  会提示一堆系统目录无法删除
+
+cd usr/local
+hadoop fs -put hadoop-1.1.2.tar.gz /
+这时候在current目录下, 产生一个blk及其.meta文件, 且大小为61927560, 与原始文件61927560相同.
+
+hadoop fs -put jdk-6u24-linux-i586.bin /
+这时候在current目录下, 产生2个blk及其.meta文件
+一个大小为67108864, 即为一个blk的大小64MB; 另一个大小为17818311, 为原始文件84927175减去67108864后大小.
+
+
+查看hdfs-default.xml 中节点:
+<property>
+  <name>dfs.block.size</name>
+  <value>67108864</value>
+  <description>The default block size for new files.</description>
+</property>
+在hdfs-site.xml中可override每个block大小
+
+
+查看hdfs-default.xml 中节点:
+<property>
+	<name>dfs.replication</name>
+	<value>3</value>
+</property>
+在hdfs-site.xml中可override副本数量
+block会优先存在DataNode所在的节点, 第2份存在另一机架的某节点上, 第3份存在同第二份的机架的不同节点上, 之后随机
+
+===================== 16 java - hdfs =====================
+
+vi hello
+内容随意, 例如 hello world
+hadoop fs -put hello /
+
+------------- 通过URL只读的访问 -------------
+
+添加hadoop下的所有jar包
+
+import java.io.InputStream;
+import java.net.URL;
+import org.apache.hadoop.fs.FsUrlStreamHandlerFactory;
+import org.apache.hadoop.io.IOUtils;
+public class App1 {
+	public static final String HDFS_PATH = "hdfs://hadoop:9000/hello";
+	
+	public static void main(String[] args) throws Exception {
+		URL.setURLStreamHandlerFactory(new FsUrlStreamHandlerFactory());	// 默认只能解析HTTP协议: unknown protocol: hdfs
+		final URL url = new URL(HDFS_PATH);
+		final InputStream in = url.openStream();
+		
+		IOUtils.copyBytes(in, System.out, 1024, true);		//输入流, 输出流, 缓冲大小, 结束后是否关闭连接
+	}
+}
+
+------------- 使用hadoop的API完全访问 -------------
+
+添加hadoop下的所有jar包
+
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.net.URI;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IOUtils;
+
+public class App2 {
+	
+	public static final String HDFS_PATH = "hdfs://hadoop:9000";
+	public static final String DIR_PATH = "/d1";			//直接写d1代表从user/root/下的相对路径
+	public static final String FILE_PATH = "/d1/f1";
+	
+	public static void main(String[] args) throws Exception {
+		URI uri = new URI(HDFS_PATH);
+		Configuration conf = new Configuration();
+		FileSystem fileSystem = FileSystem.get(uri, conf);
+		
+//		fileSystem.mkdirs(new Path(DIR_PATH));	//mkdir
+//		
+//		put(fileSystem);
+		
+//		get(fileSystem);
+		
+		fileSystem.delete(new Path(DIR_PATH), true);	//rmr, 第二个参数: 当对象是个文件, 随便设; 当对象是个目录, 必须是true, 并且其下内容一并被删除
+	}
+
+	private static void put(FileSystem fileSystem) throws IOException, FileNotFoundException {
+		FSDataOutputStream out = fileSystem.create(new Path(FILE_PATH));				//建立向hdfs的输出流
+		FileInputStream in = new FileInputStream("D:/Downloads/hadoop/README.txt");		//建立读取内容的输入流
+		IOUtils.copyBytes(in, out, 1024, true);
+	}
+	
+	private static void get(FileSystem fileSystem) throws IOException {
+		FSDataInputStream in = fileSystem.open(new Path(FILE_PATH));
+		IOUtils.copyBytes(in, System.out, 1024, true);
+	}
+}
+
+===================== 17 RPC =====================
+
+RPC: remote precedure call: 不同java进程间的方法的调用
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.ipc.RPC.Server;
+
+public class MyServer {
+	public static final String SERVER_ADDRESS = "localhost";
+	public static final Integer SERVER_PORT = 12345;
+	
+	public static void main(String[] args) throws Exception {
+	    /** Construct an RPC server.
+	     * @param instance 实例中的方法会被客户端调用
+	     * @param bindAddress 用于监听客户连接的地址
+	     * @param port 用于监听客户连接的端口
+	     * @param conf 指定配置文件
+	     */
+		Server server = RPC.getServer(new MyBiz(), SERVER_ADDRESS, SERVER_PORT, new Configuration());
+		
+		server.start();		// 开始监听
+	}
+}
+
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.ipc.RPC;
+
+public class MyClient {
+	public static void main(String[] args) {
+		
+	  /**
+	   * Construct a client-side proxy object that implements the named protocol
+	   * talking to a server at the named address.
+	   * 
+	   * @param protocol protocol class
+	   * @param clientVersion client version
+	   * @param addr remote address
+	   * @param conf configuration to use
+	   */
+		RPC.waitForProxy(
+				protocol, 
+				654321L, 
+				new InetSocketAddress(MyServer.SERVER_ADDRESS, MyServer.SERVER_PORT),
+				new Configuration()
+				);
+	}
+}
+
+
+paused: 17-17:42
+
+===================== bjsxt 5 =====================
+
+下载: https://archive.apache.org/dist/hadoop/core/hadoop-1.2.1/
+hadoop-1.2.1-bin.tar.gz
+
+block大小使用后不可变更, 副本数可以变更
+
+===================== 6-7 NN NameNode, SNN SecondaryNameNode, DN DataNode =====================
+
+NameNode: 接受客户端读写服务
+NameNode保存的元数据(metadata)包括:
+	文件owener, permission		内存, fsimage
+	文件包含哪些block				内存, fsimage
+	block保存在哪些DataNode上		内存, 心跳检查, DataNode上报
+	
+SNN机制: 见 itcast 13
+
+DN向NN每3秒发送一次心跳. 如果NN在10分钟内没有收到DN的心跳, 则认为其已lost, 开始复制其上block副本到其他DN
+
+DN副本策略: 见 itcast 14
+
+===================== 8-9 =====================
+
+客户端只向其中一个DN写一个block的副本, 其余副本由DN之间自行复制
+
+文件owner: 
+如果Linux用户abc使用shell上传了一个文件到hadoop, 这个文件的owner就是abc. 
+如果windows下用户def上传了一个文件, 其owner就是def, 即使hadoop所在的linux没有def用户.
+
+安装single node hadoop:
+http://hadoop.apache.org/docs/r1.2.1/single_node_setup.html
+
+
+1 在hadoop中配置java路径:
+conf/hadoop-env.sh
+export JAVA_HOME=/usr/local/jdk/
+
+
+2 ssh安装:
+ubuntu安装ssh:
+sudo apt-get install ssh 
+sudo apt-get install rsync
+
+
+3 使用 Pseudo-Distributed Mode 的配置:
+conf/core-site.xml:
+<configuration>
+     <property>
+         <name>fs.default.name</name>
+         <value>hdfs://localhost:9000</value>
+     </property>
+</configuration>
+
+conf/hdfs-site.xml:
+<configuration>
+     <property>
+         <name>dfs.replication</name>
+         <value>1</value>
+     </property>
+</configuration>
+
+conf/mapred-site.xml:
+<configuration>
+     <property>
+         <name>mapred.job.tracker</name>
+         <value>localhost:9001</value>
+     </property>
+</configuration>
+
+
+4 Setup passphraseless ssh 免密码ssh登陆:
+Now check that you can ssh to the localhost without a passphrase:
+ssh localhost
+
+If you cannot ssh to localhost without a passphrase, execute the following commands:
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa 
+cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys
+
+
+5 Format a new distributed-filesystem 格式化hdfs:
+bin/hadoop namenode -format
+
+
+6 Start the hadoop daemons 启动服务:
+bin/start-all.sh
+
+7 默认的浏览器方式访问:
+NameNode - http://localhost:50070/
+JobTracker - http://localhost:50030/
+
+8 通过shell的完整控制
+Copy the input files into the distributed filesystem:
+$ bin/hadoop fs -put conf input
+
+Run some of the examples provided:
+$ bin/hadoop jar hadoop-examples-*.jar grep input output 'dfs[a-z.]+'
+
+Examine the output files:
+Copy the output files from the distributed filesystem to the local filesytem and examine them:
+$ bin/hadoop fs -get output output 
+$ cat output/ *
+
+When you're done, stop the daemons with:
+$ bin/stop-all.sh
+
+===================== 10 配置 core-site.xml  =====================
+
+逐台设置每个node的ip
+参考itcast 6
+修改ip地址 vi /etc/sysconfig/network-scripts/ifcfg-enp0s3
+添加例如:
+IPADDR0=192.168.56.101
+GATEWAY0=192.168.56.1
+DNS0=192.168.56.1
+
+service network restart
+这样就可以开始使用Xshell了
+
+修改主机名:
+centos7:
+hostnamectl set-hostname node1
+centos6:
+vi /etc/sysconfig/network
+HOSTNAME=node1
+
+修改主机表:
+vi /etc/hosts
+192.168.56.101 node1
+192.168.56.102 node2
+192.168.56.103 node3
+192.168.56.104 node4
+
+
+关闭防火墙:
+centos7:
+systemctl start firewalld.service		启动firewall
+systemctl stop firewalld.service		停止firewall
+systemctl disable firewalld.service		禁止firewall开机启动
+centos6:
+service iptables stop		chkconfig iptables off
+重启 reboot
+
+修改windows的hosts: C:\Windows\System32\drivers\etc\hosts
+192.168.56.101 node1
+192.168.56.102 node2
+192.168.56.103 node3
+第一次修改需要文件复制出修改完复制回
+
+传java到/root
+tar -zxvf jdk-8u60-linux-x64.gz
+mv jdk1.8.0_60 /usr/local/jdk
+
+配置jdk
+vi /etc/profile
+export JAVA_HOME=/usr/local/jdk
+export PATH=.:$JAVA_HOME/bin:$PATH
+
+最好同时配置hadoop
+export JAVA_HOME=/usr/local/jdk
+export HADOOP_HOME=/home/hadoop
+export HADOOP_HOME_WARN_SUPPRESS=1
+export PATH=.:$HADOOP_HOME/bin:$JAVA_HOME/bin:$PATH
+
+让新配置立即生效并检查
+source /etc/profile
+java -version
+
+传hadoop到/root
+tar -zxvf hadoop-1.2.1.tar.gz
+mv hadoop-1.2.1 /home/hadoop
+
+修改conf/hadoop-env.sh
+export JAVA_HOME=/usr/local/jdk/
+
+修改conf/core-site.xml
+<configuration>
+	<property>
+		<name>fs.default.name</name>
+		<value>hdfs://node1:9000</value>
+	</property>
+	
+	<property>
+		<name>hadoop.tmp.dir</name>
+		<value>/opt/hadoop/tmp</value>
+	</property>
+</configuration>
+hadoop.tmp.dir: 默认值在/tmp/hadoop-${user.name} 下, 重启linux就被清空了
+
+===================== 11 配置 hdfs-site.xml =====================
+
+修改conf/hdfs-site.xml
+<configuration>
+	<property>
+		<name>dfs.replication</name>
+		<value>2</value>
+	</property>
+</configuration>
+
+修改 slaves 指定DN
+node2
+node3
+
+修改 masters 指定SNN. (NN已在core-site中指定)
+node2
+
+将完整conf配置复制到所有node上
+
+===================== 12-13 免密码ssh登陆 =====================
+
+理论: 各node上的hadoop配置完全一致, 任意一台node上(无论是NN, SNN, DN)都可以用start-all.sh启动集群服务
+输入start-all.sh的node, 通过ssh启动其他node上的服务. 这样需要这个node能免密码ssh登陆其他node.
+
+此处以node1通过ssh控制其他node示例:
+node1上:
+ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa 
+cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys		// >> 是追加的意思
+scp id_dsa.pub root@node2:~/.ssh/id_dsa.pub
+cat ~/.ssh/id_dsa.pub >> ~/.ssh/authorized_keys	
+
+此后, 从node1可密码登陆node2.(node2不能登陆node1)
+
+确保每个node上的配置完全一致后(及conf/hadoop-env.sh 中的JAVA_HOME设置), 只格式化namenode:
+bin/hadoop namenode -format
+
+启动集群服务:
+start-dfs.sh
+stop-dfs.sh
+
+检查各node上服务开启情况:
+jps
+
+通过浏览器查看hdfs状态: node1:50070
+
+hdfs的操作部分视频未公布, 参考itcast 12
+
+===================== 14-15, 76-77 split, map =====================
+
+MapReduce	离线计算框架
+Storm 		流式计算框架, 实时计算
+Spark		内存计算框架, 快速计算
+
+设计理念: 移动计算, 不移动数据
+
+四个阶段:
+split 不由程序控制
+map 编程控制
+shuffle 编程控制一部分(partition, sort...)
+reduce 编程控制
+
+reducer的数量有mapred-site.xml配置文件中的 mapred.reduce.tasks 决定, 默认值为1
+
+===================== 16-17 shuffle =====================
+
+shuffle步骤的参考文章:
+http://langyu.iteye.com/blog/992916
+
+shuffle: 把map的输出按照某种key值重新切分和组合成n份, 把key值符合某种范围的输出送到特定的reducer那里去
+
+DN的block到split,
+split到map开始运算,
+map产生buffer大小(默认100M)的一个buffer
+	每个buffer默认进行hashcode%运算, partition成和reducer数量一样的工作量区块
+		每个工作量区块内进行sort, sort的默认compare方法是字典排序(比较ascii码)
+		然后spill to disk
+将多个spill to disk的hash-mode值相同partition合并成一个大partition. 这样就有多个partition, 用于处理负载均衡问题
+
+===================== 18-19 reduce =====================
+
+Reducer has 3 primary phases: shuffle, sort and reduce.
+
+多个mapper的相同的partition收集到一个reducer
+相同key的数据进行合并
+相同key的数据集合传给reducer处理
+
+split大小:
+max.split=100M
+min.split=10M
+block大小自定义
+split = max(min.split, min(max.split, block))
+
+===================== 20-21 MapReduce 安装 =====================
+
+主: JobTracker(1.x):
+分配每个子任务tast运行与TaskTracker上, 如果发现task失败, 则重新分配. 没有特定node的规定.
+从: TaskTracker:
+TaskTracker主动与JobTracker通信, 接收,执行map/reduce task. 一般运行在DN上.
+
+vi /home/hadoop/conf/mapred-site.xml
+<configuration>
+     <property>
+         <name>mapred.job.tracker</name>
+         <value>node1:9001</value>
+     </property>
+</configuration>
+将该JobTaskTracker配置到所有节点上.
+
+TaskTracker默认为DN, 所以不用配置.
+
+启动: start-all.sh
+starting namenode, logging to /home/hadoop/libexec/../logs/hadoop-root-namenode-node1.out
+node2: starting datanode, logging to /home/hadoop/libexec/../logs/hadoop-root-datanode-node2.out
+node3: starting datanode, logging to /home/hadoop/libexec/../logs/hadoop-root-datanode-node3.out
+node2: starting secondarynamenode, logging to /home/hadoop/libexec/../logs/hadoop-root-secondarynamenode-node2.out
+starting jobtracker, logging to /home/hadoop/libexec/../logs/hadoop-root-jobtracker-node1.out
+node2: starting tasktracker, logging to /home/hadoop/libexec/../logs/hadoop-root-tasktracker-node2.out
+node3: starting tasktracker, logging to /home/hadoop/libexec/../logs/hadoop-root-tasktracker-node3.out
+
+通过浏览器查看MapReduce状态: node1:50030
+
+===================== 22-25 MR 统计单词出现次数 =====================
+
+更多案例参考: hadoop-1.2.1\src\examples\org\apache\hadoop\examples
+
+vi test.txt
+hello hadoop world hucene abc
+hdfs mapper reduce hadoop hello
+world efg location
+
+hadoop fs -mkdir /usr/input/wc
+hadoop fs -put test.txt /usr/input/wc
+hadoop fs -mkdir /usr/output
+
+/**
+ * KEYIN	文本内容在文件中的下标值, 固定.
+ * VALUEIN	输入的文本内容, 固定.
+ * KEYOUT	本例Mapper输出为单词(String), 所以选Text.
+ * VALUEOUT	本例对应单词的是一个数字, 所以选IntWritable.
+ */
+public class WcMapper extends Mapper<LongWritable, Text, Text, IntWritable>{
+	@Override
+	/**
+	 * 该方法由MapReduce框架调用
+	 * 
+	 * key: 每次调用map方法会传入split中的一行数据, key为该行数据在文件中位置的下标
+	 * value: 该行数据的内容
+	 */
+	protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+		String line = value.toString();
+		StringTokenizer st = new StringTokenizer(line);			//将一行内容切成单词
+		while (st.hasMoreTokens()){
+			String word = st.nextToken();
+			context.write(new Text(word), new IntWritable(1));	//map的输出行, 最终输出所有单词及其value=1
+		}
+	}
+}
+
+
+package com.bjsxt.mr;
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class WcReducer extends Reducer<Text, IntWritable, Text, IntWritable>{
+	@Override
+	protected void reduce(Text key, Iterable<IntWritable> values, Context context) throws IOException, InterruptedException {
+		int sum = 0;
+		for(IntWritable i:values){
+			sum = sum + i.get();
+		}
+		context.write(key, new IntWritable(sum));
+	}
+}
+
+
+package com.bjsxt.mr;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class JobRun {
+	public static void main(String[] args) throws Exception {
+		Configuration conf = new Configuration();
+		conf.set("mapred.job.tracker", "node1:9001");
+		
+		Job job = new Job(conf);
+		
+		job.setJarByClass(JobRun.class);		// 提交多个java class, 需要打成jar包提交
+		job.setMapperClass(WcMapper.class);
+		job.setReducerClass(WcReducer.class);
+		
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(IntWritable.class);
+		job.setNumReduceTasks(1);		// 默认值=1
+		
+		final String INPUT_PATH = "/usr/input/wc";		//目录和文件都可以. 目录时其内的所有文件都是输入
+		final String OUTPUT_PATH = "/usr/output/wc";	//output目录需要自己手动建, wc目录hadoop会建立
+	    FileInputFormat.addInputPath(job, new Path(INPUT_PATH));
+	    FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH));
+	    
+	    System.exit(job.waitForCompletion(true) ? 0 : 1);
+	}
+}
+
+
+将com.bjsxt.mr打包:
+package上右键 >> Export >> JAR file
+将该jar包传至Linux, JobTracker所在node
+
+运行:
+hadoop jar wc.jar com.bjsxt.mr.JobRun
+结果:
+15/10/17 15:45:31 WARN mapred.JobClient: Use GenericOptionsParser for parsing the arguments. Applications should implement Tool for the same.
+15/10/17 15:45:31 INFO input.FileInputFormat: Total input paths to process : 1
+15/10/17 15:45:31 INFO util.NativeCodeLoader: Loaded the native-hadoop library
+15/10/17 15:45:31 WARN snappy.LoadSnappy: Snappy native library not loaded
+15/10/17 15:45:32 INFO mapred.JobClient: Running job: job_201510171222_0001
+15/10/17 15:45:33 INFO mapred.JobClient:  map 0% reduce 0%
+15/10/17 15:45:37 INFO mapred.JobClient:  map 100% reduce 0%
+15/10/17 15:45:44 INFO mapred.JobClient:  map 100% reduce 33%
+15/10/17 15:45:45 INFO mapred.JobClient:  map 100% reduce 100%
+15/10/17 15:45:45 INFO mapred.JobClient: Job complete: job_201510171222_0001
+15/10/17 15:45:45 INFO mapred.JobClient: Counters: 29
+15/10/17 15:45:45 INFO mapred.JobClient:   Map-Reduce Framework
+15/10/17 15:45:45 INFO mapred.JobClient:     Spilled Records=26
+15/10/17 15:45:45 INFO mapred.JobClient:     Map output materialized bytes=165
+15/10/17 15:45:45 INFO mapred.JobClient:     Reduce input records=13
+15/10/17 15:45:45 INFO mapred.JobClient:     Virtual memory (bytes) snapshot=3938689024
+15/10/17 15:45:45 INFO mapred.JobClient:     Map input records=3
+15/10/17 15:45:45 INFO mapred.JobClient:     SPLIT_RAW_BYTES=104
+15/10/17 15:45:45 INFO mapred.JobClient:     Map output bytes=133
+15/10/17 15:45:45 INFO mapred.JobClient:     Reduce shuffle bytes=165
+15/10/17 15:45:45 INFO mapred.JobClient:     Physical memory (bytes) snapshot=266612736
+15/10/17 15:45:45 INFO mapred.JobClient:     Reduce input groups=10
+15/10/17 15:45:45 INFO mapred.JobClient:     Combine output records=0
+15/10/17 15:45:45 INFO mapred.JobClient:     Reduce output records=10
+15/10/17 15:45:45 INFO mapred.JobClient:     Map output records=13
+15/10/17 15:45:45 INFO mapred.JobClient:     Combine input records=0
+15/10/17 15:45:45 INFO mapred.JobClient:     CPU time spent (ms)=1030
+15/10/17 15:45:45 INFO mapred.JobClient:     Total committed heap usage (bytes)=177733632
+15/10/17 15:45:45 INFO mapred.JobClient:   File Input Format Counters 
+15/10/17 15:45:45 INFO mapred.JobClient:     Bytes Read=81
+15/10/17 15:45:45 INFO mapred.JobClient:   FileSystemCounters
+15/10/17 15:45:45 INFO mapred.JobClient:     HDFS_BYTES_READ=185
+15/10/17 15:45:45 INFO mapred.JobClient:     FILE_BYTES_WRITTEN=107988
+15/10/17 15:45:45 INFO mapred.JobClient:     FILE_BYTES_READ=165
+15/10/17 15:45:45 INFO mapred.JobClient:     HDFS_BYTES_WRITTEN=82
+15/10/17 15:45:45 INFO mapred.JobClient:   Job Counters 
+15/10/17 15:45:45 INFO mapred.JobClient:     Launched map tasks=1
+15/10/17 15:45:45 INFO mapred.JobClient:     Launched reduce tasks=1
+15/10/17 15:45:45 INFO mapred.JobClient:     SLOTS_MILLIS_REDUCES=8303
+15/10/17 15:45:45 INFO mapred.JobClient:     Total time spent by all reduces waiting after reserving slots (ms)=0
+15/10/17 15:45:45 INFO mapred.JobClient:     SLOTS_MILLIS_MAPS=3403
+15/10/17 15:45:45 INFO mapred.JobClient:     Total time spent by all maps waiting after reserving slots (ms)=0
+15/10/17 15:45:45 INFO mapred.JobClient:     Data-local map tasks=1
+15/10/17 15:45:45 INFO mapred.JobClient:   File Output Format Counters 
+15/10/17 15:45:45 INFO mapred.JobClient:     Bytes Written=82
+
+可以在/usr/output/wc/part-r-00000看到结果
+多次运行一次命名为wc, wc2...
+
+===================== 26-28 MR qq好友推荐 =====================
+
+vi test.txt
+hadoop	hello
+hdfs	world
+tom	cat
+cat	dog
+hello	world
+hello	hdfs
+
+hadoop fs -mkdir /usr/input/qq
+hadoop fs -put test.txt /usr/input/qq
+
+思路:
+将每一对关系保存为两组map:
+key=hadoop, value=hello
+key=hello, value=hadoop
+key=hello, value=world
+key=world, value=hello
+key=hello, value=hdfs
+key=hdfs, value=hello
+
+reduce时将key相同的放入同一个数组
+输出数组中某人和其他所有人的对
+
+
+package com.bjsxt.mr;
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+
+public class QqMapper extends Mapper<LongWritable, Text, Text, Text>{
+	@Override
+	protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+		String line = value.toString();
+		
+		String[] ss = line.split("\t");
+		context.write(new Text(ss[0]), new Text(ss[1]));
+		context.write(new Text(ss[1]), new Text(ss[0]));
+	}
+}
+
+
+package com.bjsxt.mr;
+
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
+
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class QqReducer extends Reducer<Text, Text, Text, Text>{
+	@Override
+	protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+		Set<String> set = new HashSet<String>();	//用set的好处是没有重复元素
+		for(Text value: values){
+			set.add(value.toString());				//所有value的人都有一个共同好友key, 从而value之间是二级关系
+		}
+		
+		if(set.size()>1){
+			for (Iterator iterator = set.iterator(); iterator.hasNext();) {
+				String name = (String) iterator.next();									//取出圈中某人
+				for (Iterator iterator2 = set.iterator(); iterator2.hasNext();) {		//某人和圈中其他所有人的关系
+					String name2 = (String) iterator2.next();
+					if(!name.equals(name2)){
+						context.write(new Text(name), new Text(name2));
+					}
+				}
+			}
+		}
+	}
+}
+
+
+package com.bjsxt.mr;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class JobRun {
+	public static void main(String[] args) throws Exception {
+		Configuration conf = new Configuration();
+		conf.set("mapred.job.tracker", "node1:9001");
+		
+		Job job = new Job(conf);
+		
+		job.setJarByClass(JobRun.class);
+		job.setMapperClass(QqMapper.class);
+		job.setReducerClass(QqReducer.class);
+		
+		job.setMapOutputKeyClass(Text.class);
+		job.setMapOutputValueClass(Text.class);
+		job.setNumReduceTasks(1);
+		
+		final String INPUT_PATH = "/usr/input/qq";
+		final String OUTPUT_PATH = "/usr/output/qq";
+	    FileInputFormat.addInputPath(job, new Path(INPUT_PATH));
+	    FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH));
+	    
+	    System.exit(job.waitForCompletion(true) ? 0 : 1);
+	}
+}
+
+
+hadoop jar qq.jar com.bjsxt.mr.JobRun
+
+===================== 29-31 MR 精准广告推送 =====================
+
+Wi = TFi * Log(N / DFi)
+W:	该条微博关于这个关键字的权重
+TF:	关键字在当前微博中的出现次数
+DF:	关键字出现在几个微博中(大家都用到了这个关键字, 所以该条微博关于这个关键字的权重降低)
+N:	微博总条数
+
+结果参考 video 50
+
+===================== 32-33 Hadoop 2.x HA =====================
+
+hadoop 1.x缺点及解决方案:
+单NN风险大								HA
+NN需要把元数据存放在内存中, 受到内存大小限制	Federation
+JobTracker访问压力大						YARN
+不支持Spark, Storm等框架					YARN
+
+
+HA: high availability
+元数据的记录放在JN集群QJM(quorum of JournalNodes)中, NN-active 和 NN-standby 共享这些JN的数据
+DN同时向NN汇报block信息, 然后存储在JN中
+
+ZooKeeper通过FailoverController监控NN的健康状态.
+用户访问ZooKeeper访问active的NN. NN从JN中读取元数据, 引导用户访问正确的DN
+ZooKeeper必须是奇数个
+
+===================== 34 Hadoop 2.x Federation =====================
+
+Federation:
+多个NN, 每个NN分管一部分元数据(电话, 短信, 网络). 所有的NN共享DN.
+当一个NN(短信)失效, 该NN的业务丢失, 但是其他NN(电话, 网络)不受影响.
+
+Federation的每个NN都可以分别添加HA
+
+===================== 34 Hadoop 2.x YARN =====================
+
+YARN: Yet Another Resource Negotiator
+是 Hadoop 2.x 新引入的资源管理系统
+ResourceManager: 只有一个. 集群资源的管理和调度
+ApplicationMaster: 每个应用对应一个ApplicationMaster. 管理应用相关的事物, 比如任务调度, 监控和容错, NodeManager
+
+===================== 35-37 部署Hadoop 2.x 文档 =====================
+
+node部署计划:
+		ZK	ZKFC	NN	JN	DN		RM	NM
+node1	X	X		X				X
+node2	X	X		X	X	X			X
+node3	X				X	X			X
+node4					X	X			X
+
+ZKFC必须与NN在一起, 用于监控NN的状态
+
+
+官方部署文档:
+http://hadoop.apache.org/docs/r2.5.2/hadoop-project-dist/hadoop-hdfs/HDFSHighAvailabilityWithQJM.html
+
+在hdfs-site.xml中为HA部署进行设置:
+1. 添加NN集群的名
+<property>
+  <name>dfs.nameservices</name>
+  <value>mycluster</value>
+</property>
+
+2. 为集群指定有效NN
+<property>
+  <name>dfs.ha.namenodes.mycluster</name>
+  <value>nn1,nn2</value>
+</property>
+
+3. 为每个NN指定rpc协议地址及端口
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.nn1</name>
+  <value>machine1.example.com:8020</value>
+</property>
+
+<property>
+  <name>dfs.namenode.rpc-address.mycluster.nn2</name>
+  <value>machine2.example.com:8020</value>
+</property>
+
+4. 为每个NN指定http协议地址及端口
+<property>
+  <name>dfs.namenode.http-address.mycluster.nn1</name>
+  <value>machine1.example.com:50070</value>
+</property>
+<property>
+  <name>dfs.namenode.http-address.mycluster.nn2</name>
+  <value>machine2.example.com:50070</value>
+</property>
+
+5. 指定JN的地址及端口
+<property>
+  <name>dfs.namenode.shared.edits.dir</name>
+  <value>qjournal://JNnode1.example.com:8485;JNnode2.example.com:8485;JNnode3.example.com:8485/mycluster</value>
+</property>
+
+6. 指定客户端用来连接activive NN的class
+<property>
+  <name>dfs.client.failover.proxy.provider.mycluster</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+
+7. 指定active/standby的NN之间免密码登陆的私钥 ??
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value>sshfence</value>
+</property>
+<property>
+  <name>dfs.ha.fencing.ssh.private-key-files</name>
+  <value>/home/exampleuser/.ssh/id_rsa</value>
+</property>
+
+8. 指定JN的工作目录, 类似之前<name>hadoop.tmp.dir</name> <value>/opt/hadoop/tmp</value>
+<property>
+  <name>dfs.journalnode.edits.dir</name>
+  <value>/path/to/journal/node/local/data</value>
+</property>
+
+在core-site.xml中为HA部署进行设置:
+9. 指定无协议及地址输入时, 默认的协议及地址前缀. 类似之前<name>fs.default.name</name> <value>hdfs://node1:9000</value>
+<property>
+  <name>fs.defaultFS</name>
+  <value>hdfs://mycluster</value>
+</property>
+
+10. 配置NN自动切换, 指定ZooKeeper集群:
+hdfs-site.xml:
+<property>
+   <name>dfs.ha.automatic-failover.enabled</name>
+   <value>true</value>
+</property>
+
+core-site.xml
+<property>
+   <name>ha.zookeeper.quorum</name>
+   <value>zk1.example.com:2181,zk2.example.com:2181,zk3.example.com:2181</value>
+</property>
+
+
+配置完毕所有节点后:
+1. 启动JN
+hdfs-daemon.sh journalnode
+
+2 同步NN上的元数据
+a. 全新hdfs集群, 在任意一台NN上进行格式化:
+hdfs namenode -format
+
+b. 如果已经完成格式化NN, 或是从非HA集群转到HA集群, 需要把格式化了的NN上的元数据同步到其他NN及JN上:
+在未格式化的NN上执行:
+hdfs namenode -bootstrapStandby
+
+c. 如果是将一个新的NN添加到HA集群中, 使用:
+hdfs -initializeSharedEdits
+
+===================== 38-39 部署Hadoop 2.x HA =====================
+
+tar -zxvf hadoop-2.5.2.tar.gz
+mv hadoop-2.5.2 /home/hadoop2
+
+cd /home/hadoop2/etc/hadoop
+
+vi hadoop-env.sh
+检查JAVA_HOME配置
+
+vi hdfs-site.xml
+<property>
+  <name>dfs.nameservices</name>
+  <value>bjsxt</value>
+</property>
+
+<property>
+  <name>dfs.ha.namenodes.bjsxt</name>
+  <value>nn1,nn2</value>
+</property>
+
+<property>
+  <name>dfs.namenode.rpc-address.bjsxt.nn1</name>
+  <value>node1:8020</value>
+</property>
+<property>
+  <name>dfs.namenode.rpc-address.bjsxt.nn2</name>
+  <value>node2:8020</value>
+</property>
+
+<property>
+  <name>dfs.namenode.http-address.bjsxt.nn1</name>
+  <value>node1:50070</value>
+</property>
+<property>
+  <name>dfs.namenode.http-address.bjsxt.nn2</name>
+  <value>node2:50070</value>
+</property>
+
+<property>
+  <name>dfs.namenode.shared.edits.dir</name>
+  <value>qjournal://node2:8485;node3:8485;node4:8485/bjsxt</value>
+</property>
+
+<property>
+  <name>dfs.client.failover.proxy.provider.bjsxt</name>
+  <value>org.apache.hadoop.hdfs.server.namenode.ha.ConfiguredFailoverProxyProvider</value>
+</property>
+
+<property>
+  <name>dfs.ha.fencing.methods</name>
+  <value>sshfence</value>
+</property>
+<property>
+  <name>dfs.ha.fencing.ssh.private-key-files</name>
+  <value>/root/.ssh/id_dsa</value>
+</property>
+
+<property>
+  <name>dfs.journalnode.edits.dir</name>
+  <value>/opt/jn/data</value>
+</property>
+
+<property>
+   <name>dfs.ha.automatic-failover.enabled</name>
+   <value>true</value>
+</property>
+
+vi core-site.xml
+<property>
+  <name>fs.defaultFS</name>
+  <value>hdfs://bjsxt</value>
+</property>
+
+<property>
+   <name>ha.zookeeper.quorum</name>
+   <value>node1:2181,node2:2181,node3:2181</value>
+</property>
+
+<property>
+   <name>hadoop.tmp.dir</name>
+   <value>/opt/hadoop2</value>
+</property>
+
+vi slaves
+node2
+node3
+node4
+
+不再使用SNN, 由JN替代
+
+配置完成复制到其他所有node上
+scp -r /home/hadoop2 root@node2:/home
+
+===================== 40-41 部署ZooKeeper =====================
+
+下载
+http://apache.spinellicreations.com/zookeeper/stable/
+
+cd ~
+tar -zxvf zookeeper-3.4.6.tar.gz
+mv zookeeper-3.4.6 /home/zookeeper
+cd /home/zookeeper/conf
+cp zoo_sample.cfg zoo.cfg
+
+1. 配置多ZK部署方案
+https://zookeeper.apache.org/doc/r3.4.6/zookeeperStarted.html
+
+vi zoo.cfg
+tickTime=2000
+dataDir=/opt/zookeeper
+clientPort=2181
+server.1=node1:2888:3888
+server.2=node2:2888:3888
+server.3=node3:2888:3888
+
+配置完成复制到其他zk node
+scp -r /home/zookeeper root@node2:/home
+
+2. 按照文档, 需要在${dataDir}下的myid中进行设置. 当前node是node1 对应server.1, 所以里面写ascii的1即可
+mkdir /opt/zookeeper
+vi /opt/zookeeper/myid
+1
+
+配置完成复制到其他zk node并修改id
+scp -r /opt/zookeeper root@node2:/opt
+vi /opt/zookeeper/myid
+2
+
+3. 修改系统path
+vi /etc/profile
+export JAVA_HOME=/usr/local/jdk
+# export HADOOP_HOME=/home/hadoop
+# export HADOOP_HOME_WARN_SUPPRESS=1
+export HADOOP2_HOME=/home/hadoop2
+export ZOOKEEPER_HOME=/home/zookeeper
+
+export PATH=.:$ZOOKEEPER_HOME/bin:$HADOOP2_HOME/sbin:$HADOOP2_HOME/bin:$JAVA_HOME/bin:$PATH
+
+配置完成复制到其他zk node
+scp -r /etc/profile root@node2:/etc
+source /etc/profile
+
+在所有ZK(node1,2,3)上都需启动: zkServer.sh start
+
+===================== 42-43 启动hadoop 2.x =====================
+
+在所有JN上都需启动: 
+cd /home/hadoop2/sbin/
+hadoop-daemon.sh start journalnode
+
+kill-9 212727		// 这里21727是JN进程号, 每次不一样
+
+格式化:
+cd /home/hadoop2/bin/
+hdfs namenode -format
+
+同步元数据:
+在执行了格式化的node上
+cd /home/hadoop2/sbin/
+hadoop-daemon.sh start namenode
+在被同步的node上
+cd /home/hadoop2/bin/					// 注意bin和sbin目录区别
+hdfs namenode -bootstrapStandby
+ll /opt/hadoop2/dfs/name/current		// 检查同步是否成功
+
+停止已运行的NN
+cd /home/hadoop2/sbin
+stop-dfs.sh
+
+在某NameNode上格式化:
+cd /home/hadoop2/bin
+hdfs zkfc -formatZK
+
+启动 hadoop 2.x
+start-dfs.sh
+结果:
+Starting namenodes on [node1 node2]
+node1: starting namenode, logging to /home/hadoop2/logs/hadoop-root-namenode-node1.out
+node2: starting namenode, logging to /home/hadoop2/logs/hadoop-root-namenode-node2.out
+node3: starting datanode, logging to /home/hadoop2/logs/hadoop-root-datanode-node3.out
+node2: starting datanode, logging to /home/hadoop2/logs/hadoop-root-datanode-node2.out
+node4: starting datanode, logging to /home/hadoop2/logs/hadoop-root-datanode-node4.out
+Starting journal nodes [node2 node3 node4]
+node3: starting journalnode, logging to /home/hadoop2/logs/hadoop-root-journalnode-node3.out
+node2: starting journalnode, logging to /home/hadoop2/logs/hadoop-root-journalnode-node2.out
+node4: starting journalnode, logging to /home/hadoop2/logs/hadoop-root-journalnode-node4.out
+Starting ZK Failover Controllers on NN hosts [node1 node2]
+node1: starting zkfc, logging to /home/hadoop2/logs/hadoop-root-zkfc-node1.out
+node2: starting zkfc, logging to /home/hadoop2/logs/hadoop-root-zkfc-node2.out
+
+有异常看日志找问题:
+cd /home/hadoop2/logs/
+tail -n100 hadoop-root-zkfc-node1.log
+
+node2也需要能免密码登陆其他node, 注意不要覆盖了其他节点的key
+每台ZK需要提前单独启动, 才能在启动dfs时候启动ZKFC
+
+关闭系统时先 stop-all.sh, 然后还要 zkServer.sh stop
+
+通过页面访问:
+node1:50070
+
+上传文件:
+cd /home/hadoop2/bin
+hdfs dfs -mkdir -p /usr/file
+hdfs dfs -put /root/jdk-8u60-linux-x64.gz /usr/file
+hdfs dfs -ls -R /
+
+===================== 44 部署及启动YARN/MR2 =====================
+
+RM及NM node上:
+cd /home/hadoop2/etc/hadoop
+如果NM上未复制, 可以启动, 但过一会儿RM检查不到NM心跳, 会关闭连接
+
+vi yarn-site.xml
+<configuration>
+	<property>
+		<name>yarn.resourcemanager.hostname</name>
+		<value>node1</value>
+	</property>
+	
+	<property>
+		<name>yarn.nodemanager.aux-services</name>
+		<value>mapreduce_shuffle</value>
+	</property>
+	
+	<property>
+		<name>yarn.nodemanager.aux-services.mapreduce.shuffle.class</name>
+		<value>org.apache.hadoop.mapred.ShuffleHandler</value>
+	</property>
+</configuration>
+
+
+cp mapred-site.xml.template mapred-site.xml
+vi mapred-site.xml
+<configuration>
+	<property>
+		<name>mapreduce.framework.name</name>
+		<value>yarn</value>
+	</property>
+</configuration>
+
+
+启动:
+start-all.sh
+结果:
+This script is Deprecated. Instead use start-dfs.sh and start-yarn.sh
+Starting namenodes on [node1 node2]
+node2: starting namenode, logging to /home/hadoop2/logs/hadoop-root-namenode-node2.out
+node1: starting namenode, logging to /home/hadoop2/logs/hadoop-root-namenode-node1.out
+node2: starting datanode, logging to /home/hadoop2/logs/hadoop-root-datanode-node2.out
+node4: starting datanode, logging to /home/hadoop2/logs/hadoop-root-datanode-node4.out
+node3: starting datanode, logging to /home/hadoop2/logs/hadoop-root-datanode-node3.out
+Starting journal nodes [node2 node3 node4]
+node2: starting journalnode, logging to /home/hadoop2/logs/hadoop-root-journalnode-node2.out
+node4: starting journalnode, logging to /home/hadoop2/logs/hadoop-root-journalnode-node4.out
+node3: starting journalnode, logging to /home/hadoop2/logs/hadoop-root-journalnode-node3.out
+Starting ZK Failover Controllers on NN hosts [node1 node2]
+node2: starting zkfc, logging to /home/hadoop2/logs/hadoop-root-zkfc-node2.out
+node1: starting zkfc, logging to /home/hadoop2/logs/hadoop-root-zkfc-node1.out
+starting yarn daemons
+starting resourcemanager, logging to /home/hadoop2/logs/yarn-root-resourcemanager-node1.out
+node2: starting nodemanager, logging to /home/hadoop2/logs/yarn-root-nodemanager-node2.out
+node4: starting nodemanager, logging to /home/hadoop2/logs/yarn-root-nodemanager-node4.out
+node3: starting nodemanager, logging to /home/hadoop2/logs/yarn-root-nodemanager-node3.out
+
+完全启动后每个node应有的java进程:
+node1:
+2019 QuorumPeerMain
+3829 ResourceManager
+3750 DFSZKFailoverController
+3464 NameNode
+
+node2:
+3219 DataNode
+3432 DFSZKFailoverController
+2026 QuorumPeerMain
+3307 JournalNode
+3149 NameNode
+3517 NodeManager
+
+node3:
+2594 DataNode
+2773 NodeManager
+2022 QuorumPeerMain
+2682 JournalNode
+
+node4:
+2503 DataNode
+2683 NodeManager
+2591 JournalNode
+
+
+通过页面访问MR2:
+node1:8088
+
+===================== 44-49 MR2 排序项目 =====================
+
+导入jar包:
+hadoop-2.5.2\share\hadoop\common
+hadoop-2.5.2\share\hadoop\common\lib
+hadoop-2.5.2\share\hadoop\mapreduce
+hadoop-2.5.2\share\hadoop\yarn
+hadoop-2.5.2\share\hadoop\hdfs
+
+需求:
+1. 计算1949-1955年中, 每年温度最高的是哪天?
+2. 计算1949-1955年中, 每年温度最高的前10天排序?
+
+数据:
+vi data.txt		//Date和Time之间是space, 和温度之间是tab
+1949-10-01 14:21:02	34c
+1949-10-02 14:01:02	36c
+1950-01-01 11:21:02	32c
+1950-10-01 12:21:02	37c
+1951-12-01 12:21:02	23c
+1950-10-02 12:21:02	41c
+1950-10-03 12:21:02	27c
+1951-07-01 12:21:02	45c
+1951-07-02 12:21:02	46c
+
+hdfs dfs -mkdir -p /usr/input/temperature			//-p一次可以建多层目录
+hdfs dfs -put data.txt /usr/input/temperature
+hdfs dfs -mkdir -p /usr/output
+
+思路:
+按年份升序排列, 同一年中按温度降序排列
+按年份分组, 一年为一个reducer任务
+
+------------- 自定义Mapper -------------
+
+package com.bjsxt.mr2;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
+
+public class RunJob {
+	public static SimpleDateFormat sdf = new SimpleDateFormat ("yyyy-MM-DD HH:mm:ss");
+	
+	static class TemperatureMapper extends Mapper<LongWritable, Text, KeyObj, Text>{
+		@Override
+		protected void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
+			String line = value.toString();
+			String[] ss = line.split("\t");
+			
+			if (ss.length == 2){		// 检查DateTime, Temperature齐全
+				try {
+					Date date = sdf.parse(ss[0]);													// 取年份值
+					Calendar calendar = Calendar.getInstance();
+					calendar.setTime(date);
+					int year = calendar.get(Calendar.YEAR);
+					
+					int temperature = Integer.parseInt(ss[1].substring(0, ss[1].indexOf('c')));		// 取温度值
+					
+					KeyObj keyObj = new KeyObj(year, temperature);
+					context.write(keyObj, value);					// Mapper的输出: 以keyObj为key, 以整行为value
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+}
+
+------------- KeyObj -------------
+
+package com.bjsxt.mr2;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+
+import org.apache.hadoop.io.WritableComparable;
+
+public class KeyObj implements WritableComparable<KeyObj>{
+	
+	private int year;
+	private int temperature;
+	//constructor; getters(); setters() 供java使用
+	
+	@Override
+	public void write(DataOutput out) throws IOException {			//序列化, 供RPC使用
+		out.writeInt(year);
+		out.writeInt(temperature);
+	}
+		
+	@Override
+	public void readFields(DataInput in) throws IOException {		//反序列化, 从RPC中读取至java
+		this.year = in.readInt();
+		this.temperature = in.readInt();
+	}
+	
+	@Override
+	public int compareTo(KeyObj o) {							//所有行均排序, 先按年, 同样年内按温度. 在sort器中要求比较对象实现WritableComparable??
+		int result = Integer.compare(year, o.getYear());
+		if (result !=0) {
+			return result;
+		}
+		return Integer.compare(temperature, o.getTemperature());
+	}
+	
+	@Override
+	public String toString() {
+		return year + "\t" + temperature;
+	}
+	
+	@Override
+	public int hashCode() {											//作用于何处, 已经用了自定义的partitioner??
+		return (new Integer(year + temperature)).hashCode();
+	}
+}
+
+------------- 自定义partitioner, 保证同一年数据在同一个reducer上, 从而同年温度在一个文件中 -------------
+
+package com.bjsxt.mr2;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Partitioner;
+
+public class FirstPartition extends Partitioner<KeyObj, Text>{	//默认partition使用hashcode%方法负载平衡. 现在需要按year自定义分区
+
+	@Override
+	public int getPartition(KeyObj key, Text value, int numPartitions) {
+		return (key.getYear() * 127) % numPartitions;		// 保证year相同一定在一个reducer上
+	}
+}
+
+------------- 自定义spill to disk 时用的 sorter -------------
+
+package com.bjsxt.mr2;
+
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableComparator;
+
+public class SortTemperature extends WritableComparator{
+
+	public SortTemperature(){
+		super(KeyObj.class, true);
+	}
+	
+	@Override
+	public int compare(WritableComparable a, WritableComparable b) {		//比较对象在此必须为KeyObj类型
+		KeyObj keyObj1 = (KeyObj) a;
+		KeyObj keyObj2 = (KeyObj) b;
+		int result = Integer.compare(keyObj1.getYear(), keyObj2.getYear());
+		if (result != 0){
+			return result;
+		}
+		return -Integer.compare(keyObj1.getTemperature(), keyObj2.getTemperature());		// 默认升序排序, 加'-'为降序排序
+	}
+}
+
+------------- 自定义Reducer中的合并分组比较器Group -------------
+
+使用默认的分组器, 则必须为keyObj中的year和temperature都一致的才会合并在一起, 与需求不符
+package com.bjsxt.mr2;
+
+import org.apache.hadoop.io.WritableComparable;
+import org.apache.hadoop.io.WritableComparator;
+
+public class GroupTemperature extends WritableComparator{
+
+	public GroupTemperature(){
+		super(KeyObj.class, true);
+	}
+	
+	@Override
+	public int compare(WritableComparable a, WritableComparable b) {
+		KeyObj keyObj1 = (KeyObj) a;
+		KeyObj keyObj2 = (KeyObj) b;
+		return Integer.compare(keyObj1.getYear(), keyObj2.getYear());		// 比较是否相等即可, 用于决定如何分组
+	}
+}
+
+------------- 自定义Reducer -------------
+
+package com.bjsxt.mr2;
+
+import java.io.IOException;
+
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Reducer;
+
+public class RunJob {
+	static class TemperatureReducer extends Reducer<KeyObj, Text, KeyObj, Text>{
+		@Override
+		protected void reduce(KeyObj key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
+			for(Text value : values){
+				context.write(key, value);
+			}
+		}
+	}
+}	
+	
+------------- 客户端 -------------
+
+package com.bjsxt.mr2;
+
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.LongWritable;
+import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.Reducer;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+
+public class RunJob {
+	public static void main(String[] args) {
+		Configuration conf = new Configuration();
+		try {
+			Job job = new Job(conf);
+			job.setJobName("temperature");
+			
+			job.setJarByClass(RunJob.class);
+			job.setMapperClass(TemperatureMapper.class);
+			job.setReducerClass(TemperatureReducer.class);
+			
+			job.setMapOutputKeyClass(KeyObj.class);
+			job.setMapOutputValueClass(Text.class);
+			
+			job.setNumReduceTasks(3);				// 这里设置成和年份一致, 不是必须
+			job.setPartitionerClass(FirstPartition.class);
+			job.setSortComparatorClass(SortTemperature.class);
+			job.setGroupingComparatorClass(GroupTemperature.class);
+			
+			final String INPUT_PATH = "/usr/input/temperature";
+			final String OUTPUT_PATH = "/usr/output/temperature";
+			FileInputFormat.addInputPath(job, new Path(INPUT_PATH));
+			FileOutputFormat.setOutputPath(job, new Path(OUTPUT_PATH));
+
+			System.exit(job.waitForCompletion(true) ? 0 : 1);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+	}
+}
+
+
+打包temperature.jar, 传至~
+hadoop jar ~/temperature.jar com.bjsxt.mr2.RunJob
+
+hdfs dfs -cat /usr/output/temperature/part* | head -n10
+
+
+!! 实际测试在reduce阶段报错, 原因尚未查明(系统用wc.jar测试可用):
+15/10/22 14:08:27 INFO client.RMProxy: Connecting to ResourceManager at node1/192.168.56.101:8032
+15/10/22 14:08:27 WARN mapreduce.JobSubmitter: Hadoop command-line option parsing not performed. Implement the Tool interface and execute your application with ToolRunner to remedy this.
+15/10/22 14:08:28 INFO input.FileInputFormat: Total input paths to process : 1
+15/10/22 14:08:28 INFO mapreduce.JobSubmitter: number of splits:1
+15/10/22 14:08:28 INFO mapreduce.JobSubmitter: Submitting tokens for job: job_1445447879558_0006
+15/10/22 14:08:28 INFO impl.YarnClientImpl: Submitted application application_1445447879558_0006
+15/10/22 14:08:28 INFO mapreduce.Job: The url to track the job: http://node1:8088/proxy/application_1445447879558_0006/
+15/10/22 14:08:28 INFO mapreduce.Job: Running job: job_1445447879558_0006
+15/10/22 14:08:33 INFO mapreduce.Job: Job job_1445447879558_0006 running in uber mode : false
+15/10/22 14:08:33 INFO mapreduce.Job:  map 0% reduce 0%
+15/10/22 14:08:38 INFO mapreduce.Job: Task Id : attempt_1445447879558_0006_m_000000_0, Status : FAILED
+Error: java.lang.RuntimeException: java.lang.reflect.InvocationTargetException
+	at org.apache.hadoop.util.ReflectionUtils.newInstance(ReflectionUtils.java:131)
+	at org.apache.hadoop.mapred.JobConf.getOutputKeyComparator(JobConf.java:884)
+	at org.apache.hadoop.mapred.MapTask$MapOutputBuffer.init(MapTask.java:981)
+	at org.apache.hadoop.mapred.MapTask.createSortingCollector(MapTask.java:391)
+	at org.apache.hadoop.mapred.MapTask.access$100(MapTask.java:80)
+	at org.apache.hadoop.mapred.MapTask$NewOutputCollector.<init>(MapTask.java:675)
+	at org.apache.hadoop.mapred.MapTask.runNewMapper(MapTask.java:747)
+	at org.apache.hadoop.mapred.MapTask.run(MapTask.java:340)
+	at org.apache.hadoop.mapred.YarnChild$2.run(YarnChild.java:168)
+	at java.security.AccessController.doPrivileged(Native Method)
+	at javax.security.auth.Subject.doAs(Subject.java:422)
+	at org.apache.hadoop.security.UserGroupInformation.doAs(UserGroupInformation.java:1614)
+	at org.apache.hadoop.mapred.YarnChild.main(YarnChild.java:163)
+...
+
+===================== 50-55 MR2 项目 =====================
+
+!! SKIPPED !!
+结果参考 video 72
+
+===================== 56-59 hive环境搭建 =====================
+
+hive是一个数据仓库客户端
+解释器: 代码->java代码
+编译器
+优化器
+
+可以放在任何一台能够连接hadoop的机器上
+
+------------- 安装hive -------------
+tar -zxvf apache-hive-0.13.1-bin.tar.gz
+mv  apache-hive-0.13.1-bin /home/hive
+cd /home/hive/conf
+cp -a hive-default.xml.template hive-site.xml
+
+cd /home/hive/bin
+./hive
+
+完成后可以看到提示符: hive>
+退出: quit
+
+------------- 安装一个关系型数据库 -------------
+yum install http://dev.mysql.com/get/mysql-community-release-el7-5.noarch.rpm
+yum install mysql-community-server
+systemctl start mysqld
+netstat -nplt | grep 3306
+
+安装jdbc驱动:
+tar -zxvf mysql-connector-java-5.1.37.tar.gz
+cd mysql-connector-java-5.1.37/
+cp -a mysql-connector-java-5.1.37-bin.jar /home/hive/lib
+cd /home/hive/conf
+
+------------- 配置mysql及与hive的连接 -------------
+mysql
+mysql> grant all on *.* to root@'%' identified by '123456';
+mysql> grant all on *.* to root@'node1' identified by '123456';
+mysql> create database hive;
+
+vim hive-site.xml
+<property>
+  <name>javax.jdo.option.ConnectionURL</name>
+  <value>jdbc:mysql://node1:3306/hive</value>
+  <description>JDBC connect string for a JDBC metastore</description>
+</property>
+
+<property>
+  <name>javax.jdo.option.ConnectionDriverName</name>
+  <value>com.mysql.jdbc.Driver</value>
+  <description>Driver class name for a JDBC metastore</description>
+</property>
+
+<property>
+  <name>javax.jdo.option.ConnectionUserName</name>
+  <value>root</value>
+  <description>username to use against metastore database</description>
+</property>
+
+<property>
+  <name>javax.jdo.option.ConnectionPassword</name>
+  <value>123456</value>
+  <description>password to use against metastore database</description>
+</property>
+
+再次启动hive
+
+===================== 60-63 hive DDL(Data Definition Statements) =====================
+vim emp.txt
+1,张三,32,销售部
+2,李四,31,销售部
+3,王五,33,销售部
+4,孙六,34,销售部
+
+建表: https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DDL#LanguageManualDDL-Create/Drop/AlterDatabase
+hive> create table t_emp(
+id int,
+name string,
+age int,
+dept_name string
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ',';
+
+导入数据: https://cwiki.apache.org/confluence/display/Hive/LanguageManual+DML
+hive> load data local inpath '/root/emp.txt' into table t_emp;
+
+hive数据存储在hdfs中: /user/hive/warehouse/t_emp/emp.txt 表名即为文件夹名
+hive的元数据(映射数据: 表结构, 字段分隔符等信息)存在mysql中
+
+查询: hive> select count(*) from t_emp;
+结果: 比起MR2编程计数, 要简单很多
+Total jobs = 1
+Launching Job 1 out of 1
+Number of reduce tasks determined at compile time: 1
+In order to change the average load for a reducer (in bytes):
+  set hive.exec.reducers.bytes.per.reducer=<number>
+In order to limit the maximum number of reducers:
+  set hive.exec.reducers.max=<number>
+In order to set a constant number of reducers:
+  set mapreduce.job.reduces=<number>
+Starting Job = job_1445701094115_0001, Tracking URL = http://node1:8088/proxy/application_1445701094115_0001/
+Kill Command = /home/hadoop2/bin/hadoop job  -kill job_1445701094115_0001
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 1
+2015-10-24 15:08:43,642 Stage-1 map = 0%,  reduce = 0%
+2015-10-24 15:08:49,978 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 0.98 sec
+2015-10-24 15:08:57,315 Stage-1 map = 100%,  reduce = 100%, Cumulative CPU 2.48 sec
+MapReduce Total cumulative CPU time: 2 seconds 480 msec
+Ended Job = job_1445701094115_0001
+MapReduce Jobs Launched: 
+Job 0: Map: 1  Reduce: 1   Cumulative CPU: 2.48 sec   HDFS Read: 288 HDFS Write: 2 SUCCESS
+Total MapReduce CPU Time Spent: 2 seconds 480 msec
+OK
+4
+Time taken: 24.685 seconds, Fetched: 1 row(s)
+
+
+create table t_person (
+id int,
+name string,
+like array<string>,
+tedian map<string, string>
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+COLLECTION ITEMS TERMINATED BY '_'
+MAP KEYS TERMINATED BY ':';
+
+desc t_person;
+
+===================== 64-66 hive DML(Data Manipulation Statements) =====================
+
+------------- 分区 partition -------------
+表名即为文件夹名
+分区即为这个文件夹下的不同文件夹. 可以根据需求设定
+
+hive> create table sxtstu(
+id int,
+sname string,
+city string
+)
+partitioned by (ds string)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+stored as textfile;
+
+hive> load data local inpath 'stu.txt' overwrite into table sxtstu partition (ds='2013-07-09');
+这样首先生成文件夹名sxtstu, 下面生成分区文件夹2013-07-09, 里面是文件stu.txt
+
+------------- 插入 insert -------------
+create table dept_count (
+dname string,
+num int
+);
+
+insert into table dept_count
+select dept_name, count(id) from t_emp group by dept_name
+;
+
+
+create table dept_count2 (
+num int
+)
+partitioned by (dname string);
+
+insert into table dept_count2
+partition (dname='销售部')
+select count(id) from t_emp where dept_name='销售部'
+;
+
+// 0.14版以后可用:
+insert into table t_emp 
+values (5,'赵七',40,'hadoop'), (6, '王八',88,'hadoop');
+
+------------- 导出 export -------------
+
+hive> EXPORT TABLE t_emp
+TO '/usr/input/emp.txt';
+
+hdfs dfs -cat /usr/input/emp.txt/data/emp.txt
+
+===================== 68-71 hive jdbc =====================
+
+HQL的三种执行方式:
+hive -e 'hql'
+hive -f 'hql.file'
+hive jdbc 代码
+
+------------- 启动hive服务 -------------
+./hive --service hiveserver2
+这是个前台服务, 进程会停在terminal上
+在其他terminal上查看启动状态:
+netstat -nplt | grep 10000
+结果:
+tcp        0      0 127.0.0.1:10000         0.0.0.0:*               LISTEN      14992/java 
+
+停止服务, 修改配置:
+vim /home/hive/conf/hive-site.xml
+查找localhost, 修改为node1:
+<property>
+  <name>hive.server2.thrift.bind.host</name>
+  <value>node1</value>
+  <description>Bind host on which to run the HiveServer2 Thrift interface.
+  Can be overridden by setting $HIVE_SERVER2_THRIFT_BIND_HOST</description>
+</property>
+
+再次启动服务, 并启动客户端测试:
+cd /home/hive/bin
+beeline
+Beeline version 0.13.1 by Apache Hive
+beeline> !connect jdbc:hive2://node1:10000/default
+结果:
+scan complete in 2ms
+Connecting to jdbc:hive2://node1:10000/default
+Enter username for jdbc:hive2://node1:10000/default: root
+Enter password for jdbc:hive2://node1:10000/default: 密码为空
+Connected to: Apache Hive (version 0.13.1)
+Driver: Hive JDBC (version 0.13.1)
+Transaction isolation: TRANSACTION_REPEATABLE_READ
+0: jdbc:hive2://node1:10000/default> show tables;
+Error: For input string: "5000L" (state=,code=0)
+
+退出客户端同时停止服务, 再次修改配置:
+查找5000L, 修改为5000:
+<property>
+  <name>hive.server2.long.polling.timeout</name>
+  <value>5000</value>
+  <description>Time in milliseconds that HiveServer2 will wait, before responding to asynchronous calls that use long polling</description>
+</property>
+
+再次启动服务, 在客户端测试:
+0: jdbc:hive2://node1:10000/default> show tables;
++-------------+
+|  tab_name   |
++-------------+
+| dept_count  |
+| t_emp       |
++-------------+
+2 rows selected (1.072 seconds)
+
+------------- hive-jdbc -------------
+导入jar包:
+hive-0.13.1\lib
+hadoop-2.5.2\share\hadoop\common
+hadoop-2.5.2\share\hadoop\common\lib
+
+
+package com.bjsxt.hive;
+
+import java.sql.Statement;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+
+public class HiveText {
+	public static void main(String[] args) throws Exception{
+		Class.forName("org.apache.hive.jdbc.HiveDriver");
+		Connection conn = DriverManager.getConnection("jdbc:hive2://node1/default","root","");
+		
+		try {
+			Statement stmt = conn.createStatement();
+			ResultSet rs = stmt.executeQuery("select count(*) from t_emp");
+			
+			if(rs.next()){
+				System.out.println(rs.getInt(1));
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			conn.close();
+		}
+	}
+}
+
+结果:
+log4j:WARN No appenders could be found for logger (org.apache.thrift.transport.TSaslTransport).
+log4j:WARN Please initialize the log4j system properly.
+log4j:WARN See http://logging.apache.org/log4j/1.2/faq.html#noconfig for more info.
+4
+
+------------- hive-正则 -------------
+tomcat的localhost_access_log日志文件:
+127.0.0.1 - - [24/Aug/2015:10:04:36 -0400] "GET / HTTP/1.1" 200 11452
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:04:39 -0400] "GET /dor/ HTTP/1.1" 304 -
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:05:42 -0400] "GET /dor/topiclist.action HTTP/1.1" 200 5465
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:05:48 -0400] "GET /dor/replylist.action?topicid=100 HTTP/1.1" 200 2403
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:05:48 -0400] "GET /dl/test/135/620x0_1_2013090616201848608.JPG HTTP/1.1" 304 -
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:05:48 -0400] "GET /dl/test/135/fun.jpg HTTP/1.1" 304 -
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:06:39 -0400] "GET /dor/replylist.action?topicid=100 HTTP/1.1" 200 2405
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:06:39 -0400] "GET /dor/js/jquery-2.1.3.min.js HTTP/1.1" 304 -
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:06:39 -0400] "GET /dor/js/replylist.js HTTP/1.1" 304 -
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:06:39 -0400] "GET /dl/test/135/620x0_1_2013090616201848608.JPG HTTP/1.1" 304 -
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:06:39 -0400] "GET /dor/css/main.css HTTP/1.1" 304 -
+0:0:0:0:0:0:0:1 - - [24/Aug/2015:10:06:39 -0400] "GET /dl/test/135/fun.jpg HTTP/1.1" 304 -
+
+参考: https://cwiki.apache.org/confluence/display/Hive/GettingStarted
+
+在hive下, 或者通过客户端, 建立表格:
+CREATE TABLE tomcatlog (
+  host STRING,
+  identity STRING,
+  user STRING,
+  time STRING,
+  request STRING,
+  status STRING,
+  size STRING
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.RegexSerDe'
+WITH SERDEPROPERTIES (
+  "input.regex" = "([^ ]*) ([^ ]*) ([^ ]*) (-|\\[[^\\]]*\\]) ([^ \"]*|\"[^\"]*\") (-|[0-9]*) (-|[0-9]*)"
+)
+STORED AS TEXTFILE;
+
+([^ ]*)					非空格的任意个字符
+(-|\\[[^\\]]*\\])			'-' 或 以'['开头, 接任意个非']', 接']'
+(\"[^\"]*\")			'"'开头, 接非'"'的任意个字符, 接 '"'
+(-|[0-9]*)				'-' 或任意个数字
+
+hive> load data local inpath '/root/log.txt' into table tomcatlog;
+
+需求:
+访问"/dl"路径次数
+hive> select count(1) from tomcatlog where request like "%GET /dl%";
+
+如果有ClassNotFoundException错误, 添加jar包:
+hive> add jar /home/hive/lib/hive-contrib-0.13.1.jar
+
+------------- hive 函数 -------------
+参考: https://cwiki.apache.org/confluence/display/Hive/LanguageManual+UDF
+
+===================== 78-84 HBase(Hadoop Database) 架构 =====================
+
+flume: 数据收集工具: 产生的小文件自动传至hdfs中
+sqoop: 关系型数据库和hadoop之间转换工具
+Mahout: 基于MR的数据挖掘算法
+
+MapReduce是离线式计算框架
+HBase实时, 分布式, 高维数据库. 主要用于存储非结构化和半结构化的松散数据
+
+
+
+Row Key: 相同的就是同一行
+
+Column Family(CF1/CF2/CF3): 列族: 实际数据存储位置
+qualifier: 列, 每个列都归属于某个列族
+权限控制在列族层面进行
+同一列族中的数据存储在同一目录下的几个文件中.
+
+Time Stamp: hdfs不适合修改, 在每一次修改时, 就新增一个版本
+
+cell: 数据存储的基本单元, 由 Row Key, Column Family 和 Time Stamp 唯一确定. cell中数据没有类型, 全部是字节码.
+
+
+
+
+ZooKeeper:
+保证只有一个HMaster
+监控HRegionServer的心跳信息
+储存所有HRegion的寻址入口??
+储存HBase的schema和table元数据??
+
+HMaster:
+为HRegionServer分配region
+负责HRegionServer负载均衡
+分配失效的HRegionServer上的数据
+管理对table的CRUD操作
+
+HRegionServer:
+处理对region的IO请求
+切分在运行过程中变大的region
+
+
+
+
+HMaster与HRegionServer关系类似NN与DN的一主多从
+
+每一个HRegionServer对应于一台服务器. 只有一个HLog, 一个或多个HRegion
+
+HRegion对应于Row Key, 是对数据按照Row Key进行横向切分
+
+
+每个HRegion有一个或多个Store, 一个Store对应为一个CF的数据
+
+Store分MemStore(内存中)和溢写到硬盘的StoreFile(元数据在StoreFile中; hdfs中部分又名HFile)
+当StoreFile到一定数量时, 系统会合并和删除同一store下的版本, 形成更大的StoreFile
+当所有StoreFile都超过一定大小后, 当前region会等分为两个新的region(裂变)
+
+Region是分布式存储和负载均衡的最小单元
+
+
+===================== 85-87 HBase 单机安装 =====================
+
+中文参考文档: http://abloz.com/hbase/book.html
+
+tar -zxvf hbase-0.98.15-hadoop2-bin.tar.gz
+mv hbase-0.98.15-hadoop2 /home/hbase
+
+cd /home/hbase/conf
+
+vim hbase-env.sh
+修改: # export JAVA_HOME=/usr/java/jdk1.6.0/
+为:   export JAVA_HOME=/usr/local/jdk
+
+vim hbase-site.xml
+<configuration>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>file:///opt/hbase</value>
+  </property>
+</configuration>
+暂时先测试数据存储到本地
+
+cd /home/hbase/bin
+start-hbase.sh
+
+jps可以看到HMaster进程, 则启动成功
+netstat -naptl | grep java
+http://node1:60010/
+
+启动hbase:
+hbase shell
+hbase(main):001:0>help
+
+!!!所有指令不可使用';'!!!
+退格用: ctrl + backspace
+创建表:
+create help
+create 't_student', 'cf1'
+desc 't_student'
+
+添加值:
+put 't_student', '007', 'cf1:name', 'value_bande'
+scan 't_student'
+结果:
+ROW                                   COLUMN+CELL                                                                                               
+ 007                                  column=cf1:name, timestamp=1445892804334, value=value_bande                                               
+1 row(s) in 0.0400 seconds
+
+===================== 88-89 HBase 分布式安装 =====================
+
+启动hadoop:
+(node1,2,3) zkServer.sh start
+start-dfs.sh
+
+node部署计划:
+		ZK	ZKFC	NN	JN	DN		RM	NM	|	HM	RS
+node1	X	X		X				X		|		X
+node2	X	X		X	X	X			X	|		X
+node3	X				X	X			X	|	X	X
+node4					X	X			X	|	X	X
+
+------------- 配置hbase -------------
+cd /home/hbase/conf
+vim hbase-site.xml
+<configuration>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>hdfs://bjsxt/hbase</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>true</value>
+  </property>
+</configuration>
+这里不使用node3, node4, 而是写ZK定义的集群名字bjsxt
+如果全新安装, 之前hbase-env.sh中java路径同样需要设置
+
+vim regionservers
+node1
+node2
+node3
+node4
+类似hadoop的slaves设置
+
+------------- 配置hbase-ZK -------------
+
+配置不使用自带的ZK:
+vim hbase-env.sh
+修改: # export HBASE_MANAGES_ZK=true
+为: export HBASE_MANAGES_ZK=false
+
+配置ZK的信息:
+vim hbase-site.xml
+    <property>
+      <name>hbase.zookeeper.quorum</name>
+      <value>node1,node2,node3</value>
+    </property>
+    <property>
+      <name>hbase.zookeeper.property.dataDir</name>
+      <value>/opt/zookeeper</value>
+    </property>
+
+------------- 配置hbase-hdfs -------------
+有3种方法, 取一即可:
+在hbase-env.sh里将HBASE_CLASSPATH环境变量加上HADOOP_CONF_DIR
+在${HBASE_HOME}/conf下面加一个 hdfs-site.xml (或者 hadoop-site.xml). 最好是软连接
+如果你的HDFS客户端的配置不多的话, 你可以把这些加到 hbase-site.xml上面.
+ln -sf /home/hadoop2/etc/hadoop/hdfs-site.xml .
+
+------------- 启动hbase -------------
+不需要配置HMaster, 哪里启动哪里就是HMaster
+注意设置免密码登陆
+
+复制hbase到所有与hbase相关的机器上:
+scp -r /home/hbase root@node2:/home
+
+启动:
+cd /home/hbase/bin
+start-hbase.sh
+结果:
+starting master, logging to /home/hbase/bin/../logs/hbase-root-master-node2.out
+node3: starting regionserver, logging to /home/hbase/bin/../logs/hbase-root-regionserver-node3.out
+node1: starting regionserver, logging to /home/hbase/bin/../logs/hbase-root-regionserver-node1.out
+node4: starting regionserver, logging to /home/hbase/bin/../logs/hbase-root-regionserver-node4.out
+node2: starting regionserver, logging to /home/hbase/bin/../logs/hbase-root-regionserver-node2.out
+
+再启动一个HMaster:
+cd /home/hbase/bin
+hbase-daemon.sh start master
+结果:
+starting master, logging to /home/hbase/bin/../logs/hbase-root-master-node1.out
+
+测试HMaster自动切换:
+jps结果:
+10578 Jps
+2644 DFSZKFailoverController
+10228 HRegionServer
+2216 QuorumPeerMain
+2745 ResourceManager
+2363 NameNode
+10319 HMaster
+
+kill -9 10319
+该台的HMaster无法使用, ZK自动切换到standby的HMaster上.
+
+
+!!! 目前只能在node1上成功启动HMaster !!!
+Caused by: java.lang.reflect.InvocationTargetException
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance0(Native Method)
+	at sun.reflect.NativeConstructorAccessorImpl.newInstance(NativeConstructorAccessorImpl.java:62)
+	at sun.reflect.DelegatingConstructorAccessorImpl.newInstance(DelegatingConstructorAccessorImpl.java:45)
+	at java.lang.reflect.Constructor.newInstance(Constructor.java:422)
+	at org.apache.hadoop.util.ReflectionUtils.newInstance(ReflectionUtils.java:129)
+	at org.apache.hadoop.security.Groups.<init>(Groups.java:55)
+	at org.apache.hadoop.security.Groups.getUserToGroupsMappingService(Groups.java:182)
+	at org.apache.hadoop.security.UserGroupInformation.initialize(UserGroupInformation.java:235)
+	at org.apache.hadoop.security.UserGroupInformation.ensureInitialized(UserGroupInformation.java:214)
+	at org.apache.hadoop.security.UserGroupInformation.isAuthenticationMethodEnabled(UserGroupInformation.java:275)
+	at org.apache.hadoop.security.UserGroupInformation.isSecurityEnabled(UserGroupInformation.java:269)
+	at org.apache.hadoop.hbase.security.User$SecureHadoopUser.isSecurityEnabled(User.java:400)
+	at org.apache.hadoop.hbase.security.User$SecureHadoopUser.login(User.java:391)
+初步搜索可能是 hbase-site.xml 中这个配置点的问题:
+  <property>
+    <name>hbase.rootdir</name>
+    <value>hdfs://bjsxt/hbase</value>
+  </property>
+
+
+
+使用:
+在任意一台机器上启动hbase: hbase shell
+hbase(main) > list
+hbase(main) > create 't_student', 'cf1'
+hbase(main) > put 't_student', '007', 'cf1:name', 'zs'
+hbase(main) > flush 't_student'		// 强制menstore到Hfile
+
+在hdfs的/hbase/data/default 路径下可以看到建立的表t_student;
+在t_student下有个目录叫:7941be5d244b78f6b14b511651ca9785;
+在hbase页面中也可以看到表的信息, Table Region Name 也是 t_student,,1445965691399.7941be5d244b78f6b14b511651ca9785
+在 7941be5d244b78f6b14b511651ca9785 目录里有个cf1目录
+在cf1目录里有数据文件 ecf58075005c411f8c0be800c3f7de45 , 其有多个副本
+
+hbase(main) > put 't_student', '008', 'cf1:name', 'ls'
+hbase(main) > put 't_student', '009', 'cf1:name', 'ww'
+hbase(main) > flush 't_student'
+应该会有多个溢写, 默认开启了Auto Flush所以只能看到一个. 在hbase的Table Region中可以看到有3次request
+
+手动合并:
+hbase(main) > major_compact 't_student'
+
+看文件内容(不加参数就是看help):
+hbase hfile -p -f /hbase/data/default/t_student/7941be5d244b78f6b14b511651ca9785/cf1/cfb0d35f784343dcbad8d765b711dc7d
+部分结果:
+K: 007/cf1:name/1445966460721/Put/vlen=2/mvcc=0 V: zs
+K: 008/cf1:name/1445966881648/Put/vlen=2/mvcc=0 V: ls
+K: 009/cf1:name/1445966916307/Put/vlen=2/mvcc=0 V: ww
+Scanned kv count -> 3
+
+格式解读:
+K: RowKey/CF:qualifier/Timestamp/...
+
+?? RowKey不该是个目录吗 ??
+
+!!! 其他机器无法访问 !!!
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/home/hbase/lib/slf4j-log4j12-1.6.4.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/home/hadoop/lib/slf4j-log4j12-1.4.3.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+
+ERROR: org.apache.hadoop.security.JniBasedUnixGroupsMapping.anchorNative()V
+
+===================== 90-93 hbase-java =====================
+
+需求:
+根据手机号, 时间段查通话记录
+
+导入jar包
+hbase-0.98.15-hadoop2\lib
+
+
+package com.bjsxt.hbase;
+
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HColumnDescriptor;
+import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.HBaseAdmin;
+import org.apache.hadoop.hbase.client.HTable;
+import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.junit.Test;
+
+public class PhoneTest {
+	
+//------------- 创建表格 -------------
+	@Test
+	public void createTable() throws Exception{
+		Configuration config = HBaseConfiguration.create();
+		config.set("hbase.zookeeper.quorum", "node1,node2,node3");		//设置hbase服务地址. 参考hbase的配置文件: hbase-site.xml
+		HBaseAdmin admin = new HBaseAdmin(config);
+		String tableName = "t_cdr";
+
+		if(admin.isTableAvailable(tableName)){
+			admin.disableTable(tableName);
+			admin.deleteTable(tableName);
+		}
+		
+		HColumnDescriptor cf1 = new HColumnDescriptor("cf1".getBytes());
+		HTableDescriptor tableDescriptor = new HTableDescriptor(tableName.getBytes());
+		tableDescriptor.addFamily(cf1);
+		
+		admin.createTable(tableDescriptor);
+		admin.close();
+	}
+
+//------------- 插入数据 -------------
+	@Test
+	public void insertData() throws Exception{
+		Configuration config = HBaseConfiguration.create();
+		config.set("hbase.zookeeper.quorum", "node1,node2,node3");
+		String tableName = "t_cdr";
+		HTable table = new HTable(config, tableName);
+		
+		String rowKey = "18684640986_" + System.currentTimeMillis();
+		Put put = new Put(rowKey.getBytes());
+		put.add("cf1".getBytes(), "dest".getBytes(), "13809877773".getBytes());
+		put.add("cf1".getBytes(), "type".getBytes(), "1".getBytes());
+		put.add("cf1".getBytes(), "time".getBytes(), "2015-09-09 16:55:29".getBytes());
+		
+		table.put(put);
+		table.close();
+	}
+/* 检测一下效果: hbase(main) > scan 't_cdr'
+ * ROW                                   COLUMN+CELL                                                                                               
+ *  18684640986_1445979648293            column=cf1:dest, timestamp=1445979647857, value=13809877773                                               
+ *  18684640986_1445979648293            column=cf1:time, timestamp=1445979647857, value=2015-09-09 16:55:29                                       
+ *  18684640986_1445979648293            column=cf1:type, timestamp=1445979647857, value=1                                                         
+ * 1 row(s) in 0.3050 seconds
+ */
+
+//------------- 查询数据 -------------
+	@Test
+	public void queryData() throws Exception{
+		Configuration config = HBaseConfiguration.create();
+		config.set("hbase.zookeeper.quorum", "node1,node2,node3");
+		String tableName = "t_cdr";
+		HTable table = new HTable(config, tableName);
+		
+	//get方法
+		String rowKey = "18684640986_1445979648293";
+		Get get = new Get(rowKey.getBytes());
+		
+		Result result = table.get(get);
+		
+		Cell cell = result.getColumnLatestCell("cf1".getBytes(), "dest".getBytes());
+		System.out.println("call destination: " + new String(cell.getValue()));
+
+	//scanner方法	
+		Scan scan = new Scan();				//无参时, 代表查询所有结果
+		scan.setStartRow(rowKey.getBytes());
+		scan.setStopRow("18684640986_1445979648294".getBytes());		//RowKey已排序, 所以可以设置开始结尾
+		
+		ResultScanner rs = table.getScanner(scan);
+		for(Result result2 : rs){										//可以在这里实现分页功能
+			cell = result2.getColumnLatestCell("cf1".getBytes(), "dest".getBytes());
+			System.out.println("call destination: " + new String(cell.getValue()));
+		}
+		
+		table.close();
+	}
+}
+
+===================== 94-96 微博项目设计 =====================
+
+需求:
+1. 查看我关注的人, 取消关注
+2. 查看我的粉丝, 屏蔽关注
+3. 发布微博
+4. 查看我发布的微博
+5. 查看我关注的人的微博, 时间降序排序
+
+方案1:
+表设计:
+微博表 3,4:
+rowkey: UID_WBID
+cf1: 微博内容, 发布时间等信息
+
+我关注的人表 1:
+rowkey: UID_UID		(前者是我, 后者是我关注的人)
+
+粉丝表 2:
+rowkey: UID_UID		(前者是我, 后者是我的粉丝)
+
+微博收件箱(我关注的人发布的微博) 5:
+rowkey: UID
+cf1: UID_WBID	(UID是我关注的人的UID)
+
+3. 发布微博时:
+向微博表插入一条数据
+根据粉丝表, 向所有粉丝的微博收件箱发UID_WBID
+
+1. 取消关注时:
+
+
+方案2:
+表设计:
+微博表 3,4:
+rowkey: UID_WBID
+cf1: 微博内容, 发布时间等信息
+
+我关注的人表 1:
+rowkey: UID
+cf1:ls=ls		//前者是qualifier, 后者是value
+cl2:ww=ww
+
+
+===================== 97-100 HBase常用优化方法 =====================
+
+------------- pre-creating regions -------------
+默认设置下, 在创建HBase表时, 会自动创建一个region分区. 当导入数据时, 所有的数据都写入这个分区. 直到这个分区足够大时候才进行切分.
+一种优化方法是预先创建一些空的region, 当写入数据时, 按region分区设置, 进行负载均衡.
+public static boolean createTable (HBaseAdmin admin, HTableDescriptor table, byte[][] splits) throws IOException{
+	try{
+		admin.createTable(table, splits);
+		return true;
+	} catch (TableExistsException e){
+		Logger logger = Logger.getLogger("myLogger");
+		logger.info("table " + table.getNameAsString() + " already exists");
+		return false;
+	}
+}
+
+public static byte[][] getHexSplits(String startKey, String endKey, int numRegions){
+	byte[][] splits = new byte[numRegions-1][];
+	BigInteger lowestKey = new BigInteger(startKey, 16);
+	BigInteger highestKey = new BigInteger(endKey, 16);
+	BigInteger range = highestKey.subtract(lowestKey);
+	BigInteger regionIncrement = range.divide(BigInteger.valueOf(numRegions));
+	
+	lowestKey = lowestKey.add(regionIncrement);
+	for(int i=0; i<numRegions-1; i++){
+		BigInteger key = lowestKey.add(regionIncrement.multiply(BigInteger.valueOf(i)));
+		
+		byte[] b = String.format("%016x", key).getBytes();
+		splits[i] = b;
+	}
+	return splits;
+}
+
+------------- rowkey -------------
+
+rowkey用于检索表中记录, 支持以下三种方式:
+通过单个rowkey访问:按照某个rowkey进行get操作.
+通过rowkey的range进行scan: 通过设置startRowKey和endRowKey, 在范围内扫描
+全表扫描
+
+rowkey可以是任意字符, 最长64kB, 实际应用中一般10~100bytes, 存为byte[]字节数组.
+rowkey按字典排序. 例如是按时间访问HBase中的数据, 可以将时间作为rowkey的起始部分: 以(Long.MAX_VALUE - timestamp)起始, 可以达到从近到远时间排序效果
+
+------------- Compact & Split -------------
+
+在HBase中, 数据在更新时首先写入WAL日志(HLog)和内存(MemStore)中. MemStore中的数据是排序的. 
+当MemStore累计到一定阈值时, 就会创建一个新的MemStore, 并将老的MemStore添加到flush队列, 由单独的线程flush到磁盘上, 成为一个StoreFile. 
+同时系统会在ZooKeeper中记录一个redo point, 表示这个点之前的变化已经持久化了(minor compact)
+
+StoreFile是只读的, 因此HBase的更新其实是不断追加的操作.
+当一个Store中的StoreFile达到一定的阈值后, 就会进行一次合并(major compact). 相同的rowkey合并在一起, 从older store file开始, 形成一个大的StoreFile.
+当StoreFile达到一定阈值后, 会被等分(split)为两个StoreFile.
+
+实际应用汇总可根据需求进行major compact. 同时也可将StoreFile设置大一些, 减少split.
+
+------------- HTablePool -------------
+
+// 不使用连接池的写法
+	@Test
+	public void insertData() throws Exception{
+		Configuration config = HBaseConfiguration.create();
+		config.set("hbase.zookeeper.quorum", "node1,node2,node3");
+		String tableName = "t_cdr";
+		HTable table = new HTable(config, tableName);
+		
+		String rowKey = "18684640986_" + System.currentTimeMillis();
+		Put put = new Put(rowKey.getBytes());
+		put.add("cf1".getBytes(), "dest".getBytes(), "13809877773".getBytes());
+		put.add("cf1".getBytes(), "type".getBytes(), "1".getBytes());
+		put.add("cf1".getBytes(), "time".getBytes(), "2015-09-09 16:55:29".getBytes());
+		
+		table.put(put);
+		table.close();
+	}
+
+// 使用连接池的写法
+	@Test
+	public void hTablePool() throws Exception{
+		Configuration config = HBaseConfiguration.create();
+		config.set("hbase.zookeeper.quorum", "node1,node2,node3");
+		HTablePool pool = new HTablePool(config, 10);		// 设置连接池数量
+		HTableInterface table = pool.getTable("t_cdr");
+		
+		String rowKey = "18684640986_" + System.currentTimeMillis();
+		Put put = new Put(rowKey.getBytes());
+		put.add("cf1".getBytes(), "dest".getBytes(), "13809877773".getBytes());
+		put.add("cf1".getBytes(), "type".getBytes(), "1".getBytes());
+		put.add("cf1".getBytes(), "time".getBytes(), "2015-09-09 16:55:29".getBytes());
+		
+		table.put(put);		// 接CRUD各种需求
+		table.close();
+	}

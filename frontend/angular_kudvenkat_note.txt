@@ -1,0 +1,2054 @@
+============ 4 ng-src directive ============
+
+# img地址直接用src="" console中会有404错误: 在HTML载入过程中, {{}}内容无法识别, 产生错误
+# 使用ng-src标识, 在angular渲染时才载入内容
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+<body ng-app="myApp">
+	<div ng-controller="myController">
+		<div>name:{{country.name}}</div>
+		<div>capital:{{country.capital}}</div>
+	 	<img ng-src="{{country.flag}}" alt="{{country.name}} flag"/>
+	</div>
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+var country = {name: "usa", capital: "dc", flag: "eatfast.gif"}
+
+myApp.controller("myController", function($scope){
+	$scope.country = country
+})
+</script>
+</html>
+
+============ 8-11 filters ============
+
+# 日期: {{expression | date:"yy/MMMM/d"}}
+yyyy	2016
+yy		16
+MMMM	October
+MMM		Oct
+MM		09
+M		9
+dd		09
+d		9
+
+# 货币: {{expression | currency:"your_str":2}}
+第一个参数是货币前缀符号, 第二个是小数点位数
+
+# ng-repeat的limitTo: {{expression | limitTo:limit:begin}}
+第一个参数是显示条目数, 第二个是起始条目位置
+
+# ng-repeat的orderBy: {{expression | orderBy:orderCol:reverse}}
+第一个参数是排序依据, 第二个boolean参数决定是否逆序(也可以在第一个参数前添加+-号实现)
+
+# 例子
+<!DOCTYPE html>
+<html>
+<style>
+th {cursor: pointer}
+/*
+	画三角形思路:
+	利用css盒子模型, 将内容, padding都设置为0; 只使用border, border交界处根据border宽度呈现不同角度
+	增加某boarder宽度相当于增加了该边对应的高度
+	将不需要的border设置为transparent, 只显示需要的那个border
+	所以只能画实心, 单色的箭头
+*/
+.arrow-up{
+	width:0;
+	height:0;
+	border-left:5px solid transparent;
+	border-right:5px solid transparent;
+	border-bottom:10px solid black;
+	display: inline-block;
+}
+.arrow-down{
+	width:0;
+	height:0;
+	border-left:5px solid transparent;
+	border-right:5px solid transparent;
+	border-top:10px solid black;
+	display: inline-block;
+}
+
+</style>
+<script src="angular.js"></script>
+
+
+<body ng-app="myApp">
+	<div ng-controller="myController">
+		rows to display: 
+		<input type="number" step="1" min="0" max="5" ng-model="rows"/>
+		
+		order by:
+		<select ng-model="orderCol">
+			<option value="name">Name asc</option>
+			<option value="-name">Name desc</option>
+			<option value="gender">gender</option>
+			<option value="dob">dob asc</option>
+			<option value="-dob">dob desc</option>
+		</select>
+		<br/><br/>
+		
+		search: 
+		<!-- 
+			添加searchStr.name形成搜索对象, 用以指定搜索列, 不使用对象为搜索条件时会搜索所有列
+			添加searchStr.gender形成复合搜索对象: {"name":"pam","gender":"female"}, 搜索指定多列
+			filter:searchStr:exactMatch第二个参数指明是否精确匹配
+		-->
+		<input type="text" placeholder="search name" ng-model="searchStr.name"/>
+		<input type="text" placeholder="search gender" ng-model="searchStr.gender"/>
+		<input type="checkbox" ng-model="exactMatch" id="exactMatch"/><label for="exactMatch">Exact Match</label> 
+		<br/>
+		<p>以对象形式输入查询条件, 从而控制查询的列: {{searchStr}}</p>
+		
+		
+		<table>
+			<tr>
+				<th>Index</th>
+				<th ng-click="sort('name')">Name<div ng-class="getArrow('name')"></div></th>
+				<th ng-click="sort('gender')">gender<div ng-class="getArrow('gender')"></div></th>
+				<th ng-click="sort('dob')">DOB<div ng-class="getArrow('dob')"></div></th>
+				<th ng-click="sort('salary')">salary_num<div ng-class="getArrow('salary')"></div></th>
+				<th ng-click="sort('salary')">salary_currency<div ng-class="getArrow('salary')"></div></th>
+			</tr>
+			<tr ng-repeat="employee in (employees | limitTo:rows:0 | orderBy:orderCol:false | filter:searchStr:exactMatch)">		<!-- searchStr可以是对象, 也就是对多条件的交集进行过滤 -->
+				<td>{{$index+1}}</td>
+				<td>{{employee.name | uppercase}}</td>
+				<td>{{employee.gender | lowercase}}</td>
+				<td>{{employee.dob | date:"yy/MMMM/d"}}</td>
+				<td>{{employee.salary | number:2}}</td>
+				<td>{{employee.salary | currency:"$":2}}</td>
+			</tr>
+		</table>
+	</div>
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+var employees = [
+	{name: "ben", dob: new Date("May 05, 2990"), gender: "male", salary: 12345.678},
+	{name: "sara", dob: new Date("May 05, 1960"), gender: "female", salary: 54321.678},
+	{name: "mark", dob: new Date("May 05, 1970"), gender: "male", salary: 23456.678},
+	{name: "pam", dob: new Date("May 05, 1980"), gender: "female", salary: 65432.678},
+	{name: "todd", dob: new Date("May 05, 1990"), gender: "male", salary: 34567.678}
+]
+
+myApp.controller("myController", function($scope){
+	$scope.employees = employees
+	$scope.rows = 5
+	$scope.orderCol = "name"
+	
+	$scope.sort = function(_orderCol){
+		if(_orderCol != $scope.orderCol) $scope.orderCol = _orderCol
+		else $scope.orderCol = "-"+_orderCol
+	}
+	
+	$scope.getArrow = function(_orderCol){
+		if(_orderCol == $scope.orderCol) return "arrow-down"
+		else if ("-"+_orderCol == $scope.orderCol) return "arrow-up"
+		else return "" 
+	}
+})
+</script>
+</html>
+
+
+============ 12-13 custom filter ============
+
+# 利用boolean的filter:mySearch传参过滤, 达到同时过滤不同列
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+
+<body ng-app="myApp">
+	<div ng-controller="myController">
+		search: 
+		<input type="text" placeholder="search name or gender" ng-model="searchStr"/>
+		<br/>
+		
+		<table>
+			<tr>
+				<th>Name</th>
+				<th>gender</th>
+				<th>DOB</th>
+				<th>salary_num</th>
+				<th>salary_currency</th>
+			</tr>
+			<tr ng-repeat="employee in employees | filter:mySearch">
+				<td>{{employee.name | uppercase}}</td>
+				<td>{{employee.gender | lowercase}}</td>
+				<td>{{employee.dob | date:"yy/MMMM/d"}}</td>
+				<td>{{employee.salary | number:2}}</td>
+				<td>{{employee.salary | currency:"$":2}}</td>
+			</tr>
+		</table>
+	</div>
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+var employees = [
+	{name: "ben", dob: new Date("May 05, 2990"), gender: "male", salary: 12345.678},
+	{name: "sara", dob: new Date("May 05, 1960"), gender: "female", salary: 54321.678},
+	{name: "mark", dob: new Date("May 05, 1970"), gender: "male", salary: 23456.678},
+	{name: "pam", dob: new Date("May 05, 1980"), gender: "female", salary: 65432.678},
+	{name: "todd", dob: new Date("May 05, 1990"), gender: "male", salary: 34567.678}
+]
+
+myApp.controller("myController", function($scope){
+	$scope.employees = employees
+
+	// 用boolean控制显示: return true表示显示该行; return false表示不显示该行
+ 	$scope.mySearch = function(data, index){		// 默认传参, 第一个是对象, 第二个是index
+		if($scope.searchStr == undefined) return true			// 检查null的方法
+		if (data.name.toLowerCase().indexOf($scope.searchStr.toLowerCase()) !=-1) return true
+		if (data.gender.toLowerCase().indexOf($scope.searchStr.toLowerCase()) !=-1) return true
+		return false
+	}
+})
+</script>
+</html>
+
+
+# 使用自定义filter传参过滤格式
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+
+<body ng-app="myApp">
+	<div ng-controller="myController">
+		<table>
+			<tr><th>Name</th><th>gender</th><th>salary</th></tr>
+			<tr ng-repeat="employee in employees">
+				<td>{{employee.name}}</td>
+				<td>{{employee.gender | myCustomFilter:"param"}}</td>
+				<td>{{employee.salary}}</td>
+			</tr>
+		</table>
+	</div>
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+var employees = [
+	{name: "ben", dob: new Date("May 05, 2990"), gender: 1, salary: 12345.678},
+	{name: "sara", dob: new Date("May 05, 1960"), gender: 2, salary: 54321.678},
+	{name: "mark", dob: new Date("May 05, 1970"), gender: 1, salary: 23456.678},
+	{name: "pam", dob: new Date("May 05, 1980"), gender: 2, salary: 65432.678},
+	{name: "todd", dob: new Date("May 05, 1990"), gender: 3, salary: 34567.678}
+]
+
+myApp.controller("myController", function($scope){
+	$scope.employees = employees
+})
+
+myApp.filter("myCustomFilter", function(){		// JS的工厂模式, 又名closure
+	return function(gender,param){					// 内层方法接收对象和参数: 第一个形参是被过滤对象; 第二个是传参
+		switch(gender){
+		case 1:
+			return "male";
+		case 2:
+			return "female";
+		case 3:
+			return "not disclosed" + param;
+		}
+	}
+})
+</script>
+</html>
+
+
+============ 16 ng-include ============
+
+# index.html 通过控制$scope.employee_view的不同值控制使用不同视图. 注意: 地址栏中路径不变化, 不支持跨域
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+
+<body ng-app="myApp">
+	<div ng-controller="myController">
+		Select View:
+		<select ng-model="employee_view">
+			<option value="listview.html">List</option>
+			<option value="tableview.html">Table</option>
+		</select>
+		<div ng-include=employee_view></div>
+	</div>
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+var employees = [
+	{name: "ben", dob: new Date("May 05, 2990"), gender: 1, salary: 12345.678},
+	{name: "sara", dob: new Date("May 05, 1960"), gender: 2, salary: 54321.678},
+	{name: "mark", dob: new Date("May 05, 1970"), gender: 1, salary: 23456.678},
+	{name: "pam", dob: new Date("May 05, 1980"), gender: 2, salary: 65432.678},
+	{name: "todd", dob: new Date("May 05, 1990"), gender: 3, salary: 34567.678}
+]
+
+myApp.controller("myController", function($scope){
+	$scope.employees = employees
+	$scope.employee_view = "tableview.html"		// 给个初始值
+})
+</script>
+</html>
+
+
+# tableview.html 和 listview.html 的内容
+<table>
+	<tr>
+		<th>Name</th>
+		<th>gender</th>
+		<th>salary</th>
+	</tr>
+	<tr ng-repeat="employee in employees">
+		<td>{{employee.name}}</td>
+		<td>{{employee.gender}}</td>
+		<td>{{employee.salary}}</td>
+	</tr>
+</table>
+
+
+<ul>
+	<li ng-repeat="employee in employees">
+		{{employee.name}}
+		<ul>
+			<li>{{employee.gender}}</li>
+			<li>{{employee.salary}}</li>
+		</ul>
+	</li>
+</ul>
+
+
+============ 18 $http service ============
+
+# 完整$http参数列表: https://docs.angularjs.org/api/ng/service/$http
+
+# getEmployees.json 数据:
+[
+	{"name": "ben", "gender": "male", "salary": 12345.678},
+	{"name": "sara", "gender": "female", "salary": 54321.678},
+	{"name": "mark", "gender": "male", "salary": 23456.678},
+	{"name": "pam", "gender": "female", "salary": 65432.678},
+	{"name": "todd", "gender": "male", "salary": 34567.678}
+]
+
+# 使用$http service(也可以使用get, post等快捷方式)
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+
+<body ng-app="myApp">
+	<div ng-controller="myController">
+		{{error}}
+		<br/>
+		<table>
+			<tr><th>Name</th><th>gender</th><th>salary</th></tr>
+			<tr ng-repeat="employee in employees">
+				<td>{{employee.name}}</td>
+				<td>{{employee.gender}}</td>
+				<td>{{employee.salary}}</td>
+			</tr>
+		</table>
+	</div>
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+
+myApp.controller("myController", function($scope, $http, $log){
+	$http({
+		method:"GET",
+		url:"getEmployees.json",
+		headers: {'Content-Type': application/json},
+		data: {test: 'test'},
+		cache:true
+	}).then(
+		function(resp){
+			$scope.employees = resp.data
+			$log.info(resp)
+			console.log(resp)
+		},
+		function(e){
+			$scope.error = e.statusText
+			console.log(e)
+		})
+})
+</script>
+</html>
+
+
+============ 20 自定义service ============
+
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+
+<body ng-app="myApp">
+	<div ng-controller="myController">
+		<table>
+			<tr>
+				<td>Input String</td>
+				<td><input type="text" ng-model="input"/></td>
+			</tr>
+			<tr>
+				<td>Output String</td>
+				<td><input type="text" ng-model="output"/></td>
+			</tr>
+			<tr>
+				<td></td>
+				<td><button ng-click="process(input)">Process String</button></td> <!-- 和controller层联系 -->
+			</tr>
+		</table>
+	</div>
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+
+myApp.factory("stringService", function(){			// 创建一个service factory
+	return{
+		myProcess: function(_input){
+			if(!_input) return
+			var output = _input[0]					// 注意这里取string字符的方式
+			for (var i=1; i<_input.length; i++){
+				if (_input[i] == _input[i].toUpperCase()) output = output + " "
+				output = output + _input[i]
+			}
+			return output
+		}
+	}
+})
+
+myApp.controller("myController", function($scope, stringService){
+	$scope.process = function(_input){
+		$scope.output = stringService.myProcess(_input);		// controller层调用service层
+	}
+})
+</script>
+</html>
+
+
+============ 21-22 anchorScroll ============
+
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+
+<body ng-app="myApp" ng-controller="myController">
+
+<button id="top" ng-click="scrollTo('bottom')">Go to bottom of the page</button>
+	<div style="height: 200px; background-color: lightyellow">dummy content 1</div>
+	<div style="height: 200px; background-color: lightgrey">dummy content 2</div>
+	<div style="height: 200px; background-color: lightblue">dummy content 3</div>
+	<div style="height: 200px; background-color: steelblue">dummy content 4</div>
+	<div style="height: 200px; background-color: lightyellow">dummy content 1</div>
+	<div style="height: 200px; background-color: lightgrey">dummy content 2</div>
+	<div style="height: 200px; background-color: lightblue">dummy content 3</div>
+	<div style="height: 200px; background-color: steelblue">dummy content 4</div>
+<button id="bottom" ng-click="scrollTo('top')">Go to top of the page</button>
+
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+
+myApp.controller("myController", function($scope, $location, $anchorScroll){
+	$scope.scrollTo = function(scrollLocation){		// 传入anchor的id
+		$location.hash(scrollLocation)				// 将id用#附在地址后
+		$anchorScroll.yOffset=50
+		$anchorScroll()								// 读取#附加段, 开始页面跳转
+	}
+})
+</script>
+</html>
+
+
+# 另外一个例子
+data.json内容:
+[
+	{"id":1,"name":"india","cities":[{"id":1,"name":"mumbai","countryid":1},{"id":2,"name":"delhi","countryid":1},{"id":3,"name":"bangalore","countryid":1},{"id":4,"name":"chennai","countryid":1}]},
+	{"id":2,"name":"usa","cities":[{"id":1,"name":"new york","countryid":2},{"id":2,"name":"los angeles","countryid":2},{"id":3,"name":"chicao","countryid":2},{"id":4,"name":"houston","countryid":2}]},
+	{"id":3,"name":"uk","cities":[{"id":1,"name":"london","countryid":3},{"id":2,"name":"birmingham","countryid":3},{"id":3,"name":"coverntry","countryid":3},{"id":4,"name":"liverpool","countryid":3}]}
+]
+
+
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+
+<body ng-app="myApp" ng-controller="myController">
+<div style="height: 300px; width: 500px; overflow-y: scroll">
+	<button ng-repeat="country in coutries" ng-click="scrollTo(country.name)">{{country.name | uppercase}}</button>
+	<hr/>
+	<fieldset ng-repeat="country in coutries" id="{{country.name}}">
+		<legend>{{country.name | uppercase}}</legend>
+		<ul>
+			<li ng-repeat="city in country.cities">{{city.name | uppercase}}</li>
+		</ul>
+	</fieldset>
+</div>
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+
+myApp.controller("myController", function($scope, $http, $location, $anchorScroll){
+	
+	$http.get("data.json").then(function(resp){
+		$scope.coutries = resp.data
+	})
+	
+	$scope.scrollTo = function(scrollLocation){
+		$location.hash(scrollLocation)
+		$anchorScroll()
+	}
+})
+</script>
+</html>
+
+============ 23-31 ng-route; 35 caseInsensitiveMatch ============
+
+# 与ng-include比较, 地址栏中路径发生变化
+
+# 主页面:index.html
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<!-- <base href="/"/> -->
+<script src="angular.js"></script>
+<script src="angular-route.js"></script>
+<style>
+.header{width:800px; height: 80px; text-align: center; background-color: #bdbdbd}
+.footer{background-color: #bdbdbd; text-align: center}
+.sidenav{height: 500px; background-color: #d8d8d8; width: 150px}
+.content{height: 500px; background-color: #e6e6e6; width: 650px}	
+</style>
+
+<body ng-app="myApp">
+<table>
+	<tr><td colspan="2" class="header"><h1>website header</h1></td></tr>
+	<tr>
+		<td class="sidenav">
+			<p><a href="#home">home</a></p>
+			<p><a href="#courses">courses</a></p>
+			<p><a href="#students">students</a></p>
+		</td>
+		
+		<td class="content" ng-view></td>
+	</tr>
+	<tr><td colspan="2" class="footer"><b>website footer</b></td></tr>
+</table>
+</body>
+
+<script>
+var myApp = angular.module("myApp", ["ngRoute"])
+
+myApp.config(function($routeProvider){
+	$routeProvider.caseInsensitiveMatch= true;	// 全局地址都可大小写, 注意使用'='
+	
+	$routeProvider
+		.when("/home", {
+			template: "<h2>简单内容使用inline方式即可</h2>"
+			// templateUrl:"home.html",
+			// controller: "homeController"
+		})
+		.when("/courses", {
+			templateUrl:"courses.html",
+			controller: "coursesController",
+			caseInsensitiveMatch:true			// 只有courses的地址可以大小写, 注意使用':'
+		})
+		.when("/students", {
+			templateUrl:"students.html",
+			controller: "studentsController"
+		})
+		.when("/students/:id", {				// 这样就可以地址REST传参, 而不是写死地址模板了
+			templateUrl:"studentDetails.html",
+			controller: "studentDetailsController"
+		})
+		.otherwise({redirectTo: "/home"})
+})
+
+myApp.controller("homeController", function($scope){
+	$scope.message = "message from controller"
+})
+
+myApp.controller("coursesController", function($scope){
+	$scope.courses = ["c#", "c++", "c", "java"]
+})
+
+myApp.controller("studentsController", function($scope, $http){
+	$http.get("getallstudents.json").then(function(resp){
+		$scope.students = resp.data
+	})
+})
+
+myApp.controller("studentDetailsController", function($scope, $http, $routeParams){
+	console.log($routeParams.id)
+	$http({
+		url: "getstudentbyid.json",
+		params:{id: $routeParams.id},		// 地址传参的内容都存储在$routeParams中, 相当于访问getstudentbyid.json?id=1
+		method: "get"
+	})
+	.then(function(resp){
+		$scope.student = resp.data
+	})
+})
+</script>
+</html>
+
+
+# students.html:
+<h2>list of students</h2>
+<ul>
+	<li ng-repeat="student in students">
+		<a href="#students/{{student.id}}">{{student.name}}</a>
+	</li>
+</ul>
+
+
+# studentDetails.html 展现内容
+<h2>student details</h2>
+<table>
+	<tr><td>id</td><td>{{student.id}}</td></tr>
+	<tr><td>name</td><td>{{student.name}}</td></tr>
+	<tr><td>gender</td><td>{{student.gender}}</td></tr>
+	<tr><td>city</td><td>{{student.city}}</td></tr>
+</table>
+<a href="#students">back to students list</a>
+
+
+# dummy服务器返回数据
+getallstudents.json:
+[
+	{"id":1,"name":"mark","gender":"male","city":"london"},
+	{"id":2,"name":"john","gender":"male","city":"new york"},
+	{"id":3,"name":"sara","gender":"female","city":"boston"},
+	{"id":4,"name":"tom","gender":"male","city":"las vagas"},
+	{"id":5,"name":"pam","gender":"female","city":"los angeles"},
+	{"id":6,"name":"catherine","gender":"female","city":"dalls"},
+	{"id":7,"name":"rosie","gender":"female","city":"jersy city"},
+	{"id":8,"name":"sasha","gender":"female","city":"san francisco"}
+]
+
+getstudentbyid.json:
+{"id":1,"name":"mark","gender":"male","city":"london"}
+
+
+============ 32-34 controller-as 语法 ============
+
+# 去除使用$scope, 嵌套时 代码易读一点
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+<body ng-app="myApp">
+	<h1 ng-controller="mainController as mainCtrl">{{mainCtrl.message}}</h1>
+</body>
+<script>
+	var myApp = angular.module("myApp", [])
+	
+	var mainController = myApp.controller("mainController", function(){
+		this.message = "controller as syntax"		// 可以略去注入$scope的步骤
+	})
+</script>
+</html>
+
+
+# 不使用controller-as 语法时的nested controller写法:
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+<body ng-app="myApp">
+<div ng-controller = 'countryController'>
+	{{name}}
+	<div ng-controller = 'stateController'>
+		{{$parent.name}} - {{name}}
+		<div ng-controller = 'cityController'>
+			{{$parent.$parent.name}}  - {{$parent.name}} - {{name}}		// 很多层时候就很麻烦了
+		</div>
+	</div>
+</div>
+</body>
+
+<script>
+	var myApp = angular.module("myApp", [])
+	
+	myApp.controller("countryController", function($scope){
+		$scope.name = "us"
+	})
+	myApp.controller("stateController", function($scope){
+		$scope.name = "nj"
+	})
+	myApp.controller("cityController", function($scope){
+		$scope.name = "piscataway"
+	})
+</script>
+</html>
+
+# 使用controller-as 语法时的写法:
+<!DOCTYPE html>
+<html ng-app="myApp">
+<script src="angular.js"></script>
+
+<body>
+<div ng-controller = 'countryController as contryCtrl'>
+	{{contryCtrl.name}}
+	<div ng-controller = 'stateController as stateCtrl'>
+		{{contryCtrl.name}} - {{stateCtrl.name}}
+		<div ng-controller = 'cityController as cityCtrl'>
+			{{contryCtrl.name}} - {{stateCtrl.name}} - {{cityCtrl.name}}
+		</div>
+	</div>
+</div>
+</body>
+
+<script>
+	var myApp = angular.module("myApp", [])
+	
+	myApp.controller("countryController", function(){
+		this.name = "us"
+	})
+	myApp.controller("stateController", function(){
+		this.name = "nj"
+	})
+	myApp.controller("cityController", function(){
+		this.name = "piscataway"
+	})
+</script>
+</html>
+
+
+============ 36 $route.reload() ============
+
+# 数据库发生变化时, 如果不刷新页面, 使用angular的routing不会读取新的数据, 需要调用$route.reload()
+<!DOCTYPE html>
+<html>
+<script src="angular.js"></script>
+<script src="angular-route.js"></script>
+<style>
+.header{width:800px; height: 80px; text-align: center; background-color: #bdbdbd}
+.footer{background-color: #bdbdbd; text-align: center}
+.sidenav{height: 500px; background-color: #d8d8d8; width: 150px}
+.content{height: 500px; background-color: #e6e6e6; width: 650px}	
+</style>
+
+<body ng-app="myApp">
+<table>
+	<tr><td colspan="2" class="header"><h1>website header</h1></td></tr>
+	<tr>
+		<td class="sidenav"><a href="#students">students</a></td>
+		<td class="content" ng-view></td>
+	</tr>
+	<tr><td colspan="2" class="footer"><b>website footer</b></td></tr>
+</table>
+</body>
+
+<script>
+var myApp = angular.module("myApp", ["ngRoute"])
+
+myApp.config(function($routeProvider){
+	$routeProvider
+	.when("/students", {
+		templateUrl:"students.html",
+		controller: "studentsController"
+	})
+})
+
+myApp.controller("studentsController", function($scope, $route, $http){
+	$scope.reloadData = function(){
+		$route.reload()
+	}
+	
+	$http.get("getallstudents.json").then(function(resp){
+		$scope.students = resp.data
+	})
+})
+</script>
+</html>
+
+
+# students.html中调用方法. 无需刷新所有页面, 只刷新了getallstudents.json数据
+<h2>list of students</h2>
+<ul>
+	<li ng-repeat="student in students">
+		<a href="#students/{{student.id}}">{{student.name}}</a>
+	</li>
+</ul>
+<button ng-click="reloadData()">Reload Data</button>
+
+
+============ 37 $scope $rootScope 作用域 ============
+
+# $rootScope的值对所有的controller都有效
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<script src="angular.js"></script>
+
+<body ng-app="myApp">
+    <div ng-controller="redController">
+        root scope color: {{rootblue}}<br/>
+        red scope color: {{red}}<span ng-show="red === undefined" style="color:red">red is not defined</span><br/>
+        green scope color: {{green}}<span ng-show="green === undefined" style="color:red">green is not defined</span>
+    </div>
+    <hr/>
+    <div ng-controller="greenController">
+        root scope color: {{rootblue}}<br/>
+        red scope color: {{red}}<span ng-show="red === undefined" style="color:red">red is not defined</span><br/>
+        green scope color: {{green}}<span ng-show="green === undefined" style="color:red">green is not defined</span>
+    </div>
+</body>
+
+<script>
+var myApp = angular.module("myApp", [])
+
+myApp.controller("redController", function($scope, $rootScope){
+    $scope.red = "I am scope RED"
+    $rootScope.rootblue = "I am rootScope BLUE"
+})
+
+myApp.controller("greenController", function($scope, $rootScope){
+    $scope.green = "I am scope GREEN"
+    $rootScope.rootblue = "I am rootScope BLUE2"        // 更改内容后双向绑定
+})
+</script>
+</html>
+
+============ 38-39 routing 过程添加监听及取地址 ============
+
+# routing的生命周期
+	$routeChangeStart
+	$locationChangeStart
+	$locationChangeSuccess
+	$routeChangeSuccess
+
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<script src="angular.js"></script>
+<script src="angular-route.js"></script>
+<style>
+    .header{width:800px; height: 80px; text-align: center; background-color: #bdbdbd}
+    .footer{background-color: #bdbdbd; text-align: center}
+    .sidenav{height: 500px; background-color: #d8d8d8; width: 150px}
+    .content{height: 500px; background-color: #e6e6e6; width: 650px}	
+</style>
+
+<body ng-app="myApp">
+<table>
+    <tr><td colspan="2" class="header"><h1>website header</h1></td></tr>
+    <tr>
+        <td class="sidenav">
+            <p><a href="#home">home</a></p>
+            <p><a href="#courses">courses</a></p>
+            <p><a href="#students">students</a></p>
+        </td>
+        <td class="content" ng-view></td>
+    </tr>
+    <tr><td colspan="2" class="footer"><b>website footer</b></td></tr>
+</table>
+</body>
+
+<script>
+var myApp = angular.module("myApp", ["ngRoute"])
+
+myApp.config(function($routeProvider){
+    $routeProvider
+    .when("/home", {
+        template: "<h2>简单内容使用inline方式即可</h2>"
+    })
+    .when("/courses", {
+        templateUrl:"courses.html",
+        controller: "coursesController"
+    })
+    .when("/students", {
+        templateUrl:"students.html",
+        controller: "studentsController"
+    })
+})
+
+myApp.controller("coursesController", function($scope){
+    //方法1: 给$locationChangeStart加个listener
+    $scope.$on("$locationChangeStart", function(event, next, current){
+        var str = "Are you sure to navigate from " +
+                current + " to " +     // 值为完整地址
+                next + " ?"
+        if(!confirm(str)){      // ok == true; cancel == false, 即点击取消
+            event.preventDefault();
+        }
+    })
+    $scope.courses = ["c#", "c++", "c", "java"]
+})
+
+myApp.controller("studentsController", function($scope, $http, $log){
+    //方法2: 给$routeChangeStart加个listener
+    $scope.$on("$routeChangeStart", function(event, next, current){
+        $log.debug(event)
+        $log.debug(next)
+        $log.debug(current)
+        
+        var str = "Are you sure to navigate from " +
+                current.$$route.originalPath + " to " +     // 值为相对地址
+                next.$$route.originalPath + " ?"
+        if(!confirm(str)){
+            event.preventDefault();
+        }
+    })
+    
+    $http.get("getallstudents.json").then(function(resp){
+        $scope.students = resp.data
+    })
+})
+</script>
+</html>
+
+============ 40 routing的综合使用 ============
+
+# 添加一个搜索框, 有内容时按照内容搜索, 没内容时显示所有students; 搜索条件在地址中显示
+	添加搜索框及按钮
+	添加按钮的响应function, 修改浏览器地址
+	添加搜索的route, 接受传参
+	添加route对应的controller
+
+# 在students.html中添加搜索框及按钮
+<h2>list of students</h2>
+Name: <input type="text" ng-model="name"/><button ng-click="searchStudents()">search</button>
+<ul>
+    <li ng-repeat="student in students">
+        <a href="#students/{{student.id}}">{{student.name}}</a>
+    </li>
+</ul>
+
+# 在students.html对应的studentsController中添加按钮的响应
+myApp.controller("studentsController", function($scope, $http, $location){
+    $scope.searchStudents = function(){
+        if($scope.name) $location.url("/searchStudents/" + $scope.name)		// 相当于redirect的作用, 引导浏览器地址访问, 不是后台get访问
+        else $location.url("/searchStudents")		// 不可省略, 否则会因为$scope.name未申明而访问/searchStudents/undefined
+    }
+})
+
+# 添加搜索的route, 接受传参
+myApp.config(function($routeProvider){
+    $routeProvider
+    .when("/searchStudents/:name?", {       // 加'?'号表示这个参数是optional的
+        templateUrl:"students.html",
+        controller: "searchStudentsController"
+    })
+    .otherwise({redirectTo: "/home"})
+})
+
+# 添加搜索route对应的controller
+myApp.controller("searchStudentsController", function($scope, $http, $routeParams){
+    if($routeParams.name){
+        $http({
+            url:"getstudentsbyname.json",
+            method:"get",
+            params:{name: $routeParams.name}
+        }).then(function(resp){
+            $scope.students = resp.data
+        })
+    } else {
+        $http.get("getallstudents.json").then(function(resp){
+            $scope.students = resp.data
+        })
+    }
+})
+
+============ 41 route resolve ============
+
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<script src="angular.js"></script>
+<script src="angular-route.js"></script>
+<style>
+    .header{width:800px; height: 80px; text-align: center; background-color: #bdbdbd}
+    .footer{background-color: #bdbdbd; text-align: center}
+    .sidenav{height: 500px; background-color: #d8d8d8; width: 150px}
+    .content{height: 500px; background-color: #e6e6e6; width: 650px}	
+</style>
+
+<body ng-app="myApp">
+<table>
+    <tr><td colspan="2" class="header"><h1>website header</h1></td></tr>
+    <tr>
+        <td class="sidenav">
+            <p><a href="#home">home</a></p>
+            <p><a href="#courses">courses</a></p>
+            <p><a href="#students">students</a></p>
+        </td>
+        <td class="content" ng-view></td>
+    </tr>
+    <tr><td colspan="2" class="footer"><b>website footer</b></td></tr>
+</table>
+</body>
+
+<script>
+var myApp = angular.module("myApp", ["ngRoute"])
+
+myApp.config(function($routeProvider){
+    $routeProvider
+    .when("/home", {
+        template: "<h2>简单内容使用inline方式即可</h2>"
+    })
+    .when("/courses", {
+        templateUrl:"courses.html"
+    })
+    .when("/students", {
+        templateUrl:"students.html",
+        controller: "studentsController",
+        resolve:{                           // 所有内容都到齐后一起渲染, 重复使用的话可以减少读取服务器开支
+            studentsList : function($http){
+                return $http.get("getallstudents.json").then(function(resp){
+                    return resp.data
+                })
+            }
+        }
+    })
+    .otherwise({redirectTo: "/home"})
+})
+
+myApp.controller("studentsController", function($scope, studentsList){  // 注入studentsList
+    $scope.students = studentsList
+})
+
+</script>
+</html>
+
+
+============ 42-48,50 ui-route ============
+
+# ui-router implements routing based on the "state" of the application, where as ng-route implements routing based on URL
+
+# index.html
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<script src="angular.js"></script>
+<script src="angular-ui-router.js"></script>		<!-- 单独用, 不需要用angular-route.js -->
+<style>
+    .header{width:800px; height: 80px; text-align: center; background-color: #bdbdbd}
+    .footer{background-color: #bdbdbd; text-align: center}
+    .sidenav{height: 500px; background-color: #d8d8d8; width: 150px}
+    .content{height: 500px; background-color: #e6e6e6; width: 650px}
+
+	.active{background-color: steelblue; color:white}
+</style>
+
+<body ng-app="myApp">
+<table>
+    <tr><td colspan="2" class="header"><h1>website header</h1></td></tr>
+    <tr>
+        <td class="sidenav">
+            <p ui-sref-active="active"><a ui-sref="home">home</a></p>	<!--ui-sref-active会在active时自动使用指定的css; ui-sref对应state, 不需要地址前的# -->
+            <p ui-sref-active="active"><a ui-sref="courses">courses</a></p>
+            <p ui-sref-active="active"><a ui-sref="students">students</a></p>
+        </td>
+        <td class="content"><ui-view></ui-view></td>
+    </tr>
+    <tr><td colspan="2" class="footer"><b>website footer</b></td></tr>
+</table>
+</body>
+
+<script>
+var myApp = angular.module("myApp", ["ui.router"])
+
+myApp.config(function($stateProvider, $urlMatcherFactoryProvider, $urlRouterProvider){
+    $urlMatcherFactoryProvider.caseInsensitive(true)    //比较之前$routeProvider.caseInsensitive = true
+    $urlRouterProvider.otherwise("/home")
+    
+    $stateProvider
+    .state("home", {
+        url:"/home",        // 不写依然可以跳转, 但是地址栏中将不显示变化, 该值仅用于在地址栏中显示
+        templateUrl:"home.html",
+        controller:"homeController",
+        data:{
+            customData1:"home state custom data1",
+            customData2:"home state custom data2"
+        }
+    })
+    .state("courses", {
+        url:"/courses123",
+        templateUrl:"courses.html",
+        data:{
+            customData1:"courses state custom data1",
+            customData2:"courses state custom data2"
+        }
+    })
+    .state("students", {
+        url:"/students",
+        templateUrl:"students.html",
+        controller: "studentsController"
+    })
+    .state("studentDetails",{
+        url:"/studentDetails/:id",
+        templateUrl:"studentDetails.html",
+        controller:"studentDetailsController"
+    })
+    .state("searchStudents",{
+        url:"/searchStudents/:name",        //不需要加'?'也可以是optional了
+        templateUrl:"students.html",
+        controller:"searchStudentsController"
+    })
+})
+
+myApp.controller("homeController", function($scope, $state){
+    $scope.homeCustomData1 = $state.current.data.customData1            //取当前router中data
+    $scope.coursesCustomData1 = $state.get("courses").data.customData1  //取另外一个router中的data
+})
+
+myApp.controller("studentsController", function($scope, $http, $state){
+    $http.get("getallstudents.json").then(function(resp){
+        $scope.students = resp.data
+    })
+    
+    $scope.searchStudents = function(){
+        $state.go("searchStudents", {name:$scope.name}) //比较之前的$location.url("/searchStudents/"+$scope.name)传参写法
+    }
+})
+
+myApp.controller("studentDetailsController", function($scope, $http, $stateParams){
+    $http({
+        url:"getstudentbyid.json",
+        method:"get",
+        params:{id: $stateParams.id}
+    }).then(function(resp){
+        $scope.student = resp.data
+    })
+})
+
+myApp.controller("searchStudentsController", function($scope, $http, $stateParams, $state){
+    if($stateParams.name){
+        $http({
+            url:"getstudentsbyname.json",
+            method:"post",
+            params:{name: $stateParams.name}
+        }).then(function(resp){
+            $scope.students = resp.data
+        })
+    } else {
+        $http.get("getallstudents.json").then(function(resp){
+            $scope.students = resp.data
+        })
+    }
+    
+    $scope.searchStudents = function(){		//搜索结果中的搜索框依然可以点击
+        $state.go("searchStudents", {name:$scope.name})
+    }
+})
+</script>
+</html>
+
+
+# home.html
+<h1>{{homeCustomData1}}</h1>
+<h1>{{coursesCustomData1}}</h1>
+
+# students.html
+<h2>list of students</h2>
+Name: <input type="text" ng-model="name"/><button ng-click="searchStudents()">search</button>
+<ul>
+    <li ng-repeat="student in students">
+        <a ui-sref="studentDetails({id:student.id})">{{student.name}}</a>  <!-- 注意: 不是用href了, 传参格式也更对象了 -->
+    </li>
+</ul>
+
+# studentDetails.html
+<h2>student details</h2>
+<table>
+    <tr><td>id</td><td>{{student.id}}</td></tr>
+    <tr><td>name</td><td>{{student.name}}</td></tr>
+    <tr><td>gender</td><td>{{student.gender}}</td></tr>
+    <tr><td>city</td><td>{{student.city}}</td></tr>
+</table>
+<a ui-sref="students">back to students list</a>
+
+
+============ 51 ui-router nested views ============
+
+# 步骤
+	建立父state, 设置其abstract: true
+	建立子state, 在state名中指定继承关系
+	子类的url是父类url+自己的url; 子类可以使用父类model中的数据
+	父类template中加<ui-view></ui-view>, 调用子类state时会调用父类state, 并触发controller和template
+	
+# index.html
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<script src="angular.js"></script>
+<script src="angular-ui-router.js"></script>
+<style>
+    .header{width:800px; height: 80px; text-align: center; background-color: #bdbdbd}
+    .footer{background-color: #bdbdbd; text-align: center}
+    .sidenav{height: 500px; background-color: #d8d8d8; width: 150px}
+    .content{height: 500px; background-color: #e6e6e6; width: 650px}
+    
+    .active{background-color:black; color:white}
+</style>
+
+<body ng-app="myApp">
+<table>
+    <tr><td colspan="2" class="header"><h1>website header</h1></td></tr>
+    <tr>
+        <td class="sidenav">
+            <p ui-sref-active="active"><a ui-sref="home" >home</a></p>
+            <p ui-sref-active="active"><a ui-sref="courses">courses</a></p>
+            <p ui-sref-active="active"><a ui-sref="studentParent.students">students</a></p> <!-- ui-sref指向子类state -->
+        </td>
+        <td class="content"><ui-view></ui-view></td>
+    </tr>
+    <tr><td colspan="2" class="footer"><b>website footer</b></td></tr>
+</table>
+</body>
+
+<script>
+var myApp = angular.module("myApp", ["ui.router"])
+
+myApp.config(function($stateProvider, $urlMatcherFactoryProvider, $urlRouterProvider){
+    $stateProvider
+    .state("home", {
+        url:"/home",
+        templateUrl:"home.html",
+    })
+    .state("courses", {
+        url:"/courses",
+        templateUrl:"courses.html",
+    })    
+    .state("studentParent",{
+        url:"/students",
+        controller:"studentParentController",
+        templateUrl:"studentParent.html",
+        abstract: true                      //注意添加, 父类的地址, 数据都会被子类继承使用
+    })
+    .state("studentParent.students", {      //子类继承的写法
+        url:"/",							//显示的地址为父类地址加子类地址, 这里是"/students" + "/"
+        templateUrl:"students.html",
+        controller: "studentsController"
+    })
+    .state("studentParent.studentDetails",{
+        url:"/:id",							//显示的地址为"/students/:id"
+        templateUrl:"studentDetails.html",
+        controller:"studentDetailsController"
+    })
+})
+
+myApp.controller("studentParentController", function($http, $scope){
+    $http.get("getstudenttotals.json").then(function(resp){
+        $scope.males = resp.data.males,
+        $scope.females = resp.data.females,
+        $scope.total = resp.data.total
+    })
+})
+
+myApp.controller("studentsController", function($scope, $http, $state){
+    $http.get("getallstudents.json").then(function(resp){
+        $scope.students = resp.data
+    })
+    
+    $scope.searchStudents = function(){
+        $state.go("searchStudents", {name:$scope.name})
+    }
+})
+
+myApp.controller("studentDetailsController", function($scope, $http, $stateParams){
+    $http({
+        url:"getstudentbyid.json",
+        method:"get",
+        params:{id: $stateParams.id}
+    }).then(function(resp){
+        $scope.student = resp.data
+    })
+})
+</script>
+</html>
+
+# 父类的template
+<h3>number of male students: {{males}}</h3>
+<h3>number of female students: {{females}}</h3>
+<h3>number of total students: {{total}}</h3>
+
+<ui-view></ui-view>
+
+# 子类的template中相应地址的修改: students.html
+<h2>list of students ({{total}})</h2>   <!-- 这个total属性是从父类中继承而来-->
+Name: <input type="text" ng-model="name"/><button ng-click="searchStudents()">search</button>
+<ul>
+    <li ng-repeat="student in students">
+        <a ui-sref="studentParent.studentDetails({id:student.id})">{{student.name}}</a>
+    </li>
+</ul>
+
+============ 52 ui-router multiple named views ============
+
+# 不同的view使用不同的template和controller
+	修改parent template, 建立多个view
+	指定children template中view使用的template和controller
+	建立相应的controller. 以下例子中totalData view的model内容已经由继承得到, 没有单独写conroller
+	建立相应的局部template
+	
+
+# 修改parent模板, 建立多个view
+<h3>number of male students: {{males}}</h3>
+<h3>number of female students: {{females}}</h3>
+
+<div ui-view="totalData"></div>			<!-- 将totalData单独放在一个view中控制 -->
+<div ui-view="studentData"></div>		<!-- 同之前的students/studentDetails内容 -->
+
+
+# 在router中指定view的配置
+<script>
+var myApp = angular.module("myApp", ["ui.router"])
+
+myApp.config(function($stateProvider){
+    $stateProvider
+	.state("studentParent",{	//不变
+        url:"/students",
+        controller:"studentParentController",
+        templateUrl:"studentParent.html",
+        abstract: true
+    })
+    .state("studentParent.students", {
+        url:"/",
+        views:{
+            "studentData":{		// students/studentDetails部分同之前渲染
+                templateUrl:"students.html",
+                controller: "studentsController"
+            },
+            "totalData":{		// 通过studentParent.students调用父类时, totalData view将被渲染
+                templateUrl:"studentsTotal.html"
+				// controller: "some_controller"	在这里按需指定对应的controller, 本例model内容由继承父类得到
+            }
+        }
+    })
+    .state("studentParent.studentDetails",{
+        url:"/:id",
+        views:{
+            "studentData":{			// 通过studentParent.studentDetails调用父类时,只有studentData view会被渲染
+                templateUrl:"studentDetails.html",
+                controller:"studentDetailsController"
+            }
+        }
+    })
+})
+
+
+# 建立相应的局部template: studentsTotal.html
+<h3>number of total students: {{total}}</h3>
+
+
+============ 其他 directive isolated scope ============
+
+# 在多次调用自定义directive时, 会使用同一scope, 导致变更一个view中内容, 改变了所有view中该directive的值
+添加scope:{} 来赋予独立scope
+
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+<body ng-app="myApp">
+	<kid></kid>
+	<kid></kid>
+	<kid></kid>
+</body>
+
+<script>
+var app = angular.module("myApp", []);
+
+app.directive("kid", function() {
+    return {
+        restrict : "E",
+        scope:{},
+        template : '<div><input type="text" ng-model="name">{{name}}</div>'
+    };
+});
+</script>
+</html>
+
+
+# @标识
+将html中kid换为template中内容
+template中{{name}}的值由scope:{}中定义, 参考html中的my-for-name, 这里指向了controller中的{{Name}}
+最终展现内容为Name在controller中的定义值
+用@绑定本地作用域(name)和dom属性(my-for-name)
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+
+<body ng-app="myApp">
+	<div ng-controller="myCtrl">
+	  <kid my-for-name="{{Name}}"></kid>
+	<div>
+</body>
+
+<script>
+var app = angular.module("myApp", []);
+
+app.controller("myCtrl",function($scope){
+      $scope.Name="global name"; 
+});
+
+app.directive("kid",function(){
+	return{
+		restrict: 'ECMA',
+		template: '<div>balabala {{name}}</div>',
+		scope:{
+			name:'@myForName'
+		}
+	} 
+})
+</script>
+</html>
+
+
+# =标识
+=与@的不同点在于, @是针对字符串而用, =是针对某个对象的引用
+case:'='是上例的简写, 表示dom中与本地作用域的变量名都是case
+
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+
+<body ng-app="myApp">
+<div ng-controller="myCtrl">
+	<kid case="data[0]"></kid>
+	<kid case="data[1]"></kid> 
+<div>
+</body>
+
+<script>
+var app = angular.module("myApp", []);
+
+app.controller("myCtrl",function($scope){
+	$scope.data=[{name:"person1"},{name:"person2"}]; 
+});
+
+app.directive("kid",function(){
+	return{
+		restrict: 'ECMA',
+		template: '<div>balabala {{case.name}}</div>',
+		scope:{
+			case:'='
+		}
+	} 
+})
+</script>
+</html>
+
+
+# =标识 例子2
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+
+<body ng-app="myApp">
+<div>
+	父级scope中： <input ng-model="mark"/>
+	<kid model="mark"/></kid>
+</div> 
+</body>
+
+<script>
+var app = angular.module("myApp", []);
+
+app.directive("kid",function(){
+	return{
+		restrict: 'ECMA',
+		template: '<div>指令中： <input ng-model="model"/></div>',
+		scope:{
+			model:'='
+		}
+	} 
+})
+</script>
+</html>
+
+
+# &标识
+对父级作用域进行绑定，并将其中的属性包装成一个函数
+dom中get-title从controller中得值
+由于使用了getTitle:'&', 绑定其值到getTitle, 包装成一个function
+取值, 复制到本地作用域中的title变量
+title变量与template中占位符绑定, 所以在占位符中显示内容
+
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+
+<body ng-app="myApp">
+<div ng-controller="myCtrl">
+	<kid get-title="title" get-content="contents"></kid> 
+</div>
+</body>
+
+<script>
+var app = angular.module("myApp", []);
+
+app.controller("myCtrl",function($scope){
+	$scope.title="mytitle";
+	$scope.contents =[{text:1234},{text:5678}]; 
+});
+
+app.directive("kid",function(){
+	return{
+		restrict: 'ECMA',
+		template: '<div>{{title}}</div>'+
+			'<div><ul><li ng-repeat="x in contents">{{x.text}}</li></ul></div>',
+		scope:{
+			getTitle:'&', 
+			getContent:'&'            
+		},
+		controller:function($scope){ 
+			$scope.title=$scope.getTitle();    //调用无参函数  
+			$scope.contents=$scope.getContent();
+		} 
+	} 
+})
+</script>
+</html>
+
+
+
+# &标识 例子2
+<!DOCTYPE html>
+<html>
+<script src="http://ajax.googleapis.com/ajax/libs/angularjs/1.4.8/angular.min.js"></script>
+
+<body ng-app="myApp">
+<div ng-controller="myCtrl">
+	<kid show="showName(name)"></kid> 
+</div>
+</body>
+
+<script>
+var app = angular.module("myApp", []);
+
+app.controller("myCtrl",function($scope){
+	$scope.showName = function(name){ 
+		alert(name); 
+	} 
+});
+
+app.directive("kid",function(){
+	return{
+		restrict: 'ECMA',
+		template: '<div><input ng-model="model"/></div>'+
+			'<div><button ng-click="show({name:model})">show</button></div>',
+		scope:{
+			show:'&'
+		}
+	}
+})
+</script>
+</html>
+
+
+============ 其他 bootstrap 手动启动 ============
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <script src="angular.js"></script>
+</head>
+
+<body>
+    <div ng-controller="myCtrl">
+        {{info}}
+    </div>
+</body>
+
+<script>
+    var myApp = angular.module("myApp", []);
+    myApp.controller("myCtrl", function ($scope) {
+        $scope.info = "hello world";
+    })
+
+    angular.bootstrap(document, ['myApp']);     // 使用手动方式启动到document对象下, 不需要ng-app directive;
+</script>
+</html>
+
+
+
+============ q44 compile, pre-link, post-link ============
+
+# HTML compilation happens in three phases:
+1. The $compile traverses the DOM and looks for directives. For each directive it finds, it adds it to a list of directives.
+2. Once the entire DOM has been traversed, each directive’s own compile function is executed.
+	Each compile function returns a linking function, which is then composed into a combined linking function and returned.
+3. $compile links the template with the scope by calling the combined linking function from the previous step. 
+	This will call the linking function of the individual directives, 
+	registering listeners on the elements and setting up $watch with the scope.
+
+<html>
+<head>
+    <title>Compile vs Link</title>
+    <script src="angular.js"></script>
+    <script type="text/javascript">
+        var app = angular.module('app', []);
+        function createDirective(name) {
+            return function () {
+                return {
+                    restrict: 'E',
+                    compile: function (tElem, tAttrs) {
+                        console.log(name + ': compile');
+                        return {
+                            pre: function (scope, iElem, attrs) {
+                                console.log(name + ': pre link');
+                            },
+                            post: function (scope, iElem, attrs) {
+                                console.log(name + ': post link');
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        app.directive('levelOne', createDirective('level-One'));
+        app.directive('levelTwo', createDirective('level-Two'));
+        app.directive('levelThree', createDirective('level-Three'));
+    </script>
+</head>
+<body ng-app="app">
+<level-one>
+    <level-two>
+        <level-three>
+            Hello {{name}}
+        </level-three>
+    </level-two>
+</level-one>
+</body>
+</html>
+
+
+============ q55 $watch, $digest and $apply ============
+
+# $watch (watchExpression, listener, [objectEquality]) : This function is used to observe changes in a variable on the $scope.
+# $watchGroup (watchExpression, listener) : This works the same as $watch() function except that the first parameter is an array of expressions to watch.
+<html>
+<head>
+    <title>AngularJS Watch</title>
+    <script src="angular.js"></script>
+    <script>
+        var myapp = angular.module("myapp", []);
+        var myController = myapp.controller("myController", function ($scope) {
+            $scope.name = 'dotnet-tricks.com';
+            $scope.counter = 0;
+//watching change in name value
+            $scope.$watch('name', function (newValue, oldValue) {
+                $scope.counter = $scope.counter + 1;
+            });
+        });
+    </script>
+</head>
+
+<body ng-app="myapp" ng-controller="myController">
+<input type="text" ng-model="name" />
+<br /><br />
+Counter: {{counter}}
+</body>
+</html>
+
+# $digest() : iterates over the watches, if the value of the expression has changed, AngularJS calls the listener(见上例) with the new value and the old value.
+<html>
+<head>
+    <script src="jquery.js"></script>
+    <script src="angular.js"></script>
+</head>
+
+<body ng-app="app">
+<div ng-controller="Ctrl">
+    <button class="digest">Digest my scope!</button>
+    <br />
+    <h2>obj value : {{obj.value}}</h2>
+</div>
+</body>
+
+<script>
+    var app = angular.module('app', []);
+    app.controller('Ctrl', function ($scope) {
+        $scope.obj = { value: 1 };
+        $('.digest').click(function () {
+            console.log("digest clicked!");
+            console.log($scope.obj.value++);    // 变化不受watcher监听, 不会自动调用digest
+//update value
+            $scope.$digest();
+        });
+    });
+</script>
+</html>
+
+# $apply([exp]) : When you do change in any model outside of the Angular context, you need to inform Angular of the changes by calling $apply(), When the $apply() function call finishes AngularJS calls $digest() internally
+<html>
+<head>
+    <title>AngularJS Apply</title>
+    <script src="angular.js"></script>
+</head>
+
+<body ng-app="myapp" ng-controller="myController">
+    <button ng-click="updateTime()">Update time - ng-click</button>
+    <button id="updateTimeButton">Update time</button>
+    <br />
+    {{datetime | date:'yyyy-MM-dd HH:mm:ss'}}
+</body>
+
+<script>
+    var myapp = angular.module("myapp", []);
+    var myController = myapp.controller("myController", function ($scope) {
+        $scope.datetime = new Date();
+        $scope.updateTime = function () {
+            $scope.datetime = new Date();
+        }
+//outside angular context
+        document.getElementById("updateTimeButton").addEventListener('click', function () {
+//update the value
+			$scope.$apply(function () {
+				console.log("update time clicked");
+				$scope.datetime = new Date();
+				console.log($scope.datetime);
+			});
+		});
+    });
+</script>
+</html>
+
+# $apply() triggers watchers on the entire scope chain.
+# $digest() triggers watchers on the current scope and its children(if it has).
+
+# $apply() uses try catch block internally to handle errors and if error occurs in one of the watchers then it passes errors to $exceptionHandler service
+# $digest() cannot handled errors via $exceptionHandler service
+
+============ q71 $emit, $broadcast and $on ============
+
+# $emit : It dispatches an event name upwards through the scope hierarchy and notify to the registered $rootScope.Scope listeners.
+# $on : It listen on events of a given type. It can catch the event dispatched by $broadcast and $emit.
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Broadcasting</title>
+    <script src="angular.js"></script>
+</head>
+
+<body ng-app="app">
+<div ng-controller="firstCtrl" style="border:2px solid #E75D5C; padding:5px;">
+    <h1>Parent Controller</h1>
+    <p>Emit Message : {{message}}</p>
+    <br />
+    <div ng-controller="secondCtrl" style="border:2px solid #428bca;padding:5px;">
+        <h1>Child Controller</h1>
+        <input ng-model="msg">
+        <button ng-click="handleClick(msg);">Emit</button>
+    </div>
+</div>
+</body>
+
+<script>
+    var app = angular.module('app', []);
+    app.controller("firstCtrl", function ($scope) {
+        $scope.$on('eventName', function (event, args) {	// 接收事件, 可以中断传播
+            $scope.message = args.message;
+            console.log($scope.message);
+        });
+    });
+    app.controller("secondCtrl", function ($scope) {
+        $scope.handleClick = function (msg) {
+            $scope.$emit('eventName', { message: msg });    // 由下而上发出事件
+        };
+    });
+</script>
+</html>
+
+# $broadcast – It dispatches an event name downwards to all child scopes (and their children) and notify to the registered $rootScope.Scope listeners.
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Broadcasting</title>
+    <script src="angular.js"></script>
+</head>
+
+<body ng-app="app">
+<div ng-controller="firstCtrl" style="border:2px solid #E75D5C; padding:5px;">
+    <h1>Parent Controller</h1>
+    <input ng-model="msg">
+    <button ng-click="handleClick(msg);">Broadcast</button>
+    <br /><br />
+    <div ng-controller="secondCtrl" style="border:2px solid #428bca;padding:5px;">
+        <h1>Child Controller</h1>
+        <p>Broadcast Message : {{message}}</p>
+    </div>
+</div>
+</body>
+
+<script>
+    var app = angular.module('app', []);
+    app.controller("firstCtrl", function ($scope) {
+        $scope.handleClick = function (msg) {
+            $scope.$broadcast('eventName', { message: msg });       // 由上而下发出事件
+        };
+    });
+    app.controller("secondCtrl", function ($scope) {
+        $scope.$on('eventName', function (event, args) {            // 接收事件, 且不可中断传播
+            $scope.message = args.message;
+            console.log($scope.message);
+        });
+    });
+</script>
+</html>
+
+============ q74 validation ============
+
+# angular内置validator
+<input type="text" ng-model="string类型" [name="可选, string类型"]
+	[ng-required="可选, boolean类型"]
+	[ng-minlength="可选, number类型"]
+	[ng-maxlength="可选, number类型"]
+	[ng-pattern="可选, string类型"]
+	[ng-change="可选, string类型"]>
+</input>
+
+# custom validation
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="angular.js"></script>
+</head>
+
+<body ng-app="myapp">
+<form name="userForm" ng-submit="submitForm()" novalidate>
+    <!-- Password -->
+    <div>
+        <label>Password</label>
+        <input type="Password" name="password" ng-required="true" ng-model="user.password">
+        <span ng-show="userForm.password.$invalid">Password required.</span>
+    </div>
+    <!-- Confirm Password -->
+    <div>
+        <label>Confirm Password</label>
+        <input type="Password" name="confirmPassword" ng-compare="password" ng-required="true" ng-model="user.confirmPassword" >
+        <p ng-show="userForm.confirmPassword.$error.compare && !userForm.confirmPassword.$error.required">Passwords do not match.</p>
+    </div>
+</form>
+</body>
+
+<script>
+    var myapp = angular.module('myapp', []);
+    myapp.directive('ngCompare', function () {
+        return {
+            require: 'ngModel',
+            link: function (scope, currentEl, attrs, ctrl) {
+                var comparefield = document.getElementsByName(attrs.ngCompare)[0]; // attrs.ngCompare => "password"
+                compareEl = angular.element(comparefield);
+//current field key up
+                currentEl.on('keyup', function () {
+                    if (compareEl.val() != "") {
+                        var isMatch = currentEl.val() === compareEl.val();
+                        ctrl.$setValidity('compare', isMatch);
+                        scope.$digest();
+                    }
+                });
+//Element to compare field key up
+                compareEl.on('keyup', function () {
+                    if (currentEl.val() != "") {
+                        var isMatch = currentEl.val() === compareEl.val();
+                        ctrl.$setValidity('compare', isMatch);
+                        scope.$digest();
+                    }
+                });
+            }
+        }
+    });
+</script>
+</html>
+
+============ q79 Factory, Service and Provider ============
+
+<html>
+<head>
+    <title>AngularJS Service, Factory and Providers</title>
+    <script src="angular.js"></script>
+</head>
+
+<body>
+<div class="container" style="padding-top:20px;">
+    <div ng-app="myApp" ng-controller="myController">
+        <p>From Service: {{serviceName}}</p>
+        <p>From Factory: {{factoryName}}</p>
+        <p>From Provider: {{providerName}}</p>
+    </div>
+</div>
+</body>
+
+<script>
+    var app = angular.module('myApp', []);
+// service:
+    app.service('myService', function () {
+        this.name = '';
+        this.setName = function (newName) {
+            this.name = newName;
+            return this.name;   // service本身不返回结果, 调用setName方法时可以返回
+        };
+    });
+// factory:
+    app.factory('myFactory', function () {
+        var serviceObj = {};
+        serviceObj.name = '';
+        serviceObj.setName = function (newName) {
+            serviceObj.name = newName;
+        };
+        return serviceObj;  // 调用factory本身即可得到返回结果
+    });
+// provider:
+    app.provider('configurable', function () {
+        var privateName = '';
+        this.setName = function (newName) {
+            privateName = newName;
+        };
+        this.$get = function () {   // 通过$get返回结构, 调用方法同service
+            return {
+                name: privateName
+            };
+        };
+    });
+    //configuring provider
+    app.config(function (configurableProvider) {
+        configurableProvider.setName("Saksham Chauhan");
+    });
+    
+    //defining controller
+    app.controller('myController', function ($scope, myService, myFactory, configurable) {
+        $scope.serviceName = myService.setName("Saksham Chauhan");
+
+        myFactory.setName("Saksham Chauhan");
+        $scope.factoryName = myFactory.name;
+
+        $scope.providerName = configurable.name;
+    });
+</script>
+</html>
+
+============ q85 $q ============
+
+# The $q.all() function lets you trigger several callbacks at the same time, and use a single then function to join them all together.
+var first = $http.get("/app/data/first.json"),
+		second = $http.get("/app/data/second.json"),
+		third = $http.get("/app/data/third.json");
+
+$q.all([first, second, third])
+	.then(function (result){
+		var tmp = [];
+		angular.forEach(result, function (response) {
+			tmp.push(response.data);
+		});
+		return tmp;
+	})
+	.then(function (tmpResult) {
+		$scope.combinedResult = tmpResult.join(", ");
+	});
+
+
+============ q95 $injector and $inject ============
+
+# $injector is a service which is used to invoke controller functions, service functions, filter functions, and any other function that might need dependencies as parameters. 
+# Angular creates only a single $injector object
+
+<html>
+<head>
+    <script src="angular.js"></script>
+</head>
+
+<body>
+<div ng-app="app" ng-controller="MyCtrl">
+    <button ng-click="doSomething()">increment</button>
+    {{value()}}
+</div>
+</body>
+
+<script>
+    var app = angular.module('app', []);
+    app.service('s1', function () {
+        this.value = 22;
+    });
+    app.controller("MyCtrl", function ($scope, $injector) {
+        $scope.doSomething = function () {
+            var s1 = $injector.get('s1')
+            s1.value += 10
+        }
+        $scope.value = function () {
+            var s1 = $injector.get('s1')
+            return s1.value
+        }
+    });
+</script>
+</html>
+
+# $inject is property which is used to inject the dependencies of a function as an array of strings.
+
+
+============ q98 i18n ============
+
+# The angular-translate is an AngularJS module that brings i18n (internationalization) and l10n (localization) into your Angular app
+<!DOCTYPE html>
+<html>
+<head>
+    <title>AngularJS Internalization</title>
+    <meta charset="UTF-8">
+    <script src="angular.js"></script>
+    <script src="angular-translate.js"></script>
+</head>
+
+<body ng-app="myApp">
+<div ng-controller="TranslateController">
+    <h1>{{ 'TITLE' | translate }}</h1>
+    <p>{{ 'PARA' | translate }}</p>
+    <button ng-click="changeLanguage('en')" translate="BUTTON_LANG_EN"></button>
+    <button ng-click="changeLanguage('zh')" translate="BUTTON_LANG_ZH"></button>
+</div>
+</body>
+
+<script>
+    var app = angular.module('myApp', ['pascalprecht.translate']);
+    app.config(function ($translateProvider) {
+        $translateProvider
+            .translations('en', {
+                TITLE: 'Hello',
+                PARA: 'This is a paragraph.',
+                BUTTON_LANG_EN: 'english',
+                BUTTON_LANG_ZH: 'chinese'
+            })
+            .translations('zh', {
+                TITLE: '你好',
+                PARA: '这是一段文字.',
+                BUTTON_LANG_EN: '英文',
+                BUTTON_LANG_ZH: '中文'
+            })
+            .preferredLanguage('en');
+    });
+    app.controller('TranslateController', function ($translate, $scope) {
+        $scope.changeLanguage = function (langKey) {
+            $translate.use(langKey);
+        };
+    });
+</script>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

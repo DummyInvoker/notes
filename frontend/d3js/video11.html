@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video11</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+    </head>
+    
+    
+    <body>
+    	<p>Paths</p>
+    </body>
+    
+    
+    <script>
+		var height = 500
+		var width = 500
+		var data = [{x:10, y:20}, {x:90, y:50}, {x:20, y:70}, {x:80, y:90}]
+
+		
+		var canvas = d3.select("body")
+			.append("svg")
+			.attr("width", width)
+			.attr("height", height)
+		var group = canvas.append("g")
+			.attr("transform", "translate(100,100)")
+				
+				
+		var line = d3.svg.line()				// build-in的path generator. 也可以在d属性中手写, 复杂些
+			.x(function(d){return d.x})
+			.y(function(d){return d.y})
+					
+		
+		group.selectAll("path")
+			.data([data])			// 注意, 这里将整组data传入, 也就是添加了一个数据点, 之后line将转化数组为路径, 可以console中line(data)查看
+			.enter()
+			.append("path")
+				.attr("d", line)
+				.attr("fill", "none")
+				.attr("stroke", "#000")
+				.attr("stroke-width", 2)
+    </script>
+</html>

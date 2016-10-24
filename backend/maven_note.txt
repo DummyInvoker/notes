@@ -1,0 +1,415 @@
+============ 1 server安装 ============
+
+系统变量加: M2_HOME
+其值是maven目录位置, 例如: D:\Program Files\maven
+
+path中加maven\bin目录位置, 例如: D:\Program Files\maven\bin
+
+测试安装成功:
+mvn -v
+
+------------第一个项目 compile, test, clean, package, install------------
+任意位置建立新项目的目录maven-ch01, 例如: D:\maven-ch01
+
+建maven-ch01\pom.xml
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>			<!--标准schema格式-->
+	
+	<groupId>zttc.itat.maven</groupId>			<!--包名-->
+	<artifactId>maven-ch01</artifactId>			<!--项目名-->
+	<version>0.0.1-SNAPSHOT</version>
+</project>
+
+建目录maven-ch01\src\main\java, 根据package存放java文件:
+package zttc.itat.maven;
+public class HelloMaven{
+	public String sayHello(String name){
+		return "hello: " + name;
+	}
+}
+dos中进入maven-ch01目录, 运行 mvn compile
+成功编译后发现新文件夹target, 其classes目录中package对应目录下有编译好的HelloMaven.class文件
+
+建目录maven-ch01\src\test\java, 根据package存放java测试文件:
+package zttc.itat.maven;
+import org.junit.*;
+import static org.junit.Assert.*;
+public class TestHelloMaven{
+	@Test
+	public void testSayHello(){
+		HelloMaven hm = new HelloMaven();
+		String str = hm.sayHello("maven");
+		assertEquals(str, "hello: maven");
+	}
+}
+dos中进入maven-ch01目录, 运行 mvn test
+报错: package org.junit does not exist
+
+在pom.xml文件中加入依赖:
+<project>
+	<dependencies>
+		<dependency>
+			<groupId>junit</groupId>			<!--通过groupId, artifactId, version三个坐标确定-->
+			<artifactId>junit</artifactId>
+			<version>4.10</version>
+		</dependency>
+	</dependencies>
+</project>
+测试后在target/surefire-reports中可以看到测试报告. 报错的测试在报告中会有详细错误记录
+
+清空项目编译后的文件
+mvn clean
+
+项目打包
+mvn package
+运行后再target目录下产生项目的jar包, 包名是artifactId和version的组合
+
+新建一个项目
+package zttc.itat.maven.ch02;
+import zttc.itat.maven.HelloMaven;
+public class Hello{
+	public String say(String name){
+		HelloMaven hm = new HelloMaven();
+		return hm.sayHello(name);
+	}
+}
+dos中进入maven-ch02目录, 运行 mvn compile
+报错: cannot find symbol: class HelloMaven
+
+在pom.xml文件中加入依赖:
+<project>
+	<dependencies>
+		<dependency>
+			<groupId>zttc.itat.maven</groupId>			<!--就是ch01项目的坐标-->
+			<artifactId>maven-ch01</artifactId>
+			<version>0.0.1-SNAPSHOT</version>
+		</dependency>
+	</dependencies>
+</project>
+dos中进入maven-ch02目录, 运行 mvn compile
+报错: Could not find artifact zttc.itat.maven:maven-ch01:jar
+
+dos中进入maven-ch01目录, 运行 mvn install
+dos中进入maven-ch02目录, 运行 mvn compile
+
+============ 2 修改本地repository路径 ============
+
+maven的默认本地repository在${user.home}/.m2/repository
+
+修改maven的repository位置:
+建立目标目录, 例如: workspace\maven\repository
+复制 maven\conf\settings.xml 文件到该目录中
+
+修改xml文件中的路径:
+复制<localRepository>/path/to/local/repo</localRepository>, 很可能在53行
+在非注释部分粘贴, 并改为路径 d:/workspace/maven/repository
+
+同样修改maven\conf\settings.xml 中同部分内容
+
+移动原repository中内容到新目录
+测试: 进入maven-ch02目录, 运行 mvn compile
+
+------------生成项目结构------------
+在dos非已有项目目录中: mvn archetype:generate
+Choose a number or apply filter (format: [groupId:]artifactId, case sensitive contains): 626:
+回车
+Choose org.apache.maven.archetypes:maven-archetype-quickstart version:
+1: 1.0-alpha-1
+2: 1.0-alpha-2
+3: 1.0-alpha-3
+4: 1.0-alpha-4
+5: 1.0
+6: 1.1
+Choose a number: 6:
+回车
+Define value for property 'groupId': :
+zttc.itat.maven
+Define value for property 'artifactId': :
+maven-ch03
+Define value for property 'version':  1.0-SNAPSHOT: :
+0.0.1-SNAPSHOT
+Define value for property 'package':  zttc.itat.maven: :
+回车
+这时候在当前目录中可以看到maven-ch03项目, 并含有完整的pom.xml和项目架构内容
+
+非对话式:
+mvn archetype:generate -DgroupId=zttc.itat.maven -DartifactId=maven-ch04 -Dversion=0.0.1-SNAPSHOT
+
+Eclipse中对maven进行设置
+Window >> Preferences >> Maven >> Installations >> Add... >> 找到自己的版本 >> 选中
+Window >> Preferences >> Maven >> User Settings >> 指向自己的repository中的settings.xml文件
+
+创建maven项目
+New >> Maven Project >> 根据需求选不同的archetype, 这里选择quickstart >>
+Group Id: zttc.itat.user
+Artifact Id: user-core
+
+新建一个source folder用于存放配置文件. (比较springmvc中名字为config)
+Project name: user-core
+Folder name: src/main/resources
+建立完maven项目自动已有src/main/java的source folder, 这里新建的对应这个folder
+建立完maven另外有一个src目录, 不手动使用
+
+新建一个source folder用于存放test的配置文件. 
+Project name: user-core
+Folder name: src/test/resources
+
+============ 3 ============
+
+添加hibernate的maven坐标
+在 http://mvnrepository.com/ 搜关键字: hibernate, core
+点击例如:4.3.10.Final, 可以看到Maven坐标, 复制到pom.xml中
+<dependency>
+	<groupId>org.hibernate</groupId>
+	<artifactId>hibernate-core</artifactId>
+	<version>4.3.10.Final</version>
+</dependency>
+这时候hibernate相关的jar包就自动下载到本地
+
+准备user的pojo
+package zttc.itat.user.model;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+@Entity
+@Table(name="t_user")
+public class User {
+	private int id;
+	@Id
+	@GeneratedValue
+	public int getId() {
+		return id;
+	}
+	
+	private String username;
+	private String password;
+	private String nickname;
+	//getters; setters();
+}
+
+在 http://mvnrepository.com/ 搜关键字: mysql, 复制maven坐标
+<dependency>
+	<groupId>mysql</groupId>
+	<artifactId>mysql-connector-java</artifactId>
+	<version>5.1.36</version>
+</dependency>
+
+在 http://mvnrepository.com/ 搜关键字: log4j, 复制maven坐标
+<dependency>
+	<groupId>log4j</groupId>
+	<artifactId>log4j</artifactId>
+	<version>1.2.17</version>
+</dependency>
+
+配置resources/hibernate.cfg.xml
+<!DOCTYPE hibernate-configuration PUBLIC
+	"-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+	"http://www.hibernate.org/dtd/hibernate-configuration-3.0.dtd">
+<hibernate-configuration>
+	<session-factory>
+		<property name="hibernate.dialect">org.hibernate.dialect.MySQLDialect</property>
+		<property name="hibernate.connection.driver_class">com.mysql.jdbc.Driver</property>
+		<property name="hibernate.connection.url">jdbc:mysql://localhost:3306/itat_hibernate</property>
+		<property name="hibernate.connection.username">root</property>
+		<property name="hibernate.connection.password">123456</property>
+		<property name="hibernate.hbm2ddl.auto">update</property>		<!-- 自动完成类到数据表的转换?? -->
+		<mapping class="zttc.itat.user.model.User"/>
+	</session-factory>
+</hibernate-configuration>
+
+建立hibernate连接工具
+package zttc.itat.user.util;
+public class HibernateUtil {
+	private final static SessionFactory FACTORY = buildSessionFactory();
+
+	private static SessionFactory buildSessionFactory() {
+		Configuration cfg = new Configuration().configure();
+		ServiceRegistry serviceRegistry = new ServiceRegistryBuilder().applySettings(cfg.getProperties()).buildServiceRegistry();
+		SessionFactory factory = cfg.buildSessionFactory(serviceRegistry);
+		return factory;
+	}
+	
+	public static SessionFactory getSessionFactory() {
+		return FACTORY;
+	}
+	
+	public static Session openSession() {
+		return FACTORY.openSession();
+	}
+	
+	public static void close(Session session) {
+		if(session!=null) session.close();
+	}
+}
+
+建立Dao层
+package zttc.itat.user.dao;
+public interface IUserDao {
+	public void add(User user);
+	public User loadByUsername(String username);
+}
+
+public class UserDao implements IUserDao {
+	public void add(User user) {
+		Session session = null;
+		try {
+			session = HibernateUtil.openSession();
+			session.beginTransaction();
+			session.save(user);
+			session.getTransaction().commit();
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			HibernateUtil.close(session);
+		}
+	}
+
+	public User loadByUsername(String username) {
+		Session session = null;
+		User user = null;
+		try {
+			session = HibernateUtil.openSession();
+			user = (User)session.createQuery("from User where username=?").setParameter(0, username).uniqueResult();
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			HibernateUtil.close(session);
+		}
+		return user;
+	}
+}
+
+建立测试类
+package zttc.itat.user.dao;
+public class TestUserDao extends AbstractDbUnitTestCase{
+	private IUserDao userDao;
+	
+	@Before
+	public void setUp() throws DataSetException, IOException, SQLException {
+		userDao = new UserDao();
+		bakcupOneTable("t_user");
+	}
+	
+	@Test
+	public void testLoad() throws IOException, DatabaseUnitException, SQLException {
+		IDataSet ds = createDateSet("t_user");
+		DatabaseOperation.CLEAN_INSERT.execute(dbunitCon, ds);
+		User tu = userDao.loadByUsername("admin");
+		EntitiesHelper.assertUser(tu);
+	}
+	
+	@Test
+	public void testAdd() throws IOException, DatabaseUnitException, SQLException {
+		IDataSet ds = createDateSet("t_user");
+		DatabaseOperation.TRUNCATE_TABLE.execute(dbunitCon, ds);
+		User user = new User("admin","123","管理员");
+		userDao.add(user);
+		Assert.assertTrue(user.getId()>0);
+		
+		User tu = userDao.loadByUsername("admin");
+		EntitiesHelper.assertUser(tu,user);
+	}
+	
+	@After
+	public void tearDown() throws DatabaseUnitException, SQLException, IOException {
+		resumeTable();
+	}
+}
+
+
+DBunit, 避免测试时对原始数据库造成实际影响
+<dependency>
+	<groupId>org.dbunit</groupId>
+	<artifactId>dbunit</artifactId>
+	<version>2.5.1</version>
+</dependency>
+
+DBunit的2个抽象类
+package zttc.itat.user.util;
+public class EntitiesHelper {
+	private static User baseUser = new User(1,"admin","123","管理员");
+	
+	public static void assertUser(User expected,User actual) {
+		Assert.assertNotNull(expected);
+		Assert.assertEquals(expected.getId(), actual.getId());
+		Assert.assertEquals(expected.getUsername(), actual.getUsername());
+		Assert.assertEquals(expected.getPassword(), actual.getPassword());
+		Assert.assertEquals(expected.getNickname(), actual.getNickname());
+	}
+	
+	public static void assertUser(User expected) {
+		assertUser(expected, baseUser);
+	}
+}
+
+
+package zttc.itat.user.util;
+public class AbstractDbUnitTestCase {
+	public static IDatabaseConnection dbunitCon;
+	private File tempFile;
+	
+	@BeforeClass
+	public static void init() throws DatabaseUnitException, SQLException {
+		dbunitCon = new DatabaseConnection(DbUtil.getConnection());
+	}
+	
+	protected IDataSet createDateSet(String tname) throws DataSetException, IOException {
+		InputStream is = AbstractDbUnitTestCase
+					.class
+					.getClassLoader().getResourceAsStream(tname+".xml");
+		Assert.assertNotNull("dbunit的基本数据文件不存在",is);
+		return new FlatXmlDataSet(is);
+	}
+	
+	protected void backupAllTable() throws SQLException, IOException, DataSetException {
+		IDataSet ds = dbunitCon.createDataSet();
+		writeBackupFile(ds);
+	}
+	
+	private void writeBackupFile(IDataSet ds) throws IOException, DataSetException {
+		tempFile = File.createTempFile("back","xml");
+		FlatXmlDataSet.write(ds, new FileWriter(tempFile));
+	}
+	
+	protected void backupCustomTable(String[] tname) throws DataSetException, IOException, SQLException {
+		QueryDataSet ds = new QueryDataSet(dbunitCon);
+		for(String str:tname) {
+			ds.addTable(str);
+		}
+		writeBackupFile(ds);
+	}
+	
+	protected void bakcupOneTable(String tname) throws DataSetException, IOException, SQLException {
+		backupCustomTable(new String[]{tname});
+	}
+	
+	protected void resumeTable() throws DatabaseUnitException, SQLException, IOException {
+		IDataSet ds = new FlatXmlDataSet(tempFile);
+		DatabaseOperation.CLEAN_INSERT.execute(dbunitCon, ds);
+	}
+	
+	
+	@AfterClass
+	public static void destory() {
+		try {
+			if(dbunitCon!=null) dbunitCon.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+

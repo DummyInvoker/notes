@@ -1,0 +1,63 @@
+========= home.jsp ========= optional
+set carousel rolling interval in ms
+<div id="carousel-example-generic" class="carousel slide" data-ride="carousel" data-interval="10000">
+
+set carousel content refresh interval in ms
+setTimeout(function(){window.location.href="${pageContext.request.contextPath}";}, 1801000);
+
+
+========= ProjectController.java ========= optional
+set carousel page numbers
+List<Integer> idList = projectService.findTopIdList(5);
+
+
+
+========= log4j.properties ========= !
+set log location and size:
+log4j.appender.dailyFile.File=D:/logs/logging.log4j
+log4j.appender.dailyFile.MaxFileSize=1GB
+
+
+========= applicationContext.xml ========= !
+set custom parameters:
+<bean id="settings" class="com.dataorta.projecthub.util.Settings">
+	<property name="limit" value="12" />						<!-- items per page for project list and project detail -->
+	<property name="fileServerPath" value="D:/Downloads/" />	<!-- this path is used for saving attachments -->
+	<property name="recyclerPath" value="D:/myrecyclerpath/" />	<!-- this path is used for administrator to delete project, but not delete attachment files immediately -->
+</bean>
+
+
+
+========= db.property中按需修改 ========= !
+jdbc.driver=com.mysql.jdbc.Driver
+jdbc.url=jdbc:mysql://10.0.0.20/projecthub
+jdbc.username=xurp
+jdbc.password=xurunpei@gmail.com
+
+附: mysql添加新用户
+grant select, insert, delete, update on projecthub.* to ricky@'%' identified by 'xurunpei@gmail.com';
+
+
+
+
+========= 在conf/server.xml文件中添加虚拟目录 ========= !
+<Host>
+	<Context docBase="Driver:\folder" path="/url" reloadable="false"/>
+</Host>
+
+具体在:
+</Server>
+  </Service>
+	<Engine>
+      <Host name="localhost"  appBase="webapps" unpackWARs="true" autoDeploy="true">
+        <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs" prefix="localhost_access_log" suffix=".txt" pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+        <Context docBase="/home/ricky/projecthub/attachment" path="/dl" reloadable="true"/>
+      </Host>
+    </Engine>
+  </Service>
+</Server>
+
+
+
+
+

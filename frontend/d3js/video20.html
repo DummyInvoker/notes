@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video20</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+    </head>
+    
+    
+    <body>
+    	<p>Maps in D3</p>
+    </body>
+    
+<!-- 注意: 未找到数据文件, 无法出图效果-->    
+    <script>
+		var canvas = d3.select("body")
+			.append("svg")
+			.attr("width", 500)
+			.attr("height", 500)
+					
+		
+		d3.json("ny.geojson", function(resp){		// check QGIS for how to generate map json
+			
+			var group = canvas.selectAll("g")
+				.data(resp.features)
+				.enter()
+				.append("g")
+		
+			var projection = d3.geo.mercator().scale(7300).translate([0,1980]) // 将立体坐标投影到平面
+			var path = d3.geo.path().projection(projection)
+			
+			var areas = group.append("path")
+				.attr("d", path)
+				.attr("class", "area")
+				.attr("fill", "steelblue")
+
+			group.append("text")
+				.text(function(r){return r.properties.LNNAMN})
+				.attr("x", function(r){return path.centroid(r)[0]})
+				// 取出resp.features中的each, 由centroid计算出中点, 取出计算结果数组中的x
+				.attr("y", function(r){return path.centroid(r)[1]})
+				.attr("text-anchor", "middle")
+
+		})
+    </script>
+</html>

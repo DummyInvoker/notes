@@ -1,0 +1,1586 @@
+============ 5 在web.xml中配置 前端控制器============
+
+config/springmvc.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd" id="WebApp_ID" version="2.5">
+	<servlet>
+		<servlet-name>springmvc</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<init-param>
+			<param-name>contextConfigLocation</param-name>		<!--如果这里不配置, 默认加载/WEB-INF/<servlet-name>-serlvet.xml(springmvc-servlet.xml)-->
+			<param-value>classpath:springmvc.xml</param-value>		<!--如果很多框架都用起来, 默认地址可能会有冲突-->
+		</init-param>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>springmvc</servlet-name>
+		<url-pattern>*.action</url-pattern>
+	</servlet-mapping>
+</web-app>
+
+============ 6 HandlerAdapter 处理器适配器1 SimpleControllerHandlerAdapter 非注解 ============
+
+step1, 在springmvc.xml中配置 HandlerAdapter处理器适配器. 需要导入spring所有jar及commons-logging.jar
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd 
+		http://www.springframework.org/schema/mvc 
+		http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd 
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-3.2.xsd 
+		http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop-3.2.xsd 
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-3.2.xsd ">
+
+	<bean class="org.springframework.web.servlet.mvc.SimpleControllerHandlerAdapter" />	<!--需要Handler实现Controller接口-->
+</beans>
+
+step2, Handler(又名Controller)的实现
+package cn.itcast.ssm.controller;
+public class ItemController1 implements Controller {	// 由SimpleControllerHandlerAdapter中supports()知, 必须实现Controller接口
+	@Override
+	public ModelAndView handleRequest(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		
+		List<Item> itemList = new ArrayList<Item>();		// 之后List中内容改由mybatis从DB中读取. 这里需要有Item的pojo
+		Item item_1 = new Item();
+		item_1.setName("联想笔记本");
+		item_1.setPrice(6000f);
+		item_1.setDetail("ThinkPad T430 联想笔记本电脑！");
+		Item item_2 = new Item();
+		item_2.setName("苹果手机");
+		item_2.setPrice(5000f);
+		item_2.setDetail("iphone6苹果手机！");
+		itemList.add(item_1);
+		itemList.add(item_2);
+		
+		ModelAndView modelAndView = new ModelAndView();
+		modelAndView.addObject("itemList", itemList);		//指定(数据)模型, jsp中通过iterator取List. model就是jsp和java的信息媒介
+		modelAndView.setViewName("/WEB-INF/jsp/item/itemList.jsp");		//指定返回的视图, 之后由dispatcherServlet解析jsp视图
+
+		return modelAndView;
+	}
+}
+
+step3, 准备itemList.jsp视图. 需要导入jstl.jar, jstl-api.jar (从jstl1.2.1开始, 分为两个包)
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>	<!--使用jstl的forEach, 对比struts-tags的iterator: struts video64-->
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt"  prefix="fmt"%>
+<html>
+	<head>...</head>
+	<body>...
+		<c:forEach items="${itemList}" var="item">			<!--这里items是forEach的参数名字, 不可更改. 和item没关系-->
+			<tr>
+				<td>${item.name}</td>
+				<td>${item.price}</td>
+				<td><fmt:formatDate value="${item.createtime}" pattern="yyyy-MM-dd HH:mm:ss"/></td>
+				<td>${item.detail}</td>
+				<td><a href="${pageContext.request.contextPath}/editItem.action?id=${item.id}">修改</a></td>
+			</tr>
+		</c:forEach>
+	</body>
+</html>
+
+============ 6 HandlerMapping 处理器映射器1 BeanNameUrlHandlerMapping 及 View resolver 视图解析器 非注解 ============
+
+step1, 在springmvc.xml中配置HandlerMapping
+<beans>
+	<bean id="itemController1" name="/queryItem_test.action" class="cn.itcast.ssm.controller.ItemController1" />
+</beans>		<!--访问name地址, 也就是url地址时, 使用ItemController1.java-->
+
+step2, 指定使用的HandlerMapping类
+<beans>
+	<bean class="org.springframework.web.servlet.handler.BeanNameUrlHandlerMapping"/>
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">		<!--默认使用jstl, 需有其jar包-->
+		<property name="prefix" value="/WEB-INF/jsp/"/>		<!--添加了前后缀, 指定视图时只要填写url中间部分, 之前view地址需修改为modelAndView.setViewName("item/itemList");-->
+		<property name="suffix" value=".jsp"/>
+	</bean>
+</beans>
+
+调试servlet时使用debug模式, 可以修改代码热部署, 无需重启tomcat
+
+============ 7 HandlerMapping 处理器映射器2 SimpleUrlHandlerMapping 非注解 ============
+
+单独管理url的HandlerMapping类
+<bean id="itemController1" class="cn.itcast.ssm.controller.ItemController1" />
+<bean class="org.springframework.web.servlet.handler.SimpleUrlHandlerMapping">
+	<property name="mappings">
+		<props>
+			<prop key="/queryItem1.action">itemController1</prop>
+			<prop key="/queryItem2.action">itemController1</prop>	<!--多个url访问同一个bean, 同时之前的mapping方法依然可用-->
+		</props>
+	</property>
+</bean>
+
+============ 7 HandlerAdapter 处理器适配器2 HttpRequestHandlerAdapter 非注解 ============
+
+<beans>
+	<bean class="org.springframework.web.servlet.mvc.HttpRequestHandlerAdapter"/>	<!--需要Handler实现HttpRequestHandler接口-->
+</beans>
+
+package cn.itcast.ssm.controller;
+public class ItemController2 implements HttpRequestHandler {
+	@Override
+	public void handleRequest(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+		List<Item> itemList = new ArrayList<Item>();
+		Item item_1 = new Item();
+		item_1.setName("联想笔记本");
+		item_1.setPrice(6000f);
+		item_1.setDetail("ThinkPad T430 联想笔记本电脑！");
+		Item item_2 = new Item();
+		item_2.setName("苹果手机");
+		item_2.setPrice(5000f);
+		item_2.setDetail("iphone6苹果手机！");
+		itemList.add(item_1);
+		itemList.add(item_2);
+
+		request.setAttribute("itemList", itemList);
+		request.getRequestDispatcher("/WEB-INF/jsp/item/itemList.jsp").forward(request, response);
+	}
+}
+
+在springmvc.xml中添加mapping到这个新HandlerAdapter(任意一种mapping方法)
+<bean>
+	<bean id="itemController2" name="/queryItem3.action" class="cn.itcast.ssm.controller.ItemController2" />
+</beans>
+
+使用此方法可以通过修改response设置响应的数据格式, 参考video23
+public void handleRequest(){
+	//...
+	response.setCharacterEncoding("utf-8");
+	response.setContentType("application/json;charset=utf-8");
+	response.getWriter().write("json string");
+}
+
+============ 8-9 HandlerMapping, HandlerAdapter 注解方式 @Controller, @RequestMapping ============
+
+step1, 在springmvc.xml中配置 HandlerMapping, HandlerAdapter
+3.2版本默认加载DispatcherServlet.properties使用了老的类, 需要手动指定HandlerMapping, HandlerAdapter提高程序效率
+<bean>
+	<bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping"/>
+	<bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter"/>
+</beans>
+
+或者使用mvc:annotation-driven代替上边手动配置, 且默认加载很多的参数绑定方法. 实际开发时使用
+<bean>
+	<mvc:annotation-driven></mvc:annotation-driven>
+</beans>
+
+无论使用何种配置方式, 注解的映射器@RequestMapping和注解的适配器@Controller必须配对使用!
+	
+step2, Handler的实现
+import org.springframework.stereotype.Controller;
+@Controller								//使用注解, 类不用继承, 实现. 从而可以定义自己想要的其他方法
+public class ItemController3 {
+	@RequestMapping("/queryItem")		//不用xml配置, url路径在这里注解 Mapping. 不需要和方法名相关. 可以不加.action
+	public ModelAndView queryItem() throws Exception{
+		List<Item> itemList = new ArrayList<Item>();
+		Item item_1 = new Item();
+		item_1.setName("联想笔记本");
+		item_1.setPrice(6000f);
+		item_1.setDetail("ThinkPad T430 联想笔记本电脑！");
+		Item item_2 = new Item();
+		item_2.setName("苹果手机");
+		item_2.setPrice(5000f);
+		item_2.setDetail("iphone6苹果手机！");
+		itemList.add(item_1);
+		itemList.add(item_2);
+
+		ModelAndView modelAndView =  new ModelAndView();
+		modelAndView.addObject("itemList", itemList);
+		modelAndView.setViewName("item/itemList");
+		return modelAndView;
+	}
+}
+
+step3, 在spring容器中加载handler
+<beans>
+	<bean class="cn.itcast.ssm.controller.ItemController3" />
+</beans>
+
+或者使用扫描方式一次加载多个handler. 实际开发时使用
+<beans>
+	<context:component-scan base-package="cn.itcast.ssm.controller"></context:component-scan>
+</beans>
+
+完整的实际开发springmvc.xml配置:
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd 
+		http://www.springframework.org/schema/mvc 
+		http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd 
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-3.2.xsd 
+		http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop-3.2.xsd 
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-3.2.xsd ">
+		
+	<mvc:annotation-driven></mvc:annotation-driven>
+	<context:component-scan base-package="cn.itcast.ssm.controller"></context:component-scan>
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/jsp/"/>
+		<property name="suffix" value=".jsp"/>
+	</bean>
+</beans>
+
+============ 14 Dao/Mapping 层整合 完整例子!! ============
+
+step1, config/mybatis/sqlMapConfig.xml 中配置alias:
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration PUBLIC "-//mybatis.org//DTD Config 3.0//EN" "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+	<typeAliases>
+		<package name="cn.itcast.ssm.po"/>
+	</typeAliases>							<!--mapper扫描交由spring批量扫描完成-->
+</configuration>
+
+step2, config/spring/applicationContext-dao.xml 中配置dao相关设置dataSource, sqlSessionFactory, MapperScanner:
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd 
+		http://www.springframework.org/schema/mvc 
+		http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd 
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-3.2.xsd 
+		http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop-3.2.xsd 
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-3.2.xsd ">
+
+	<context:property-placeholder location="classpath:db.properties" />
+	<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="${jdbc.driver}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+		<property name="maxTotal" value="10" />
+		<property name="maxIdle" value="5" />
+	</bean>
+
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="configLocation" value="classpath:mybatis/sqlMapConfig.xml" />
+	</bean>
+
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="cn.itcast.ssm.mapper" />				<!--spring 替代mybatis, 替代springmvc 中的mapper扫描 -->
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory" />
+	</bean>
+</beans>
+
+step3, 准备和db中表对应的po类, mapper.java接口和mapper.xml映射文件
+public class ItemCustom extends Item {		//可以在这里添加扩展信息, 纵向延伸信息可以用继承
+}
+public class ItemQueryVo {					//商品的包装对象, 横向包含多种类型信息用组合, 便于扩展
+	private Item item;						//商品本身信息
+	private ItemCustom itemCustom;			//商品扩展信息, 本例中用于存放查询参数
+	//getters(); setters();
+}
+
+数据库查询需求: SELECT * FROM item WHERE item.name LIKE '%笔记本%';
+ItemCustomMapper.java:
+public interface ItemCustomMapper {
+	public List<ItemCustom> findItemList(ItemQueryVo itemQueryVo)throws Exception;
+}
+ItemCustomMapper.xml:
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="cn.itcast.ssm.mapper.ItemCustomMapper" >
+	<sql id="query_item_where">
+		<if test= "itemCustom!=null">				<!--ItemQueryVo的itemCustom属性含有查询条件-->
+			<if test="itemCustom.name!=null and itemCustom.name!=''">
+				item.name LIKE '%${itemCustom.name}%'
+			</if>
+		</if>
+	</sql>
+  	
+  	<select id="findItemList" parameterType="cn.itcast.ssm.po.ItemQueryVo" resultType="cn.itcast.ssm.po.ItemCustom">
+  		SELECT item.* FROM item
+  		<where>
+  			<include refid="query_item_where" />
+  		</where>
+  	</select>		<!-- 综合查询输入条件可能需要自定义内容, 最好使用包装对象DTO/VO方便扩展所需条件 -->
+</mapper>
+
+============ 15 service 层整合 ============
+
+step4, 实现service的实现
+public interface ItemService {		//定义好service层的接口后, service层可以多人并行开发实现方法
+	public List<ItemCustom> findItemList(ItemQueryVo itemQueryVo) throws Exception;
+	//public ItemCustom findItemById(Integer id) throws Exception;
+	//public void updateItem(Integer id,ItemCustom itemCustom) throws Exception;
+}
+
+public class ItemServiceImpl implements ItemService{
+	@Autowired
+	private ItemCustomMapper itemCustomMapper;		//让spring属性注入 itemCustomMapper 实例
+
+	@Override
+	public List<ItemCustom> findItemList(ItemQueryVo itemQueryVo) throws Exception {
+		return itemCustomMapper.findItemList(itemQueryVo);
+	}
+}
+
+step5, config/spring/applicationContext-service.xml 中, 由spring管理service实例. 这里用的是xml schema方法而不是注解方法, 便于随时更换impl
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:context="http://www.springframework.org/schema/context"
+   	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd 
+		http://www.springframework.org/schema/mvc 
+		http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd 
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-3.2.xsd 
+		http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop-3.2.xsd 
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-3.2.xsd ">
+		
+	<bean id="itemService" class="cn.itcast.ssm.service.impl.ItemServiceImpl"/>
+</beans>
+
+step6, spring/applicationContext-transaction.xml 中, 设置tx. 参考spring video28. 注意检查jar包
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:context="http://www.springframework.org/schema/context"
+   	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd 
+		http://www.springframework.org/schema/mvc 
+		http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd 
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-3.2.xsd 
+		http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop-3.2.xsd 
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-3.2.xsd ">
+
+	<bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"/>		<!--dataSource在applicationContext-dao.xml中产生, 由spring管理, 所以这里也能直接调用-->
+	</bean>
+
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="save*" propagation="REQUIRED"/>						<!--指定REQUIRED必须用tx-->
+			<tx:method name="delete*" propagation="REQUIRED"/>
+			<tx:method name="insert*" propagation="REQUIRED"/>
+			<tx:method name="update*" propagation="REQUIRED"/>
+			<tx:method name="find*" propagation="SUPPORTS" read-only="true"/>		<!--建议SUPPORTS用tx. 查询类可设置为只读-->
+			<tx:method name="get*" propagation="SUPPORTS" read-only="true"/>
+			<tx:method name="select*" propagation="SUPPORTS" read-only="true"/>
+		</tx:attributes>
+	</tx:advice>
+	
+	<aop:config>
+		<aop:advisor advice-ref="txAdvice" pointcut="execution(* cn.itcast.ssm.service.impl..*.*(..))"/>
+	</aop:config>		<!--指定切点描述, 在service层; 并参考tx的advice设置-->
+</beans>
+
+============ 16-17 control 层整合 ============
+
+step7, config/spring/springmvc.xml 中, 配置controller, view resolver, 允许注解的mapper
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:mvc="http://www.springframework.org/schema/mvc"
+	   xmlns:context="http://www.springframework.org/schema/context"
+   	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-3.2.xsd 
+		http://www.springframework.org/schema/mvc 
+		http://www.springframework.org/schema/mvc/spring-mvc-3.2.xsd 
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-3.2.xsd 
+		http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop-3.2.xsd 
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-3.2.xsd ">	<!--需要添加aopalience.jar-->
+
+	<context:component-scan base-package="cn.itcast.ssm.controller"></context:component-scan>	<!--在spring容器中批量加载handler-->
+	<mvc:annotation-driven></mvc:annotation-driven>		<!--允许使用@Controller, @RequestMapping-->
+	
+	<bean class="org.springframework.web.servlet.view.InternalResourceViewResolver">
+		<property name="prefix" value="/WEB-INF/jsp/"/>
+		<property name="suffix" value=".jsp"/>
+	</bean>
+</beans>
+
+step8, web.xml 中, 配置dispatcher
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns="http://java.sun.com/xml/ns/javaee" xmlns:web="http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd"
+	id="WebApp_ID" version="2.5">
+	
+	<servlet>
+		<servlet-name>springmvc</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<init-param>
+			<param-name>contextConfigLocation</param-name>
+			<param-value>classpath:spring/springmvc.xml</param-value>
+		</init-param>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>springmvc</servlet-name>
+		<url-pattern>*.action</url-pattern>
+	</servlet-mapping>
+</web-app>
+
+step9, web.xml 中, 配置启动servlet时候, 自动启动spring容器
+<web-app>
+	<listener>
+		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>		<!--参考spring video40-->
+	</listener>
+	
+	<context-param>
+		<param-name>contextConfigLocation</param-name>
+		<param-value>/WEB-INF/classes/spring/applicationContext-*.xml</param-value>		<!--修改默认的配置文件位置, 通配符批量加载-->
+	</context-param>
+</web-app>
+
+step10, 注解方式的Controller的实现
+@Controller
+public class ItemController {
+	@Autowired
+	private ItemService itemService;
+
+	@RequestMapping("/queryItem")
+	public ModelAndView queryItem()throws Exception{
+		List<ItemCustom> itemList = itemService.findItemList(null);
+
+		ModelAndView modelAndView =  new ModelAndView();
+		modelAndView.addObject("itemList", itemList);
+		modelAndView.setViewName("item/itemList");
+		return modelAndView;
+	}
+}
+
+step11, 实现itemList.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt"  prefix="fmt"%>
+<html>
+	<head>...</head>
+	<body>...
+		<c:forEach items="${itemList}" var="item">
+			<tr>
+			<td>${item.name}</td>
+			<td>${item.price}</td>
+			<td><fmt:formatDate value="${item.createtime}" pattern="yyyy-MM-dd HH:mm:ss"/></td>
+			<td>${item.detail}</td>
+			<td><a href="${pageContext.request.contextPath}/item/editItem.action?id=${item.id}">修改</a></td>
+			</tr>
+		</c:forEach>
+	</body>
+</html>
+
+
+============ 18 商品修改功能开发 需求分析 ============
+
+service, Dao 层修改
+需求: 根据id调用Dao查询商品信息(然后将信息填充至view); 点击提交时候根据id调用Dao用新信息update数据库
+
+control 层修改
+需求: 商品信息编辑页面; submit地址页面
+
+============ 19 商品修改功能开发 mapper, service实现 ============
+
+step1, 准备和db中表对应的po类, mapper.java接口和mapper.xml映射文件
+public interface ItemMapper {
+	//public ItemCustom findItemById(Integer id) throws Exception;
+	public Item selectByPrimaryKey(Integer id) throws Exception;
+	public void updateByPrimaryKeyWithBLOBs(ItemCustom itemCustom) throws Exception;
+}
+<mapper namespace="cn.itcast.ssm.mapper.ItemMapper" >
+  	<select id="selectByPrimaryKey" parameterType="int" resultType="cn.itcast.ssm.po.ItemCustom">
+  		SELECT item.* FROM item where id = #{id}
+  	</select>
+  	
+  	<update id="updateByPrimaryKeyWithBLOBs" parameterType="cn.itcast.ssm.po.ItemCustom">
+  		update item set name=#{name}, price=#{price}, detail=#{detail}, createtime=#{createtime} where id=#{id}
+  	</update>
+</mapper>		<!--数据库查询结果和pojo中属性名一致, 省略使用resultMap-->
+
+
+step2, 在service层实现2个查询业务需求
+public interface ItemService {
+	//public List<ItemCustom> findItemList(ItemQueryVo itemQueryVo) throws Exception;
+
+	public ItemCustom findItemById(Integer id) throws Exception;
+	public void updateItem(Integer id, ItemCustom itemCustom) throws Exception;
+}
+
+public class ItemServiceImpl implements ItemService{
+	@Autowired
+	private ItemMapper itemMapper;
+
+	@Override
+	public ItemCustom findItemById(Integer id) throws Exception {
+		Item item = itemMapper.selectByPrimaryKey(id);
+
+		ItemCustom itemCustom = new ItemCustom();
+		BeanUtils.copyProperties(item, itemCustom);		//Item可能需要经过service处理, 返回的是ItemCustom类型. 本例中相当于直接cast
+		
+		return itemCustom;
+	}
+	
+	@Override
+	public void updateItem(Integer id, ItemCustom itemCustom) throws Exception {
+		//实际开发时需要对关键参数进行校验, 比如id. 所以这里用Integer类型, 可以检查null. 通过throw异常, 前台用申明式的异常处理
+		//最简单的校验方法比如比较id和itemCustom的id属性
+		itemCustom.setId(id);			//部分组拼ItemCustom在这里完成, 保证了dto必有id属性
+		itemMapper.updateByPrimaryKeyWithBLOBs(itemCustom);		//BLOB是sql的大文本类型字段
+	}
+}
+
+============ 20 商品修改功能开发 control实现 ============
+
+step3, 注解方式的Controller的实现
+@Controller
+public class ItemController {
+	@Autowired
+	private ItemService itemService;
+
+	@RequestMapping("/editItem")
+	public ModelAndView editItem() throws Exception{
+		ItemCustom itemCustom = itemService.findItemById(1);	//暂时使用固定的id=1测试, jsp向control传基础参 之后介绍
+
+		ModelAndView modelAndView =  new ModelAndView();
+		modelAndView.addObject("itemCustom", itemCustom);
+		modelAndView.setViewName("item/editItem");
+		return modelAndView;
+	}
+	
+	@RequestMapping("/editItemSubmit")
+	public String editItemSubmit(Integer id, ItemCustom itemCustom) throws Exception {
+		itemService.updateItem(id, itemCustom);					//jsp向control传pojo参 之后介绍 Video24
+		return "redirect:queryItem.action";
+	}
+}
+
+step4, 修改主页面itemList.jsp, 添加至/editItem的连接
+<html>
+	<head>...</head>
+	<body>...
+		<c:forEach items="${itemList}" var="item">
+			<tr>
+				<td>${item.name}</td>
+				<td>${item.price}</td>
+				<td><fmt:formatDate value="${item.createtime}" pattern="yyyy-MM-dd HH:mm:ss"/></td>
+				<td>${item.detail}</td>
+				<td><a href="${pageContext.request.contextPath}/editItem.action?id=${item.id}">修改</a></td>
+			</tr>
+		</c:forEach>
+	</body>
+</html>
+
+step5, 实现item/editItem.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt"  prefix="fmt"%>
+<html>
+	<head>...</head>
+	<body>
+		<form id="itemForm" action="${pageContext.request.contextPath}/editItemSubmit.action" method="post">
+			<input type="hidden" name="id" value="${itemCustom.id}"/>		<!--itemCustom是jsp访问controller后产生的model数据-->
+			<table width="100%" border=1>
+				<tr><td>商品名称</td>
+					<td><input type="text" name="name" value="${itemCustom.name}"/></td>
+				</tr>
+				<tr><td>商品价格</td>
+					<td><input type="text" name="price" value="${itemCustom.price}"/></td>
+				</tr>
+				<tr><td>商品生产日期</td>
+					<td><input type="text" name="createtime" value="<fmt:formatDate value="${itemCustom.createtime}" pattern="yyyy-MM-dd HH:mm:ss"/>"/></td>
+				</tr>
+				<tr><td>商品简介</td>
+					<td><textarea rows="3" cols="30" name="detail">${itemCustom.detail}</textarea></td>
+				</tr>
+				<tr>
+					<td colspan="2" align="center"><input type="submit" value="提交"/></td>
+				</tr>
+			</table>
+		</form>
+	</body>
+</html>
+注意, 这里用jstl的fmt标签格式化了从数据库读取的日期格式. 去除标签可以看到系统本身支持的格式. 在未使用converter(参考video26)前, 如果需要提交新日期, 必须按照系统本身格式书写.
+本次测试的日期格式: Wed Sep 09 10:00:00 EDT 2009
+
+============ 21 @RequestMapping 的应用 ============
+
+指定访问路径, 参考之前
+
+窄化请求映射
+@Controller
+@RequestMapping("/item")			//在这里定义了根路径, 访问内部路径需要: .../item/editItem.action
+public class ItemController {
+	@Autowired
+	private ItemService itemService;
+
+	@RequestMapping("/editItem")
+	public ModelAndView editItem() throws Exception{...}
+}
+
+设置允许的http请求方法
+public class ItemController {
+	@RequestMapping(value="/editItem", method={RequestMethod.POST, RequestMethod.GET})		//method用于设置允许的请求方法
+	public ModelAndView editItem() throws Exception{...}
+}
+
+============ 22 controller的返回值类型 ============
+
+ModelAndView类型, 参考之前, 设置model和view
+
+String类型1: 设置返回view
+public class ItemController {
+	@RequestMapping(value="/editItem", method={RequestMethod.POST, RequestMethod.GET})
+	public String editItem(Model model) throws Exception{
+		ItemCustom itemCustom = itemService.findItemById(1);
+		
+		model.addAttribute("itemCustom", itemCustom);		//在这里设置原来的model
+		return "item/editItem";								//在这里设置原来的view
+	}
+}
+
+String类型2: 设置redirect(地址栏url会改变, 两次访问, request不共享), 或forward
+public String editItemSubmit(...) throws Exception {
+	return "redirect: queryItem.action";		//这样提交表单后会重定向到列表. 由于和queryItem在一个controller中, 不用添加跟路径
+	//return "forward: queryItem.action";
+}
+
+测试forward可以共享request
+public class ItemController {
+	@RequestMapping("/testrequest")
+	public ModelAndView queryItem(HttpServletRequest request) throws Exception {
+		System.out.println(request.getParameter("id"));
+	}
+}
+
+void 类型: 如上例的测试程序或如video7中, 方法可以接收request和response, 从而可以定向返回view
+public class ItemsController {
+	@RequestMapping("/testrequest")
+	public void queryItem(HttpServletRequest request, HttpServletResponse response) throws Exception {
+		request.getRequestDispatcher("新页面路径").forward(request, response);	//1. 取得request, 修改指向, 继续执行
+		response.sendRedirect("新页面路径");										//2. 直接修改response的指向页面
+		
+		response.setCharacterEncoding("utf-8");									//3. 直接编辑response的内容
+		response.setContentType("application/json; charset=utf-8");
+		response.getWriter().write("json_string");
+	}
+}
+
+============ 24-4 参数绑定 @RequestParam ============
+
+struts2中, 通过类的field, value stack传参, 参考struts2 video15
+springMVC中, 通过controller的方法的输入参来接收
+
+springMVC使用converter进行任意类型的传换, 一般用默认converter即可, 特殊情况例如日期数据绑定需要自定义converter
+
+------------默认支持------------24
+
+HttpServletRequest
+HttpServletResponse
+HttpSession
+Model
+
+------------简单类型------------
+
+public class ItemController {
+	@RequestMapping("/editItem")
+	public String editItem(Model model, Integer id) throws Exception{
+		ItemCustom itemCustom = itemService.findItemById(id);	//直接传入简单类型的参数, 参数名必须和jsp传入的参数名一致, 或使用@RequestParam注解
+
+		model.setAttribute("itemCustom", itemCustom);
+		return "item/editItem";
+	}
+}
+
+使用@RequestParam指定request传入参数名称id 和 形参名称item_id 进行绑定(对应关系)
+public class ItemController {
+	@RequestMapping("/editItem")
+	public String editItem(Model model, @RequestParam(value="id", required=true, defaultValue="1") Integer item_id)throws Exception {
+		ItemCustom itemCustom = itemService.findItemById(item_id);
+
+		model.setAttribute("itemCustom", itemCustom);
+		return "item/editItem";
+	}
+}
+
+------------简单pojo类型------------25
+
+editItem.jsp点击submit时相当于访问: editItemSubmit.action?id=1&name=台式机&price=3000.0&detail=该电脑质量非常好！  (时间参数稍后处理, 这里需要修改提交方式为get并去除时间部分传参, 数据库日期允许空)
+public class ItemController {
+	@RequestMapping("/editItemSubmit")
+	public String editItemSubmit(Integer id, ItemCustom itemCustom)throws Exception {
+		itemService.updateItem(id, itemCustom);
+		return "redirect:queryItem.action";
+	}
+}
+
+import java.util.Date;
+public class Item {
+    private Integer id;
+    private String name;
+    private Float price;
+	private Date createtime;
+	...
+	//getters(); setters();
+}
+
+当页面提交参数名和形参类的field名完全相同时, 可自动绑定
+同时有简单类型和pojo类型公用一个参数, 比如这里的id, 也会同时各自绑定
+
+------------时间类型------------26
+
+pojo类型形参中的时间日期类型, 需要自定义参数绑定
+思路: 将请求日期数据串 转成 日期类型, 且和pojo中日期属性的类型保持一致
+
+step1, 实现自定义converter
+package cn.itcast.ssm.controller.converter;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import org.springframework.core.convert.converter.Converter;
+public class CustomDateConverter implements Converter<String, Date>{		//Converter<输入类型, 输出类型>
+	@Override
+	public Date convert(String source) {
+		SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+		try {
+			return simpleDateFormat.parse(source);
+		} catch (ParseException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+}
+
+step2, 在 springmvc.xml中对自定义converter进行配置(给mvc:annotation-driven添加conversion-service参数), 成为spring的interceptor
+<beans>
+	<mvc:annotation-driven conversion-service="conversionService"></mvc:annotation-driven>
+	<bean id="conversionService" class="org.springframework.format.support.FormattingConversionServiceFactoryBean">
+		<property name="converters">
+			<list>
+				<bean class="cn.itcast.ssm.controller.converter.CustomDateConverter"/>
+			</list>
+		</property>
+	</bean>
+</beans>
+现在日期格式可以输入成: 1999-9-9 9:9:9
+
+------------包装pojo类型------------2
+
+参考video14, 适合接收多表复杂查询输入条件的包装pojo: ItemQueryVo.java:
+public class ItemQueryVo {					//商品的包装对象
+	private Item item;					//商品本身信息
+	private ItemCustom itemCustom;		//商品扩展信息, 本例中用于存放查询参数
+	//getters(); setters();
+}
+
+想传参到属性itemCustom的name属性中, 只需要修改 itemList.jsp 中:
+<tr>
+	<td><input type="text" name="itemCustom.name"/></td>		<!--name的值和 属性中pojo.属性 一致-->
+	<td><input type="submit" value="查询"/></td>
+</tr>
+相当于访问: /queryItem.action?itemCustom.name=abc
+
+@Controller
+public class ItemController {
+	@RequestMapping("/queryItem")
+	public ModelAndView queryItem(ItemQueryVo itemQueryVo) throws Exception {
+		List<ItemCustom> itemList = itemService.findItemList(itemQueryVo);
+		
+		ModelAndView modelAndView =  new ModelAndView();
+		modelAndView.addObject("itemList", itemList);
+		modelAndView.setViewName("item/itemList");
+		return modelAndView;
+	}
+}
+
+------------Array[]类型------------3
+
+需求: 用户选择多个商品批量删除
+
+step1, 修改 itemList.jsp, 添加删除按钮和checkbox
+<html>
+	<head>...
+		<script type="text/javascript">
+			function deleteItems(){
+				document.itemListForm.action="${pageContext.request.contextPath}/deleteItems.action";
+				document.itemListForm.submit();
+			}
+		</script>
+	</head>
+	<body>
+		<p><input type="button" value="批量删除" onclick="deleteItems()"/></p>
+		
+		<form name="itemListForm" method="get">
+			<table width="100%" border=1>
+				<c:forEach items="${itemList}" var="item">
+					<tr>
+						<td><input type="checkbox" name="item_id" value="${item.id}"/></td>
+						<td>${item.name}</td>
+						<td>${item.price}</td>
+						<td><fmt:formatDate value="${item.createtime}" pattern="yyyy-MM-dd HH:mm:ss"/></td>
+						<td>${item.detail}</td>
+						<td><a href="${pageContext.request.contextPath}/editItem.action?id=${item.id}">edit</a></td>
+					</tr>
+				</c:forEach>
+				
+			</table>
+		</form>
+	</body>
+</html>
+相当于访问: /deleteItems.action?item_id=1&item_id=2&item_id=3
+
+step2, Controller中接收Array[]
+@Controller
+public class ItemController {
+	@RequestMapping("/deleteItems")
+	public String deleteItems(Integer[] item_id) throws Exception {		//数组形参名必须和jsp中变量名一致时, 可自动绑定
+		for (int i = 0; i < item_id.length; i++) {
+			System.out.println(item_id[i]);
+		}
+		return "success";
+	}
+}
+
+------------List<>类型------------4
+
+需求: 用户选择多个商品批量修改
+思路: 批量修改页面, 批量修改提交
+
+step1, 访问/editItemQuery 时准备编辑页面数据
+@Controller
+public class ItemController {
+	@RequestMapping("/editItemQuery")
+	public ModelAndView editItemQuery() throws Exception {
+		List<ItemCustom> itemList = itemService.findItemList();
+
+		ModelAndView modelAndView = new ModelAndView();
+		modelAndView.addObject("itemList", itemList);
+		modelAndView.setViewName("item/editItemQuery");		//转至同名的jsp文件, model内容为查询出来的内容
+
+		return modelAndView;
+	}
+}
+
+step2, 建立 editItemQuery.jsp, 实现多个商品批量修改界面
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt"  prefix="fmt"%>
+<html>
+	<head>...
+		<script type="text/javascript">
+			function editItemAllSubmit(){
+				document.itemListForm.action="${pageContext.request.contextPath}/editItemAllSubmit.action";
+				document.itemListForm.submit();
+			}
+		</script>
+	</head>
+	<body>
+		<p><input type="button" value="批量修改" onclick="editItemAllSubmit()"/></p>		<!--提交批量修改按钮-->
+		<form name="itemListForm" method="get">
+			<table width="100%" border=1>
+				<c:forEach items="${itemList}" var="item" varStatus="status">			<!--varStatus见后面step5中解释-->
+					<tr>
+						<td><input name="itemList[${status.index}].name" value="${item.name}"/></td>		<!--从列表展示方式修改为可编辑框方式, name="itemList[0].name"-->
+						<td><input name="itemList[${status.index}].price" value="${item.price}"/></td>
+						<td><input name="itemList[${status.index}].createtime" value="<fmt:formatDate value="${item.createtime}" pattern="yyyy-MM-dd HH:mm:ss"/>"/></td>
+						<td><input name="itemList[${status.index}].detail" value="${item.detail}"/></td>
+					</tr>
+				</c:forEach>
+			</table>
+		</form>
+	</body>
+</html>
+
+step3, 在包装pojo中定义List<pojo>属性, 用于接收页面提交的List数据
+public class ItemQueryVo {
+	private List<ItemCustom> itemList;
+	//getters(); setters();
+}
+
+step4, 点击jsp中提交按钮时, 相当于访问/editItemAllSubmit.action?itemList[0].name=abc&itemList[0].price=123&itemList[1].name=def&itemList[1].price=456
+@Controller
+public class ItemController {
+	@RequestMapping("/editItemAllSubmit")
+	public String editItemAllSubmit(ItemQueryVo itemQueryVo) throws Exception {		//商品信息存储到itemQueryVo的itemList属性中
+		System.out.println(itemQueryVo.getItemList().get(0).getName());
+		return "success";
+	}
+}
+
+step5, 关于jsp页面中 input name 的设置
+参考之前向itemQueryVo的ItemsCustom itemCustom 写name属性: <input name="itemCustom.name"/>
+
+现在希望向itemQueryVo的List<ItemCustom> itemList 写name属性, 相当于有个列表:
+<itemList[0].name/>
+<itemList[0].price/>
+...
+<itemList[9].name/>
+<itemList[9].price/>
+
+将[i]用自动增长序列替换
+<itemList[${status.index}].name/>
+<itemList[${status.index}].price/>
+注意, 在<c:forEach items="${itemsList}" var="item" varStatus="status"> 中添加自动增长序列varStatus
+
+------------Map<>类型------------
+
+public class ItemQueryVo {
+	private Map<String, ItemCustom> itemMap;
+	//getters(); setters();
+}
+
+<c:forEach items="${itemList}" var="item">
+	<tr>
+		<td><input name="itemMap['name']" value="${item.name}"/></td>			<!--相对于List[0], 这里用的是Map[key]-->
+		<td><input name="itemMap['price']" value="${item.price}"/></td>
+	</tr>
+</c:forEach>
+相当于访问: /action?itemMap[name]=abc&itemMap[price]=123
+
+============ 5 validator @Validated ============
+
+较多用前端的校验, 比如页面中js校验
+控制层conroller: 校验页面请求的参数的合法性
+业务层service(主要): 校验关键业务参数, 仅限于service接口中使用的参数
+持久层dao: 一般不校验
+
+step1, 加入hibernate validator所用jar包
+hibernate-validator-5.1.3.Final.jar
+jboss-logging-3.1.3.GA.jar
+validation-api-1.1.0.Final.jar
+javax.el-api-2.2.4.jar
+javax.el-2.2.4.jar
+classmate-1.0.0.jar
+
+step2, springmvc.xml中, 配置validator实例
+<beans>
+	<bean id="validator" class="org.springframework.validation.beanvalidation.LocalValidatorFactoryBean">
+		<property name="providerClass" value="org.hibernate.validator.HibernateValidator" />
+		<property name="validationMessageSource" ref="messageSource" />	<!-- 指定校验错误信息配置文件. 默认使用classpath下ValidationMessages.properties -->
+	</bean>
+
+	<bean id="messageSource" class="org.springframework.context.support.ReloadableResourceBundleMessageSource">
+		<property name="basenames">		<!--表示只需要写basename, 不用扩展名.properties部分-->
+			 <list>    
+				<value>classpath:CustomValidationMessages</value> 
+			 </list>   
+    	</property>
+		<property name="fileEncodings" value="utf-8" />
+		<property name="cacheSeconds" value="120" />		<!--秒-->
+	</bean>
+</beans>
+
+step3, 准备之前定义的validationMessageSource: config/CustomValidationMessages.properties
+#添加校验错误信息
+item.name.length.error=请输入1到20个字符的商品名称
+item.createtime.isNUll=请输入商品的生产日期
+item.price.isNUll=请输入商品的价格
+
+step4, 将validator注入springmvc中(给mvc:annotation-driven添加validator参数)
+<mvc:annotation-driven conversion-service="conversionService" validator="validator"></mvc:annotation-driven>
+
+step5, 在要绑定的目标pojo中添加校验规则Constraint
+public class Item {
+    @Size(min=1, max=20, message="{item.name.length.error}")	//建议用指向的方法设置校验出错信息, 而不是在这里硬编码
+    private String name;
+    
+    @NotNull(message="{item.createtime.isNUll}")				//注意导入javax.validation.constrains的@NotNull标注
+    private Date createtime;
+}
+
+step6,  在需要校验的pojo前添加@Validated, 后边添加BindingResult接收校验错误信息. 两者配对使用且顺序固定
+@Controller
+public class ItemController {
+	@RequestMapping("/editItemSubmit")
+	public String editItemsSubmit(Integer id, @Validated ItemCustom itemCustom, BindingResult bindingResult)throws Exception {
+		if (bindingResult.hasErrors()) {
+			List<ObjectError> allErrors = bindingResult.getAllErrors();
+			for (ObjectError objectError : allErrors) {
+				System.out.println(objectError.getDefaultMessage());		//可以看出, objectError有个属性名叫defaultMessage
+			}
+		}
+		itemService.updateItem(id, itemCustom);								//这里应该对是否继续updateItem进行业务逻辑的判断
+		return "redirect:queryItem.action";
+	}
+}
+测试一下, 观察输入值产生校验错误信息是否出现在console中
+
+step7, 改用model传递校验错误信息
+@Controller
+public class ItemController {
+	@RequestMapping("/editItemSubmit")
+	public String editItemSubmit(Model model, Integer id, @Validated ItemCustom itemCustom, BindingResult bindingResult) throws Exception {
+		if (bindingResult.hasErrors()) {
+			List<ObjectError> allErrors = bindingResult.getAllErrors();
+			model.addAttribute("allErrors", allErrors);
+			return "item/editItem";				//提交新信息后发现校验错误, 则返回editItem.jsp, 由其读取model中allErrors, 并在页面中显示. 用forward会重读数据库, 从而丢失已填写的其他内容
+		}
+		itemService.updateItem(id, itemCustom);				//无校验错误, 通过redirect回itemList
+		return "redirect:queryItem.action";
+	}
+}
+
+step8, editItem.jsp页面中合适位置显示校验错误信息
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt"  prefix="fmt"%>
+<c:if test="${allErrors!=null}">
+	<c:forEach items="${allErrors}" var="error">
+		${error.defaultMessage}<br/>
+	</c:forEach>
+</c:if>
+
+build-in的constraints API pdf page15:
+Table 2.2. Bean Validation constraints
+@Null					元素必须为null
+@NotNull
+@AssertTrue				元素必须为true
+@AssertFalse
+@Min(value)				元素值必须大于等于指定的最小值
+@Max(value)
+@DecimalMin(value=, inclusive=)		inclusive= 用于指定是否包含边界点
+@DecimalMax(value=, inclusive=)
+@Size(max=, min=)					Checks if the annotated element's size is between min and max (inclusive)
+@Digits (integer=, fraction=)		元素值是否有integer位整数位 和fraction为小数位
+@Past   					元素必须是一个过去的日期
+@Future
+@Pattern(regex=,flag=)  	元素必须符合指定的正则表达式
+
+Table 2.3. Custom constraints
+@NotBlank					(只适用于String)非null，且trim后长度必须大于0
+@NotEmpty					包含@NotBlank功能, 还能检查Collection, Map, arrays
+@Email						元素必须是电子邮箱地址
+@Length(min=,max=)			字符串的大小必须在指定的范围内
+@Range(min=,max=,message=)  Checks whether the annotated value lies between (inclusive) the specified minimum and maximum
+
+============ 6 Grouping constraints ============
+
+需求: 如果如上在pojo中定义constraints, 多个方法调用该pojo时, 无法使用不同的校验方法
+
+step1, 建立分组接口(空接口)
+package cn.itcast.ssm.controller.validation;
+public interface ValidGroup1 {}
+
+step2, 在校验规则Constraints上添加分组信息
+public class Items {
+    @Size(min=1, max=20, message="{item.name.length.error}", groups={ValidGroup1.class})	//给本条规则指定所属groups, 同一条规则可以归属多个group
+    private String name;
+    
+    @NotNull(message="{items.createtime.isNUll}")
+    private Date createtime;
+}
+
+step3, 在使用该pojo处, 指定使用哪个groups的规则
+public class ItemController {
+	@RequestMapping("/editItemSubmit")
+	public String editItemSubmit(Model model, Integer id, @Validated(value={ValidGroup1.class}) ItemCustom itemCustom, BindingResult bindingResult) throws Exception {
+		if (bindingResult.hasErrors()) {
+			List<ObjectError> allErrors = bindingResult.getAllErrors();
+			model.addAttribute("allErrors", allErrors);
+			return "item/editItem";
+		}
+		itemsService.updateItem(id, itemCustom);
+		return "redirect:queryItem.action";
+	}
+}
+结果: 只对@Size进行了检测, 其他项目不进行校验
+
+============ 7 数据回显 @ModelAttribute ============
+
+回显: 提交表单后, 将提交的数据和校验出错信息显示在提交表单中
+
+------------springmvc默认的回显注入------------
+
+1. 用户访问editItem?id=1, 服务器读出id对应的内容存放在model.addAttribute("itemCustom", itemCustom) 属性中, 然后展现在editItem.jsp中
+2. 用户修改内容, 新内容提交至 editItemSubmit
+3. 由于定义了editItemSubmit的形参为ItemCustom类型, 用户提交的信息会自动存放于model的itemCustom属性中.(springmvc默认回显存放于pojo类型首字母小写同名属性中)
+4. editItemSubmit返回地址指向editItem.jsp时, model的属性中内容, 也就是之前用户提交的信息, 将被展示出来, 实现回显
+如果在1中, model的属性名不是itemCustom, 例如改为myItemsCustom, 相应的jsp也改从这个属性读值. 用户提交的信息自动存放于itemCustom属性. jsp展示页面会依然从myItemCustom读取, 从而无法回显.
+
+------------当model的属性名和pojo类型名不一致时, 用@ModelAttribute指定注入model哪个属性中------------
+
+@Controller
+public class ItemController {
+	@RequestMapping("/editItem")
+	public String editItem(Model model, Integer id) throws Exception {
+		ItemCustom itemCustom = itemService.findItemById(id);
+		
+		model.addAttribute("myItemCustom", itemCustom);		//这里model中手动设置key=myItemCustom. 而editItemSubmit的接收pojo类型为ItemCustom, jsp默认将新信息存于key=itemCustom的model中
+		return "item/editItem";
+	}
+
+	@RequestMapping("/editItemSubmit")
+	public String editItemSubmit(Model model, Integer id, @ModelAttribute("myItemCustom") @Validated ItemCustom itemCustom, BindingResult bindingResult) throws Exception {
+		//用@ModelAttribute("myItemCustom")指明用户提交的新信息存放在model的哪个key(=myItemCustom)下面
+	}
+}
+
+============ 7 直接操作model ============
+
+创建model的key并注入值
+@Controller
+public class ItemController {
+	@ModelAttribute("itemtypemap")			//创建一个model的key, 将所属的程序的返回值, 这里是itemTypeMap注入这个key下面
+	public Map<String, String> getItemType() {
+		Map<String, String> itemTypeMap = new HashMap<String, String>();		//可以改从数据库取值
+		itemTypeMap.put("101", "数码");
+		itemTypeMap.put("102", "母婴");
+		return itemTypeMap;
+	}
+}
+
+<select name="itemtype">
+	<c:forEach items="${itemtypemap}" var="itemtype">
+		<option value="${itemtypemap.key}"> ${itemtypemap.value} </option>
+	</c:forEach>
+</select>
+
+直接修改model的属性值
+@Controller
+public class ItemController {
+	@RequestMapping("/editItemSubmit")
+	public String editItemSubmit(
+		Model model, Integer id,
+		@Validated ItemsCustom itemsCustom, BindingResult bindingResult
+	) throws Exception {
+		model.addAttribute("myItemCustom", itemCustom);		//直接使用model的方法传送用户提交的信息值
+		//...
+	}
+}
+
+============ 8-9 异常处理 ============
+
+step1, 建立自定义Exception类, 需要extends Exception
+package cn.itcast.ssm.exception;
+public class CustomException extends Exception {
+	public String message;
+	//getters(); setters();
+	
+	public CustomException(String message){
+		super(message);
+		this.message = message;
+	}
+}
+
+step2, 建立自定义 ExceptionResolver, 用于处理抛出的Exception
+ExceptionResolver解析异常类型:
+	如果是自定义的异常CustomException, 取出异常信息并展示. (自定义异常就是预期中会发生的, 指定throws出来的异常)
+	如果不是自定义的异常, 构造一个信息为"未知错误"的自定义异常. (非自定义异常就是运行时异常, 没有预期)
+package cn.itcast.ssm.exception;
+public class CustomExceptionResolver implements HandlerExceptionResolver {
+	@Override
+	public ModelAndView resolveException(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex){
+		CustomException customException = null;				//自定义异常处理的逻辑
+		if(ex instanceof CustomException){
+			customException = (CustomException)ex;
+		}else{
+			customException = new CustomException("未知错误");
+		}
+
+		String message = customException.getMessage();
+
+		ModelAndView modelAndView = new ModelAndView();
+		modelAndView.addObject("message", message);
+		modelAndView.setViewName("error");
+		return modelAndView;
+	}
+}
+jsp页面提取"message"并展示, 略去
+
+step3, springmvc.xml中, 加载全局Exception处理器
+<beans>
+	<bean class="cn.itcast.ssm.exception.CustomExceptionResolver"></bean>		<!--全局Exception处理, 只有一个, 不需要加id属性-->
+</beans>
+
+step4, 测试异常
+@Controller
+public class ItemController {
+	@RequestMapping("/editItem")
+	public String editItem(Integer id) throws Exception {
+		ItemCustom itemCustom = itemService.findItemById(id);
+		
+		if(itemCustom == null){
+			throw new CustomException("修改的商品信息不存在");		//如果查询结果为空就无法编辑, 这个是可以预见的. 抛自定义异常, 交由 ExceptionResolver 处理
+		}
+
+		model.addAttribute("item", itemCustom);					//这些是正常运行时的逻辑
+		return "item/editItem";
+	}
+}
+手动访问/item/editItem.action?id=999
+与业务相关的异常, 在service层抛出. 例如本例空查询结果
+与业务无关的异常, 在controller层抛出, 例如输入字符的校验
+
+============ 10 上传图片 ============
+
+需求: 在editItem.jsp展示页面, 添加上传商品图片功能
+
+step1, 在editItem.jsp页面的form中加上multipart属性
+<form id="itemForm" method="post" action="${pageContext.request.contextPath}/item/editItemSubmit.action" enctype="multipart/form-data">
+	...
+</form>
+
+step2, 在springmvc.xml中配置multipart类型解析器
+<beans>
+	<bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+		<property name="maxUploadSize">
+			<value>5242880</value>		<!-- 设置上传文件的最大尺寸, 这里为5MB = 5*1024*1024 -->
+		</property>
+	</bean>
+</beans>
+
+step3, 创建图片虚拟目录存储图片(实际使用需要建立单独图片服务器)
+方法1: 图像界面方式
+双击Servers中的Tomcat v8.0 Server at localhost >> 点击Modules标签(不在默认的OverView标签页面里) >> Add External Web Module... >>
+browse...到你希望作为虚拟目录的物理目录 >> Path: 中设置对应虚拟目录的路径. 注意含'/'
+方法2: 修改tomcat配置方式
+在conf/server.xml文件中添加虚拟目录:
+<Engine>
+	<Context docBase="Driver:\folder" path="/url" reloadable="false"/>
+</Engine>
+
+启动tomcat后, 访问http://localhost:8080/url/subfolder/image.jpg 就访问了Driver:\folder\subfolder\image.jpg
+注意, 不再需要项目路径. 直接服务器地址后加虚拟路径
+
+架构图片服务器/目录时, 为了提高传输效率, 一定分级创建将图片目录. 一般我们采用按日期Long进行分级创建
+
+step4, 导入文件传输的jar包
+commons-fileupload-1.3.1.jar
+commons-io-2.4.jar
+
+step5, 在itemCustom.java和数据库中, 建立pic字段, 用于存放图片路径, 图片名. 同时检查mapper中相应内容更新
+public class Item {
+    private Integer id;
+    private String name;
+    private Float price;
+	
+    private String pic;
+	//getters(); setters();
+}
+
+step6, 在单项编辑页面的发送地址/editItemSubmit.action中
+@Controller
+public class ItemController {
+	@RequestMapping("/editItemSubmit")
+	public String editItemSubmit(Model model, Integer id, ItemCustom itemCustom, MultipartFile item_pic) throws Exception {	//接收上传的文件对象, 会自动绑定到item_pic. 也可用List<MultipartFile> item_picList一次接收多张图片对象
+		String originalFilename = item_pic.getOriginalFilename();			//假设上传的文件名字为image.jpg
+
+		if(item_pic!=null && originalFilename!=null && originalFilename.length()>0){
+			String pic_path = "Driver:\\folder\\subfolder\\";				//这里subfolder字符串可以修改为按照日期自动变化
+			String newFileName = UUID.randomUUID() + originalFilename.substring(originalFilename.lastIndexOf("."));		//改名为UUIDstring.jpg 也可以采用MD5方法减少重复文件, 参考android video64
+
+			File newFile = new File(pic_path + newFileName);
+			item_pic.transferTo(newFile);						//将上传的图片对象写入图片服务器硬盘
+			
+			itemCustom.setPic(newFileName);					//itemsCustom中只保存了文件的新名称(实际还需要保存其subfolder, 本例中未使用subfolder所以直接保存newFileName)
+		}
+
+		itemService.updateItem(id, itemCustom);
+		return "success";
+	}
+}
+
+step7, 在editItem.jsp页面中展示图片及上传控件
+<tr>
+	<td>商品图片</td>
+	<td>
+		<c:if test="${itemCustom.pic != null}">
+			<img src="/url/${itemCustom.pic}" width=100 height=100/><br/>		<!--/url相对应folder, itemCustom.pic相对应subfolder+newFileName-->
+		</c:if>
+		
+		<input type="file" name="item_pic"/>				<!--上传控件, name属性要和controller的属性名对应, 或在controller中用@RequestParam指定参数绑定, 参考video24-->
+	</td>
+</tr>
+
+============ 12-13 json与pojo的相互转换 @RequestBody, @ResponseBody ============		!!??使用jquery-2.1.3失败, 未测试1.4.4 ??!!
+
+step1, 导入jackson包
+jackson-core-asl-1.9.13.jar
+jackson-mapper-asl-1.9.13.jar
+
+step2, 如果未使用<mvc:annotation-driven/>注解方式, 则需手动配置:
+<beans>
+	<bean class="org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter">
+		<property name="messageConverters">
+			<list>
+				<bean class="org.springframework.http.converter.json.MappingJacksonHttpMessageConverter"></bean>
+			</list>
+		</property>
+	</bean>
+</beans>
+
+step3a, 加入jQuery库: WebRoot/js/jquery-2.1.3.min.js; 准备请求=string, 接收返回=json的WebRoot/jsonTest.jsp页面
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<script type="text/javascript" src="${pageContext.request.contextPath}/js/jquery-2.1.3.min.js"></script>
+		<script type="text/javascript">
+			function requestJson(){
+				$.ajax({		//参考JQuery中get连接服务器方法: $.get(URL,callback); jQuery video7, 参考W3school>>JavaScript>>jQuery>>jQuery Ajax中不同Ajax函数
+					type:'post',
+					url:'${pageContext.request.contextPath}/requestJson.action',
+					contentType:'application/json;charset=utf-8',		//默认是application/x-www-form-urlencoded的key/value的类型, 需指定为json. 意义参考video14 : 对http的contentType规范. 请求时指定contentType, 要json数据则设置json格式的type
+
+					data:'{"name":"手机","price":999}',					//json格式: {"key1":"value1", "key2":"value2"}, 参考android video26
+					success:function(databack){							//回调函数, 当请求成功之后才调用
+						alert(databack);
+					}
+				});
+			}
+		</script>
+	</head>
+	<body>
+		<input type="button" onclick="requestJson()" value="请求json, 输出json"/>
+		<input type="button" onclick="responseJson()" value="请求String, 输出json"/>
+	</body>
+</html>
+
+step3b, 请求String, 输出json的jsp页面
+<head>
+	<script type="text/javascript">
+		function responseJson(){
+			$.ajax({
+				type:'post',
+				url:'${pageContext.request.contextPath }/responseJson.action',
+				data:'name=手机&price=999',
+				success:function(databack){
+					alert(databack.name);						//直接调用json对象的key
+				}
+			});
+		}
+	</script>
+</head>
+
+step4a, 实现请求json, 输出json的jsp提交接收 /requestJson.action
+package cn.itcast.ssm.controller;
+@Controller						//注意这里不含窄化请求映射
+public class JsonTest {
+	@RequestMapping("/requestJson")
+	public @ResponseBody ItemCustom requestJson(@RequestBody ItemCustom itemCustom){		//@RequestBody将请求json转成itemsCustom对象
+		return itemsCustom;																	//@ResponseBody将itemsCustom转成json输出
+	}
+}
+
+step4b, 实现请求String, 输出json的jsp提交接收 /responseJson.action
+public class JsonTest {
+	@RequestMapping("/responseJson")
+	public @ResponseBody ItemCustom responseJson(ItemsCustom itemCustom){					//如之前, 输入的String形式的参数自动映射到itemCustom对象中
+		return itemsCustom;
+	}
+}
+
+============ 14 RESTful @PathVariable ============
+
+网址最后的".html"后缀名是不必要的, 因为这个后缀名表示格式, 属于"表现层"范畴, 而URI应该只代表"资源"的位置.
+它的具体表现形式, 应该在HTTP请求的头信息中用Accept和Content-Type字段指定, 这两个字段才是对"表现层"的描述
+
+step1, 用{id}和@PathVariable("id")来通过url传递参数
+@Controller @RequestMapping("/items")
+public class ItemsController {
+	@RequestMapping("/itemsView/{id}/{type}")		//itemsView/{id}的{id}是占位符, 通过@PathVariable获取占位符中的参数, 从而完成绑定
+	public @ResponseBody ItemsCustom itemsView(@PathVariable("id") Integer id, @PathVariable("type") String type)throws Exception{
+		ItemsCustom itemsCustom = itemsService.findItemsById(id);
+		return itemsCustom;
+	}
+例如访问: itemsView/123/abc 就相当于: itemsView?id=123&type=abc
+
+step2, web.xml中添加新过滤规则
+<web-app>
+	<servlet>
+		<servlet-name>springmvc_rest</servlet-name>
+		<servlet-class>org.springframework.web.servlet.DispatcherServlet</servlet-class>
+		<init-param>
+			<param-name>contextConfigLocation</param-name>
+			<param-value>classpath:spring/springmvc.xml</param-value>
+		</init-param>
+	</servlet>
+
+	<servlet-mapping>
+		<servlet-name>springmvc_rest</servlet-name>
+		<url-pattern>/</url-pattern>
+	</servlet-mapping>
+</web-app>
+
+扩展: Java List对象转json用 jQuery easyui-datagrid
+
+step3, '/'方法时, 静态资源文件的解析需要独立设置, 不使用DispatcherServlet解析. 在springmvc.xml中, 添加静态资源的解析方法
+<beans>
+	<mvc:resources location="/js/" mapping="/js/**"/>
+	<mvc:resources location="/img/" mapping="/img/**"/>
+</beans>
+
+============ 15-16 interceptor ============
+
+step1, 在springmvc.xml中配置interceptors
+<beans>
+	<mvc:interceptors>							<!-- 多个拦截器时按顺序执行 -->
+		<mvc:interceptor>
+			<mvc:mapping path="/**"/>			<!-- /** 表示所有url及其子路径 -->
+			<bean class="cn.itcast.ssm.interceptor.HandlerInterceptor1"></bean>
+		</mvc:interceptor>
+		
+		<mvc:interceptor>
+			<mvc:mapping path="/**"/>
+			<bean class="cn.itcast.ssm.interceptor.HandlerInterceptor2"></bean>
+		</mvc:interceptor>
+	</mvc:interceptors>
+</beans>
+
+step2, 实现拦截器
+public class HandlerInterceptor1 implements HandlerInterceptor {
+	@Override
+	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+		System.out.println("HandlerInterceptor1...preHandle");
+		return true;		//return false表示拦截，不向下执行
+	}						//该方法在进入Handler方法之前执行, 常用于身份认证
+
+	@Override
+	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+		System.out.println("HandlerInterceptor1...postHandle");
+	}						//该方法在返回modelAndView之前执行, 常用于修改模型和视图, 例如加入公用的模型数据
+
+	@Override
+	public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+		System.out.println("HandlerInterceptor1...afterCompletion");
+	}						//该方法在完成执行Handler后执行, 常用于统一异常处理, 日志处理
+}
+HandlerInterceptor2 类似HandlerInterceptor1, 略
+
+step3, 测试两个拦截器之间执行先后顺序
+HandlerInterceptor1, HandlerInterceptor2都放行: 
+结果: preHandle方法按顺序执行; postHandle和afterCompletion按拦截器配置的逆向顺序执行
+HandlerInterceptor1...preHandle
+HandlerInterceptor2...preHandle
+HandlerInterceptor2...postHandle
+HandlerInterceptor1...postHandle
+HandlerInterceptor2...afterCompletion
+HandlerInterceptor1...afterCompletion
+
+HandlerInterceptor1放行, HandlerInterceptor2不放行: 
+结果: 只要有一个拦截器不放行, postHandle不会执行
+HandlerInterceptor1...preHandle
+HandlerInterceptor2...preHandle
+HandlerInterceptor1...afterCompletion		//??
+
+经验:
+统一日志处理拦截器, 必须放在拦截器链接中第一个位置. 且preHandle一定要放行
+登陆认证拦截器, 一般放在拦截器链接中第一个位置. 权限校验拦截器, 放在登陆认证拦截器之后, 因为登陆通过后才校验权限
+
+
+============ 17 interceptor 例子 登录认证 ============
+
+需求:
+用户请求url
+拦截器进行拦截校验
+	如果请求公开地址, 放行
+	如果请求权限地址, 用户session存在, 放行
+	如果请求权限地址, 用户session不存在, 跳转到登陆页面
+
+step1, 在springmvc.xml中配置拦截器, 这里对所有的action访问都设置登陆拦截
+<beans>
+	<mvc:interceptors>
+		<mvc:interceptor>
+			<mvc:mapping path="/**"/>
+			<bean class="cn.itcast.ssm.interceptor.LoginInterceptor"></bean>
+		</mvc:interceptor>
+	</mvc:interceptors>	
+</beans>
+
+step2, 实现拦截器LoginInterceptor
+package cn.itcast.ssm.interceptor
+public class LoginInterceptor implements HandlerInterceptor {
+	@Override
+	public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+		String url = request.getRequestURI();		//获取请求的url用以判断是否是公开地址, 实际使用时读公开地址配置文件
+		if(url.indexOf("login.action")>=0){			//这里假设公开的业务地址中含login字段
+			return true;
+		}
+		
+		HttpSession session  = request.getSession();
+		String username = (String) session.getAttribute("username");
+		if(username != null){
+			return true;
+		}
+		
+		request.getRequestDispatcher("/WEB-INF/jsp/login.jsp").forward(request, response);
+		return false;
+	}
+
+	@Override
+	public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {}
+	@Override
+	public void afterCompletion(HttpServletRequest request,HttpServletResponse response, Object handler, Exception ex)throws Exception {}
+}
+
+step3, 实现拦截器指向的登陆页面 login.jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title></title>
+</head>
+<body>
+	<form action="${pageContext.request.contextPath}/login.action" method="post">
+		用户账号： <input type="text" name="username"/><br/>
+		用户密码： <input type="password" name="password"/><br/>
+		<input type="submit" value="登陆"/>
+	</form>
+</body>
+</html>
+
+step4, 实现 login.jsp 的提交页面的 login.action
+@Controller
+public class LoginController {
+	@RequestMapping("/login")
+	public String login(HttpSession session, String username, String password) throws Exception {
+		session.setAttribute("username", username);		// 实际中应先调用service对username和password进行验证, 成功后再在这里设置session内容. session内容不一定是username
+		return "redirect:queryItem.action";
+	}
+
+	@RequestMapping("/logout")
+	public String logout(HttpSession session) throws Exception {
+		session.invalidate();							// 清除session
+		return "redirect:/queryItem.action";
+	}
+}
+
+step5, 任何页面, 比如itemList.jsp中, 添加退出session按钮
+<c:if test="${username!=null}">
+	当前用户: ${username}, 
+	<a href="${pageContext.request.contextPath}/logout.action">退出</a>
+</c:if>
+
+
+============ 其他 ============
+
+实现不同的访问路径和项目名:
+properties >> web project settings >> context root >> 默认访问路径和项目名一样, 可以按需求修改为任意

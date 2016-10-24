@@ -1,0 +1,2614 @@
+﻿/**
+ * set language=java in notepad++
+*/
+EJB和ssh组合的关系:
+video42, 25min34sec - 27min45sec
+
+============ 1-3 ============
+
+step1, 面向对象编程的第一步, 找出实体类. 一般一个DB表对应一个pojo
+package com.bjsxt.model;
+public class User {
+	private String username;
+	private String password;
+	//getters(), setters()
+}
+
+step2, 建立和DB链接的层次DAO. 为了适应不同的数据库, 可以使用interface, 这样用不同的implements之间可以很容易切换
+public interface UserDAO {
+	public void save(User user);
+}
+
+public class UserDAOmySQLImpl implements UserDAO {
+	public void save(User user) {
+		System.out.println("user saved in mySQL!");		//这里接收user后可以连接各种DB
+	}
+}
+public class UserDAOoracleSQLImpl implements UserDAO {
+	public void save(User user) {
+		System.out.println("user saved in oracle SQL!");
+	}
+}
+
+step3, 建立service层实现业务逻辑
+public class UserService {
+	private UserDAO userDAO = new UserDAOmySQLImpl();
+	
+	public void add(User user) {
+		userDAO.save(user);
+	}
+}
+
+step4, 测试见video5
+
+============ 4 JDOM ============
+
+JDOM: 通过 Java 代码来访问, 操作并输出 XML 数据
+
+读文本节点(text node)和属性节点(attribute)
+<?xml version="1.0" encoding="UTF-8"?>
+<HD>
+	<disk name="C">
+		<capacity>8G</capacity>
+		<directories>200</directories>
+		<files>1580</files>
+	</disk>
+
+	<disk name="D">
+		<capacity>10G</capacity>
+		<directories>500</directories>
+		<files>3000</files>
+	</disk>
+</HD>
+
+jdom2 mvnrepository:
+<dependency>
+	<groupId>org.jdom</groupId>
+	<artifactId>jdom2</artifactId>
+	<version>2.0.6</version>
+</dependency>
+
+import java.util.*;
+import org.jdom2.*;
+import org.jdom2.input.SAXBuilder;
+public class Sample1 {
+	public static void main(String[] args) throws Exception{ 
+		SAXBuilder sb = new SAXBuilder();
+		Document docu = sb.build(Sample1.class.getClassLoader().getResourceAsStream("test.xml"));	//test.xml在src目录下
+		
+		Element root = docu.getRootElement();		//<HD>
+		List list = root.getChildren("disk");
+		
+		for(int i=0; i<list.size(); i++){
+			Element element = (Element)list.get(i);
+			
+			String name = element.getAttributeValue("name");
+			String capacity = element.getChildText("capacity");
+			String directories = element.getChildText("directories");
+			String files = element.getChildText("files");			
+			
+			System.out.println(name);			
+			System.out.println(capacity);
+			System.out.println(directories);
+			System.out.println(files);
+		}
+	}
+} 
+
+============ 5 JUnit ============
+
+被测类UserService.java上右键 >> new >> Other >> Java >> JUnit >> JUnit Test Case
+EclipseEE版本自带了JUnit lib. 各种设置, 选择目标后, 在同一包下生成同名+Test文件: UserServiceTest.java
+
+测试用的代码最好存放于单独source folder中. 手动建立source folder "test", 拖该测试文件进去
+package com.bjsxt.service;			//测试类与被测试类同包名(不同的source folder中)
+import org.junit.Test;
+
+public class UserServiceTest {
+	@Test
+	public void testAdd() {
+		UserService service = new UserService();	//手动输入测试方法需要的参数, 然后开始调用方法
+		User u = new User();
+		u.setUsername("zhangsan");
+		u.setPassword("zhangsan");
+		service.add(u);
+	}
+}
+如果检测成功, 显示一个绿色bar. 否则红色bar. 注意检查调用的类, 方法是否对应.
+
+============ 6 从xml读取配置参数例 ============
+
+通过读beans.xml取得配置参数, 然后放在UserService的变量中去
+step1, 有一个存有配置参数的beans.xml文件
+<beans>
+	<bean id="userDAO" class="com.bjsxt.dao.impl.UserDAOmySQLImpl" />
+</beans>
+
+step2, 模拟spring, 建立相应的 ClassPathXmlApplicationContext.java 读取所有xml的内容, 提供读配置方法
+
+public interface BeanFactory {
+	Object getBean(String string);
+}
+
+public class ClassPathXmlApplicationContext implements BeanFactory {
+	private Map<String, Object> beans = new HashMap<String, Object>();		//用于存放String及对应的String实例化后的Object
+	
+	public ClassPathXmlApplicationContext() throws Exception {
+		SAXBuilder sb=new SAXBuilder();
+		Document doc=sb.build(this.getClass().getClassLoader().getResourceAsStream("beans.xml"));
+		
+		Element root=doc.getRootElement();
+		List list=root.getChildren("bean");
+		
+		for(int i=0;i<list.size();i++){
+			Element element=(Element)list.get(i);
+			String id=element.getAttributeValue("id");				// 取出id=UserDAO
+			
+			String cls=element.getAttributeValue("class");
+			Object obj=Class.forName(cls).newInstance();			// 取得class的name String, 然后实例化
+			
+			beans.put(id, obj);
+		}
+	}
+	
+	public Object getBean(String id) {		//构造方法时已经读取了xml所有内容, 并将实例存放在beans里. 对外方法实现传入一个String请求, 返回对应Object
+		return beans.get(id);
+	}
+}
+
+step3, 修改service调用DAO的方式:
+public class UserService {
+	public void add(User user) {
+		BeanFactory factory = new ClassPathXmlApplicationContext();
+		UserDAO userDAO = (UserDAO)factory.getBean("userDAO");		//userDAO初始值从xml中来, 修改dao只要修改xml配置即可
+		userDAO.save(user);
+	}
+}
+
+============ 7 注入实例 IOC (Inverse of Control 控制反转) DI (Dependency Injection 依赖注入)============
+
+修改之前JUnit例, 实现灵活且低耦合的service类的创建
+全手动:
+public class UserServiceTest {
+	@Test
+	public void testAdd() {
+		UserService service = new UserService();			//固定的UserService对象
+		User user = new User();
+		service.add(user);
+	}
+}
+public class UserService {
+	private UserDAO userDAO = new UserDAOmySQLImpl();		//调用service过程中先实例化dependency的UserDAO, 对象固定
+
+	public void add(User user) {
+		userDAO.save(user);
+	}
+}
+
+容器注入:
+step1, bean中添加对应service, 及其用到的UserDAO配置
+<beans>
+	<bean id="userDAOmySQL" class="com.bjsxt.dao.impl.UserDAOmySQLImpl" />
+	<bean id="userService" class="com.bjsxt.service.UserService" >
+		<property name="userDAO" bean="userDAOmySQL"/>
+	</bean>
+</beans>
+
+step2, UserService中对userDAO提供getters(), setters() 用于接收注入
+public class UserService {
+	private UserDAO userDAO;		//与xml中property name 必须严格一致
+	//getters(); setters();
+	
+	public void add(User user) {
+		userDAO.save(user);
+	}
+}
+
+step3, 通过注入方式实例化userService
+public class ClassPathXmlApplicationContext implements BeanFactory {
+	private Map<String , Object> beans = new HashMap<String, Object>();
+	
+	public ClassPathXmlApplicationContext() throws Exception {
+		SAXBuilder sb=new SAXBuilder();
+		Document doc=sb.build(this.getClass().getClassLoader().getResourceAsStream("beans.xml"));
+		
+		Element root=doc.getRootElement();				//beans
+		List list=root.getChildren("bean");
+		
+		for(int i=0;i<list.size();i++){
+		//实例化所有<bean>节点
+			Element element=(Element)list.get(i);
+			String id=element.getAttributeValue("id");
+			String cls=element.getAttributeValue("class");
+			Object obj=Class.forName(cls).newInstance();
+			beans.put(id, obj);
+			
+			//对有property的bean实现注入(注入的内容需在被调用前需已实例化)
+			for(Element propertyElement : (List<Element>)element.getChildren("property")) {
+				String name = propertyElement.getAttributeValue("name");	//"userDAO"
+				String bean = propertyElement.getAttributeValue("bean");	//"userDAOmySQL"
+				Object beanObject = beans.get(bean);						//从之前的实例Map中取出userDAOmySQL实例, 准备用于注入
+
+				String methodName = "set" + name.substring(0, 1).toUpperCase() + name.substring(1);			//开始将UserDAO注入UserService. 找到用以注入的方法名: "userDAO" -> "setUserDAO"
+				Method m = obj.getClass().getMethod(methodName, beanObject.getClass().getInterfaces()[0]);	//此时obj就是userService, beanObject就是userDAOmySQLImpl. 从方法名String实例化到方法对象
+				//beanObject.getClass() = userDAOmySQLImpl.java	从obj实例对应到class类. 同理obj.getClass()
+				//beanObject.getClass().getInterfaces()[0] = userDAO.java	找父类集合. [0]代表取第一个接口
+				//这行相当于 Method m = userService.getMethod("setUserDAO", UserDAO). 指明了method的位置: userService的setUserDAO; 指明了method的参数类型: UserDAO
+
+				m.invoke(obj, beanObject);		//执行注入方法!(完成从一个string到方法的执行)
+			}
+	    }  
+	}
+	public Object getBean(String id) {
+		return beans.get(id);
+	}
+}
+ 
+step4, 一次取得userService, 过程需要的userDAO实例通过注入自动完成
+public class UserServiceTest {
+	@Test
+	public void testAdd()  {
+		BeanFactory factory = new ClassPathXmlApplicationContext();			//构造方法读取了xml所有内容, 注入过程需要的实体内容
+		UserService service = (UserService)factory.getBean("userService");
+		
+		User user = new User();
+		service.add(user);
+	}
+}
+
+============ 8 spring实例 ref ============
+
+step1, 复制basic structure of XML-based configuration metadata:
+http://docs.spring.io/spring/docs/current/spring-framework-reference/htmlsingle/
+
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+       http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <bean id="..." class="...">
+        <!-- collaborators and configuration for this bean go here -->
+    </bean>
+    <bean id="..." class="...">
+        <!-- collaborators and configuration for this bean go here -->
+    </bean>
+    <!-- more bean definitions go here -->
+</beans>
+
+step2, 修改为 Video7 中内容
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+	   http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
+
+	<bean id="userDAOmySQL" class="com.bjsxt.dao.impl.UserDAOmySQLImpl">
+	</bean>
+	
+	<bean id="userService" class="com.bjsxt.service.UserService">
+		<property name="userDAO" ref="userDAOmySQL" />		<!--注意这里用的是ref, 与之前手动例子中attribute起名bean不同-->
+		<!--name与UserService中的field相同, ref与需要引用的bean相同-->
+	</bean>
+</beans>
+
+step3, 导入spring包
+下载: http://maven.springframework.org/release/org/springframework/spring/
+Window >> Preferences >> Java >> Build Path >> User Libraries >> New... >> 起名 Spring4.1.6 >>
+Add External JARs >> D:\SETUP\Windows\!PROGRAMMING\JAVA_WEB\plugins\spring\spring-framework-4.1.6.RELEASE\libs\所有jar包(精细操作可以去除doc和src部分)
+
+项目右键 >> Properties >> Java Build Path >> Add Library... >> user Library >> Spring4.1.6 >> OK
+
+step4, 调整之前例子的测试部分程序, JUnit调试
+import org.junit.Test;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+import com.bjsxt.model.User;
+
+public class UserServiceTest {
+	@Test
+	public void testAdd() {
+		ApplicationContext factory = new ClassPathXmlApplicationContext();	//这里使用了BeanFactory的子接口, 处理生命周期等功能更强. 实际中一般用annotation, 不用背
+		UserService service = (UserService)factory.getBean("userService");
+		
+		User user = new User();
+		service.add(user);
+	}
+}
+
+step5, 调试出错, 看错误提示, java.lang.NoClassDefFoundError: org/apache/commons/logging/LogFactory
+下载Apache Commons Logging: http://commons.apache.org/proper/commons-logging/download_logging.cgi
+重复step3的Add JARs
+
+step6, 调试出错, 看错误提示, java.lang.IllegalStateException: BeanFactory not initialized or already closed...
+这是由于spring不知道自定义的beans.xml
+看API, 还有一个重载的构造方法: ClassPathXmlApplicationContext(String configLocation)
+Create a new ClassPathXmlApplicationContext, loading the definitions from the given XML file and automatically refreshing the context.
+改:
+public class UserServiceTest {
+	@Test
+	public void testAdd() {
+		ApplicationContext factory = new ClassPathXmlApplicationContext("beans.xml");
+		UserService service = (UserService)factory.getBean("userService");
+		
+		User user = new User();
+		service.add(user);
+	}
+}
+可爱的小绿条
+
+============ 9 constructor()注入 constructor-arg ============
+
+spring的XML中不显示提示
+Window >> Preferences >> XML >> XML Catalog >> User Specified Entries >> Add...
+Location:
+D:\SETUP\Windows\!PROGRAMMING\JAVA_WEB\plugins\spring\spring-framework-4.1.6.RELEASE\schema\beans\spring-beans-4.1.xsd
+Key type: Schema location
+Key: http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+
+每个xml文档头部<beans  xsi:schemaLocation>也需要用这个Key的地址(实测不改也可以用)
+提示 >> 找文档头 >> 找Key >> 找Key对应的xsd文件
+
+
+constructor()注入
+step1, beans.xml中
+<beans>
+	<bean id="userDAOmySQL" class="com.bjsxt.dao.impl.UserDAOImpl">
+	</bean>
+	<bean id="userService" class="com.bjsxt.service.UserService">
+		<constructor-arg index="0">			<!-- index用于控制传多参的顺序 -->
+			<ref bean="userDAOmySQL"/>
+		</constructor-arg>
+	</bean>
+</beans>
+比较setters()注入: <property name="userDAO" ref="userDAOmySQL" />
+	
+step2, UserService.java中constructor():
+public class UserService {
+	private UserDAO userDAO;  
+	public UserService(UserDAO userDAO) {
+		this.userDAO = userDAO;
+	}
+}
+比较setters()注入:
+public class UserService {
+	private UserDAO userDAO;
+	public void setUserDAO(UserDAO userDAO) {
+		this.userDAO = userDAO;
+	}
+}
+比较全手动:
+public class UserService {
+	private UserDAO userDAO = new UserDAOmySQLImpl();
+}
+
+step3, UserServiceTest使用
+public class UserServiceTest {
+	@Test
+	public void testAdd() {
+		ApplicationContext factory = new ClassPathXmlApplicationContext("beans.xml");
+		UserService service = (UserService)factory.getBean("userService");
+		
+		User user = new User();
+		service.add(user);		//step2中省略了add()的部分
+	}
+}
+
+============ 10 id name ============
+
+name里可以可以含一些特殊字符, 其余与用id完全一样
+
+============ 11 通过xml注入变量值 value ============
+
+step1, 在xml文件中定义初始值
+<beans>
+	<bean name="userDAO" class="com.bjsxt.dao.impl.UserDAOImpl">
+		<property name="daoId" value="8"></property>
+		<property name="daoStatus" value="good"></property>
+	</bean>
+</beans>
+
+step2, 在java中定义变量
+public class UserDAOImpl implements UserDAO {
+	private int daoId;
+	private String daoStatus;
+	//getters(); setters();
+}
+
+============ 12 bean的作用范围 scope ============
+
+API: pdf page57
+
+singleton (Default): Scopes a single bean definition to a single object instance per Spring IoC container. 单一实例
+prototype: Scopes a single bean definition to any number of object instances. 多实例
+
+<bean id="userService" class="com.bjsxt.service.UserService" scope="prototype">
+</bean>
+
+============ 13 集合注入 props/list/map/set ============
+
+API: pdf page45
+<bean id="moreComplexObject" class="example.ComplexObject">
+<!-- results in a setAdminEmails(java.util.Properties) call -->
+	<property name="adminEmails">
+		<props>
+			<prop key="administrator">administrator@example.org</prop>
+			<prop key="support">support@example.org</prop>
+			<prop key="development">development@example.org</prop>
+		</props>
+	</property>
+	
+<!-- results in a setSomeList(java.util.List) call -->
+	<property name="someList">
+		<list>
+			<value>a list element followed by a reference</value>
+			<ref bean="myDataSource" />
+		</list>
+	</property>
+	
+<!-- results in a setSomeMap(java.util.Map) call -->
+	<property name="someMap">
+		<map>
+			<entry key="an entry" value="just some string"/>
+			<entry key ="a ref" value-ref="myDataSource"/>
+		</map>
+	</property>
+	
+<!-- results in a setSomeSet(java.util.Set) call -->
+	<property name="someSet">
+		<set>
+			<value>just some string</value>
+			<ref bean="myDataSource" />
+		</set>
+	</property>
+</bean>
+
+
+step1, 在UserDAOImpl中有3种容器field
+public class UserDAOImpl implements UserDAO {
+	private Set<String> sets;
+	private List<String> lists;
+	private Map<String , String> maps;
+	//getters(); setters();
+}
+
+step2, 在xml中按API规范给属性设值, 就可以在实例化时DI
+<beans>
+	<bean name="userDAO" class="com.bjsxt.dao.impl.UserDAOImpl">
+		<property name="sets">
+			<set>
+				<value>1</value>
+				<value>2</value>
+			</set>
+		</property>
+		
+		<property name="lists">
+			<list>
+				<value>1</value>
+				<value>2</value>
+				<value>3</value>
+			</list>
+		</property>
+		
+		<property name="maps">
+			<map>
+				<entry key="1" value="1"></entry>
+				<entry key="2" value="2"></entry>
+				<entry key="3" value="3"></entry>
+				<entry key="4" value="4"></entry>
+			</map>
+		</property>
+	</bean>
+</beans>
+
+============ 14 自动装配 autowire ============
+
+按name自动装配
+xml中:
+<beans>
+	<bean name="userDAO" class="com.bjsxt.dao.impl.UserDAOImpl">
+		<property name="daoId" value="1"></property>
+	</bean>
+	
+	<bean id="userService" class="com.bjsxt.service.UserService" autowire="byName">
+	</bean>
+</beans>
+
+UserService.java中:
+public class UserService {
+	private UserDAO userDAO;
+	//getters(); setters();
+}
+可以看到, 在xml中没有给userService配置关于userDAO的<property>, 但spring仍然可以根据UserService的field名字, 找到对应的beans
+
+
+按type自动装配
+xml中:
+<beans>
+	<bean name="userDAO1" class="com.bjsxt.dao.impl.UserDAOImpl">
+		<property name="daoId" value="1"></property>
+	</bean>
+	
+	<bean name="userDAO2" class="com.bjsxt.dao.impl.UserDAOImpl">
+		<property name="daoId" value="2"></property>
+	</bean>
+	
+	<bean id="userService" class="com.bjsxt.service.UserService" autowire="byType">
+	</bean>
+</beans>
+运行后报错, 有2个符合userService的field类型(userDAO)的bean. 删除任意一个后通过(当然结果是不一样的)
+
+
+按default自动装配
+<beans autowire="byType">
+	<bean name="userDAO2" class="com.bjsxt.dao.impl.UserDAOImpl">
+		<property name="daoId" value="2"></property>
+	</bean>
+
+	<bean id="userService" class="com.bjsxt.service.UserService" autowire="byDefault">
+	</bean>
+</beans>
+在<beans>设置autowire, 子bean用byDefault继承默认方法
+
+============ 15 lazy-init ============
+
+API: pdf page51
+默认在new ClassPathXmlApplicationContext("beans.xml")时所有的beans都实例化了.
+
+<bean id="lazy" class="com.foo.ExpensiveToCreateBean" lazy-init="true"/>
+启用lazy-init参数后, 只有在用到这个bean时候才会初始化
+<beans default-lazy-init="true">
+
+============ 15 生命周期 ============
+
+step1, 在UserService类中加入开始和销毁方法
+public class UserService {
+	private UserDAO userDAO;
+	//getters(); setters();
+	
+	public void init() {
+		System.out.println("init");
+	}
+
+	public void destroy() {
+		System.out.println("destroy");
+	}
+}
+
+step2, 在xml中配置方法
+<bean id="userService" class="com.bjsxt.service.UserService" init-method="init" destroy-method="destroy" scope="prototype">
+	<property name="userDAO" ref="userDAO" />
+</bean>
+
+step3, 由于ApplicationContext没有destroy(), 修改主程序的类到ClassPathXmlApplicationContext
+public class UserServiceTest {
+	@Test
+	public void testAdd() throws Exception {
+		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("beans.xml");
+		UserService service = (UserService)ctx.getBean("userService");
+		ctx.destroy();
+	}
+}
+
+结果:
+scope="singleton"(默认值)时, 出现一次init和destroy
+scope="prototype" 时, 出现调用次init, 但是没有destroy
+
+============ 16 Annotation注入 @Autowired, @Qualifier, @Required ============
+
+API: pdf page83
+step1, 在xml头添加新的namespace
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+						http://www.springframework.org/schema/beans/spring-beans.xsd
+						http://www.springframework.org/schema/context
+						http://www.springframework.org/schema/context/spring-context.xsd">
+	<context:annotation-config/>	<!-- 当xml中有这行时, spring就会初始化4个bean, 用于处理annotation. 详见 API: pdf page83 -->
+</beans>
+与标准xml比较, 多了含context的所有行(共4行)
+
+xmlns="http://www.springframework.org/schema/beans"	没有任何前缀的tag使用的schema
+xmlns:context="http://www.springframework.org/schema/context" 以context开头的tag按后面的link找Catalog里的规则
+dtd, xsd原理参考struts2的video7
+
+step2, 同之前添加各种要注入bean
+<beans>
+	<context:annotation-config />
+	
+	<bean id="u" class="com.bjsxt.dao.impl.UserDAOImpl">
+	</bean>	<!-- 同之前byType, 不可同时有多个同class的bean. 或者java中使用@Qualifier -->
+	
+	<bean id="userService" class="com.bjsxt.service.UserService" >
+	</bean>	<!--无需在这里指定ref, 用java中annotation-->
+</beans>
+
+step3, 在java中通过annotation指定DI的bean
+API: pdf page84
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+public class UserService {
+	private UserDAO userDAO;  
+
+	public UserDAO getUserDAO() {
+		return userDAO;
+	}
+	
+	@Autowired	//有了这个annotation, spring就能自动DI和参数类型一致的bean, 而不用在xml中设置
+	public void setUserDAO(@Qualifier("u") UserDAO userDAO) {	//如果有多个同class的bean, 可以用@Qualifier指定bean的名字
+		this.userDAO = userDAO;
+	}
+}
+
+//@Required, 有这个annotation, 初始化时候必须注入. 非必须, 类似@Override提醒作用
+
+============ 17 Annotation注入 @Resource ============
+
+step1, xml中bean设置同之前
+step2, 检查是否包含了j2ee的 common-annotations.jar
+
+step3, 
+import javax.annotation.Resource;
+public class UserService {
+	private UserDAO userDAO;  
+	
+	public UserDAO getUserDAO() {
+		return userDAO;
+	}
+	@Resource	//默认byType, 也可以加参数指定byName: @Resource(name="u"). 比@Autowired, @Qualifier组合直观.
+	public void setUserDAO(UserDAO userDAO) {
+		this.userDAO = userDAO;
+	}
+}	//实际使用时直接在field上@Resource即可, 无需设置在setter()上
+
+============ 17-18 Annotation注入 @Component, @Resource ============
+
+API: pdf page96
+step1, 在xml文件中指定扫描bean的目录(扫描@Component标注)
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+						http://www.springframework.org/schema/beans/spring-beans.xsd
+						http://www.springframework.org/schema/context
+						http://www.springframework.org/schema/context/spring-context.xsd">
+	<context:component-scan base-package="com.bjsxt"/>
+</beans>
+API: pdf page97 无需<context:annotation-config/>标记:
+The use of <context:component-scan> implicitly enables the functionality of <context:annotation-config>.
+
+step2, 指定类产生的对象作为一个组件
+@Component("myComponentName") 		//如果只有@Component, 则默认对象实体value为类名首字母小写, 例如本例:userDAOImpl
+public class UserDAOImpl implements UserDAO {
+	public void save(User user) {
+		System.out.println("user saved!");
+	}
+}
+
+step3, 在其他类中指明依赖关系
+@Component("userService")
+public class UserService {
+	private UserDAO userDAO;  
+
+	public UserDAO getUserDAO() {
+		return userDAO;
+	}
+	
+	@Resource(name="myComponentName")		//如果只有@Resource, 首先按名称寻找匹配的bean. 如果找不到, 再按类型找(必须只有唯一一个类型符合的bean)
+	public void setUserDAO(UserDAO userDAO) {		//参考DI原理, 在此处注入userDAO实例
+		this.userDAO = userDAO;
+	}
+}
+
+新版本spring中, 也可以直接在field申明处直接注入(bean property setter methods) API pdf page93
+@Component("userService")
+public class UserService {
+	@Resource (name="myComponentName")
+	private UserDAO userDAO;
+}
+
+step4, 测试, 主程序使用bean时实例化
+public class UserServiceTest {
+	@Test 
+	public void testAdd() throws Exception {
+		ClassPathXmlApplicationContext ctx = new ClassPathXmlApplicationContext("beans.xml");
+		
+		UserService service = (UserService)ctx.getBean("UserService123");	//找不到该名字bean, 按类型找
+		service.add(new User());
+	}
+}
+
+@Component, @Repository, @Service, @Controller 在2.5.6中作用是一样的
+
+============ 18 Annotation注入 @Scope, @PostConstruct, @PreDestroy ============
+
+API: pdf page100
+@Scope("prototype")
+@Repository
+public class MovieFinderImpl implements MovieFinder {
+	// 效果同xml中的scope设置
+}
+
+
+API: pdf page94
+在java中
+public class UserService {
+	private UserDAO userDAO;
+	
+//效果同Video15中: <bean id="userService" class="..." init-method="init" destroy-method="destroy" scope="prototype">	
+	@PostConstruct
+	public void init() {
+		System.out.println("init");
+	}
+	
+	@PreDestroy
+	public void destroy() {
+		System.out.println("destroy");
+	}
+}
+
+============ 19-20 AOP ============
+
+面向切面编程 Aspect-Oriented-Programming
+
+给原方法添加功能
+方法1: 修改代码 (完全耦合)
+public class UserDAOImpl implements UserDAO {
+	public void save(User user) {
+		System.out.println("new function");
+		System.out.println("user saved!");
+	}
+}
+
+方法2: 继承 (耦合度较高)
+public class UserDAOImpl2 extends UserDAOImpl {
+	@Override
+	public void save(User user) {
+		System.out.println("new function");
+		super.save(user);
+	}
+}	//在xml中对应调整bean的class
+
+方法3: 组合
+public class UserDAOImpl3 implements UserDAO {
+	private UserDAO userDAO = new UserDAOImpl();
+	@Override
+	public void save(User user) {
+		System.out.println("new function");
+		userDAO.save(user);
+	}
+}
+
+方法3小升级: 新功能模块单独出来. 对每一个方法还是需要额外写一套的新方法
+public class LogInterceptor{
+	public void beforeMethod() {
+		System.out.println("new function");
+	}
+}
+public class UserDAOImpl3 implements UserDAO {
+	private UserDAO userDAO = new UserDAOImpl();
+	@Override
+	public void save(User user) {
+		new LogInterceptor().beforeMethod();
+		userDAO.save(user);
+	}
+}
+
+============ 21 动态代理模拟AOP原理 Proxy, InvocationHandler ============
+
+step1, 准备想要插入的新业务beforeMethod(). 如果业务比较大, 也可以独立成一个类.
+public class LogInterceptor{
+	public void beforeMethod() {
+		System.out.println("save start");
+	}
+}
+
+step2, 实现InvocationHandler接口, 重写需要实现的方法. LogInterceptor相当于新增业务和原业务合并了方法的容器handler
+public class LogInterceptor implements InvocationHandler{
+	public void beforeMethod() {
+		System.out.println("save start");
+	}
+	
+	//proxy 代理对象 the proxy instance that the method was invoked on 
+	//method 被代理的方法 the Method instance corresponding to the interface method invoked on the proxy instance.
+	//args 运行参数 an array of objects containing the values of the arguments passed in the method invocation on the proxy instance
+	//返回的Object是方法执行的结果
+	@Override
+	public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+		beforeMethod();							//新增业务
+		// TODO Auto-generated method stub		//原业务
+		return null;
+	}
+}
+
+step3, 完成handler的invoke()内容
+public class LogInterceptor implements InvocationHandler{
+	beforeMethod();
+	private Object target;	//用于保存被代理的对象. 这里用setter()注入方式, 也可以通过传参方式传过来
+	//getters(); setters();
+	
+	// 后面调用代理对象(target)的任何方法时都调用这个invoke(), 然后间接调用被代理对象的方法
+	public Object invoke(Object proxy, Method m, Object[] args) throws Throwable {
+		beforeMethod();
+		m.invoke(target, args);		//连接被代理对象target的m方法运行args参数
+		return null;
+	}
+}
+
+step4, 产生, 使用代理对象
+public class UserServiceTest {
+	@Test
+	public void testProxy() {
+		UserDAO userDAO = new UserDAOImpl();			//准备一个被代理对象的实例
+		LogInterceptor li = new LogInterceptor();		//准备一个handler, 调用其时可以执行新增业务和原业务
+		li.setTarget(userDAO);							//使用setter()注入被代理对象
+		
+		UserDAO userDAOProxy = (UserDAO)Proxy.newProxyInstance(				//产生代理对象userDAOProxy
+									userDAO.getClass().getClassLoader(),	//代理对象用哪个ClassLoader. 需要与被代理对象用同样的ClassLoader
+									userDAO.getClass().getInterfaces(),		//定义代理对象实现哪些接口(这里是所有接口). 也可以手写实现的接口列表: new Class[]{UserDAO.class};
+									li										//调用代理的方法时, 用哪个handler响应方法的调用
+								);
+		userDAOProxy.save(new User());				//调用代理对象的save方法, 执行handler, 执行新增业务beforeMethod()和原业务中的方法
+	}
+	//如过原业务有其他方法, 比如delete(), 由于使用动态指向的方法m, 所以同样可以在UserServiceTest中直接调用代理.
+	
+	/*class $Proxy4 implements UserDAO{					//内部调用InvocationHandler过程
+	 *	save(User user) {
+	 *		Method m = UserDAO.getclass().getmethod();	//拿到save方法
+	 *		li.invoke(this, m, user);
+	 *	}
+	 *}
+	 */
+}
+
+step5, 美化细节
+public class LogInterceptor implements InvocationHandler {
+	public Object invoke(Object proxy, Method m, Object[] args) throws Throwable {
+		beforeMethod(m);
+		m.invoke(target, args);
+		return null;
+	}
+
+	public void beforeMethod(Method m) {
+		System.out.println(m.getName() + " start");
+	}
+}
+
+============ 22 AOP Annotation 配置 @Before ============
+
+java1.8无法运行Spring2.5. 需要使用java1.7 - 1.5之间版本:
+http://stackoverflow.com/questions/23813369/spring-java-error-namespace-element-annotation-config-on-jdk-1-5-and-high
+http://stackoverflow.com/questions/20882576/has-spring-framework-2-x-reached-eol
+
+Spring=4.1配合使用Java=1.8, 需要添加aopalliance.jar
+<dependency>
+	<groupId>aopalliance</groupId>
+	<artifactId>aopalliance</artifactId>
+	<version>1.0</version>
+</dependency>	<!--maven deposit-->
+
+step1, 在xml头添加新的namespace
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+						http://www.springframework.org/schema/beans/spring-beans.xsd
+						http://www.springframework.org/schema/context
+						http://www.springframework.org/schema/context/spring-context.xsd
+					    http://www.springframework.org/schema/aop
+						http://www.springframework.org/schema/aop/spring-aop.xsd">
+	<context:component-scan base-package="com.bjsxt"/>
+ 	<aop:aspectj-autoproxy />
+</beans>
+与包含了content的xml比较, 多了含aop的所有行(共4行)
+
+step2, 导入AspectJ包 ?? 直接去AspectJ下载的aspectj-1.8.6.jar不支持, 需要下单独的aspectjrt-1.8.5.jar和aspectjweaver-1.8.5.jar ??
+Window >> Preferences >> Java >> Build Path >> User Libraries >> Spring4.1.6 >>
+Add External JARs >> D:\SETUP\Windows\!PROGRAMMING\JAVA_WEB\plugins\AspectJ 里面的aspectjrt-1.8.5.jar和aspectjweaver-1.8.5.jar
+
+step3, LogInterceptor.java中, 加入新业务before()
+@Aspect				//调用AspectJ的annotation, 说明本身是个切面逻辑, 用于添加业务功能
+@Component			//必须把LogInterceptor本身也交给spring进行组织, 作为一个component
+public class LogInterceptor {
+	@Before("execution(public void com.bjsxt.dao.impl.UserDAOImpl.save(com.bjsxt.model.User))")		//指明织入新业务的点pointcut
+	public void myBefore() {
+		System.out.println("method before");
+	}
+}
+
+结果:
+在执行save()前, 执行了myBefore()的内容, 然后继续执行save()
+
+============ 22 AOP Annotation 概念 ============
+
+API: pdf page201
+@Pointcut("execution(* com.xyz.someapp..service.*.*(..))")
+public void businessService() {}
+这个Pointcut的名字叫做businessService. 这是com.xyz.someapp..service下所有类所有方法, 任何类型形参和返回值的连接点的集合
+@Pointcut就是JoinPoint的集合描述
+
+一个切面类, 例如这里的LogInterceptor, 里面有很多方法, 加到各种被代理的对象上去. 就是一个切面Aspect.
+Target是被代理的对象
+
+API: pdf page193
+Aspect: a modularization of a concern that cuts across multiple classes.									代理对象
+Join point: a point during the execution of a program, a join point always represents a method execution.	具体的被代理的方法
+Pointcut: a predicate that matches join points.																对joint point特点的描述, 例如 * com.xyz.someapp..service.*.*(..)
+Advice: action taken by an aspect at a particular join point. Different types of advice include "around", "before" and "after" advice.		新切入的业务内容
+
+Target object: object being advised by one or more aspects.
+AOP proxy: an object created by the AOP framework in order to implement the aspect contracts. A JDK dynamic proxy or a CGLIB proxy.
+Weaving: linking aspects with other application types or objects to create an advised object.
+
+============ 23 AOP Annotation @AspectJ style ============
+
+API: pdf page202
+execution(public * *(..))
+//第一个*, 任何返回类型
+//第二个*, 任何类的任何方法
+//(..) matches any number of parameters
+
+execution(* set*(..))
+//第一个*, 任何返回类型
+//第二个*, 任何以set开头方法
+
+execution(!void com.xyz.service.AccountService.*(..))
+//!void, 返回类型非空
+//com.xyz.service.AccountService类的任何方法, 任何形参
+
+execution(* com.xyz.service..*.*(..))
+//第一个*, 任何返回类型
+//com.xyz.service.. 包的任何子包
+//com.xyz.service..* 任何子包的任何类
+//com.xyz.service..*.* 任何子包的任何类的任何方法
+//com.xyz.service..*.*(..) 任何子包的任何类的任何方法, 任何形参
+
+API: pdf page205
+@Before: 在目标方法执行前
+@AfterReturning: After returning advice runs when a matched method execution returns normally 在目标方法正常执行后
+@AfterThrowing: After throwing advice runs when a matched method execution exits by throwing an exception 在目标方法异常执行后
+@After: After (finally) advice runs however a matched method execution exits. 在目标方法执行后(无论是否异常)
+
+@Around: API: pdf page208. 原理参考设计模式中责任链部分. 建议使用指向更明确的标注组合, 例如 @Before及@AfterReturning
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.ProceedingJoinPoint;
+@Aspect
+public class AroundExample {
+	@Around("com.xyz.myapp.SystemArchitecture.businessService()")
+	public Object doBasicProfiling(ProceedingJoinPoint pjp) throws Throwable {
+		// start stopwatch 						//Target对象执行前的内容
+		Object retVal = pjp.proceed();			//通知Target对象开始执行, ProceedingJoinPoint 对象自动输入, 不用设置
+		// stop stopwatch						//Target对象执行后的内容
+		return retVal;
+	}
+}
+
+@Pointcut给织入点一个代称, 例如本例中: myMethod
+package com.bjsxt.service;
+@Aspect
+@Component
+public class LogInterceptor {
+	@Pointcut("execution(public * com.bjsxt.dao..*.*(..))")
+	public void myMethod(){};		//起了一个代称
+
+	@Before("myMethod()")		//当使用同一个织入点时, @Before, @Around 先后出现顺序不一定
+	public void before() {
+		System.out.println("method before");
+	}
+
+	@Around("myMethod()")
+	public void aroundMethod(ProceedingJoinPoint pjp){
+		System.out.println("method around start");
+		pjp.proceed();
+		System.out.println("method around end");
+	}
+}
+如果类实现了接口, spring会用jdk的InvocationHandler和Proxy自动产生代理
+如果类没有实现接口, spring会直接操作二进制码类库CGLibrary来产生代理. 需要导入CGLibrary库http://mvnrepository.com/artifact/cglib/cglib-nodep/3.1
+
+============ 24 AOP XML schema-based approach ============
+
+step1, 由spring管理Aspect, 效果同annotation中@Component
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-2.5.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop-2.5.xsd">
+	<context:component-scan base-package="com.bjsxt"/>
+
+	<bean id="logInterceptor" class="com.bjsxt.aop.LogInterceptor"></bean>
+</beans>
+
+step2, 定义Pointcut描述. 全局的pointcut所有切面类都可以应用; Aspect内部的pointcut仅该切面自己可以用.
+<beans>
+	<aop:config>
+		<aop:pointcut id="servicePointcut" expression="execution(public * com.bjsxt.dao..*.*(..))">	<!--@AspectJ标注风格中, id用的是方法名-->
+	</aop:config>
+</beans>
+
+step3, 添加Aspect. 效果同annotation中@Aspect
+<beans>
+	<aop:config>
+		<aop:aspect id="logAspect" ref="logInterceptor">
+		</aop:aspect>
+	</aop:config>
+</beans>
+
+step4, 在Aspect中添加Advise
+<beans>
+	<aop:config>
+		<aop:aspect id="logAspect" ref="logInterceptor">
+			<aop:before method="before" pointcut-ref="servicePointcut" />
+		</aop:aspect>
+	</aop:config>
+</beans>
+
+step1-4完整配置:
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-2.5.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop-2.5.xsd">
+	<context:component-scan base-package="com.bjsxt"/>
+
+	<bean id="logInterceptor" class="com.bjsxt.aop.LogInterceptor"></bean>
+	
+	<aop:config>
+		<aop:pointcut id="servicePointcut" expression="execution(public * com.bjsxt.dao..*.*(..))">	<!--这样的pointcut全局可用-->
+		
+		<aop:aspect id="logAspect" ref="logInterceptor">
+			<aop:before method="before" pointcut-ref="servicePointcut" />	<!--before就是一种advice. pointcut处也可以采用直接指定-->
+		</aop:aspect>
+	</aop:config>
+</beans>
+
+============ 25 Spring在xml中配置连接池 ============
+
+数据库连接池dbcp: database connection pool API: pdf page332
+<context:property-placeholder location="classpath:db.properties" />
+<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+	<property name="driverClassName" value="${jdbc.driverClassName}" />
+	<property name="url" value="${jdbc.url}" />
+	<property name="username" value="${jdbc.username}" />
+	<property name="password" value="${jdbc.password}" />
+</bean>
+
+step1, beans.xml中配置连接池
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-2.5.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop-2.5.xsd">
+	<context:component-scan base-package="com.bjsxt" />
+
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/spring" />
+		<property name="username" value="root" />
+		<property name="password" value="root" />
+		<property name="maxActive" value="80" />		<!--最大连接数, 0=不限-->
+		<property name="maxIdle" value="20" />
+		<property name="maxWait" value="3000" />		<!--断开等待连接时间ms-->
+	</bean>
+</beans>
+
+step2, 在使用数据库连接的UserDAOImpl.java中
+import javax.sql.DataSource;
+@Component("u") 
+public class UserDAOImpl implements UserDAO {
+	private DataSource dataSource;
+	public DataSource getDataSource() {return dataSource;}
+
+	@Resource	//使用DI实例化. 相当于以前util.DB.java里Class.forName("com.mysql.jdbc.Driver"); conn = DriverManager.getConnection("jdbc:mysql://localhost/spring", "root", "root");
+	public void setDataSource(DataSource dataSource) {
+		this.dataSource = dataSource;
+	}
+	
+	public void save(User user) {
+		try {
+			Connection connection=dataSource.getConnection();
+			connection.createStatement().executeUpdate(""insert into user (username) values ('zhang3')"");
+			connection.close();		//正规应该放在finally部分
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+	}
+}	
+
+step3,
+引入commons-dbcp.jar, commons-pool.jar, mysql_connector_java.jar
+数据库中建对应的数据库spring, 表user, 列id, name:
+create database spring;
+use spring;
+create table user (id int primary key auto_increment, name varchar(20));
+
+如果使用的是commons-dbcp2.jar, commons-pool2.jar, 需要相应修改bean配置文件:
+<bean id="dataSource" class="org.apache.commons.dbcp2.BasicDataSource" destroy-method="close">
+	<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+	<property name="url" value="jdbc:mysql://localhost:3306/spring" />
+	<property name="username" value="root" />
+	<property name="password" value="root" />
+	<property name="maxTotal" value="80" />				<!--注意属性名与dbcp中不同-->
+	<property name="maxIdle" value="20" />
+	<property name="maxWaitMillis" value="3000" />
+</bean>
+
+============ 26 Spring用PropertyPlaceholderConfigurer配置连接池 ============
+
+API: pdf page80
+<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+	<property name="locations" value="classpath:com/foo/jdbc.properties"/>
+</bean>
+
+<bean id="dataSource" destroy-method="close" class="org.apache.commons.dbcp.BasicDataSource">
+	<property name="driverClassName" value="${jdbc.driverClassName}"/>
+	<property name="url" value="${jdbc.url}"/>
+	<property name="username" value="${jdbc.username}"/>
+	<property name="password" value="${jdbc.password}"/>
+</bean>
+
+step1, beans.xml中配置连接池
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-2.5.xsd
+           http://www.springframework.org/schema/aop
+           http://www.springframework.org/schema/aop/spring-aop-2.5.xsd">
+	<context:annotation-config />
+	<context:component-scan base-package="com.bjsxt" />
+	
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations" value="classpath:jdbc.properties" />
+	</bean>
+
+	<bean id="dataSource" destroy-method="close" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${jdbc.driverClassName}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+</beans>
+
+step2, 在value="classpath:jdbc.properties"指定的jdbc.properties文件中:
+jdbc.driverClassName=com.mysql.jdbc.Driver
+jdbc.url=jdbc:mysql://localhost:3306/spring
+jdbc.username=root
+jdbc.password=root
+
+============ 27 Spring连接Hibernate ============
+
+SessionFactory 与一个数据库连接只需要一个实例就可以了, 很适合spring默认的(也是推荐的)singleton模式
+API: pdf page406
+<beans>
+	<bean id="myDataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="org.hsqldb.jdbcDriver"/>
+		<property name="url" value="jdbc:hsqldb:hsql://localhost:9001"/>
+		<property name="username" value="sa"/>
+		<property name="password" value=""/>
+	</bean>
+	
+	<bean id="mySessionFactory" class="org.springframework.orm.hibernate3.LocalSessionFactoryBean">
+		<property name="dataSource" ref="myDataSource"/>
+		
+		<property name="mappingResources">
+			<list>
+				<value>product.hbm.xml</value>
+			</list>
+		</property>
+		
+		<property name="hibernateProperties">
+			<value>
+				hibernate.dialect=org.hibernate.dialect.HSQLDialect
+			</value>
+		</property>
+	</bean>
+</beans>
+
+
+step1, beans.xml中配置hibernate
+<beans>
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/spring" />
+		<property name="username" value="root" />
+		<property name="password" value="root" />
+	</bean>
+	
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean">	<!--这个class实现了LocalSessionFactoryBean-->
+		<property name="dataSource" ref="dataSource" />		<!--将已有的dataSource bean注入dataSource对象-->
+		
+		<property name="hibernateProperties">		<!--指定hibernate dialect-->
+			<props>
+				<prop key="hibernate.dialect">org.hibernate.dialect.MySQLDialect</prop>		<!--注入props-->
+				<prop key="hibernate.show_sql">true</prop>
+			</props>
+		</property>
+		
+		<property name="annotatedClasses">			<!--API中mappingResources用xml配置文件, 直接指明class用annotatedClasses-->
+			<list>
+				<value>com.bjsxt.model.User</value>		<!--指明entity bean-->
+				<!-- <value>com.bjsxt.model.Log</value> -->
+			</list>
+		</property>
+	</bean>
+</beans>
+
+step2, 导入hibernate3.jar. 宁可少导入package, 出错提示, 不可多导入.
+antlr-2.7.6.jar; commons-collections-3.1.jar; dom4j-1.6.1.jar; javassist-3.9.0.GA.jar; jta-1.1.jar; slf4j-api-1.5.8.jar
+hibernate-annotations.jar
+ejb3-persistence.jar; hibernate-commons-annotations.jar
+slf4j-log4j12-1.5.8.jar
+
+step3, 在实体类上用Hibernate的注解
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+
+@Entity
+public class User {
+	private int id;				//和数据库对应
+	private String name;
+	
+	@Id							//在getID上用@Id标注primary key
+	@GeneratedValue
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+}
+
+step4, 在UserDAOImpl.java中注入 sessionFactory实例
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+
+@Component("u") 
+public class UserDAOImpl implements UserDAO {
+	@Resource
+	private SessionFactory sessionFactory;
+
+	public void save(User user) {
+		Session s = sessionFactory.openSession();
+		s.beginTransaction();
+		s.save(user);
+		s.getTransaction().commit();
+	}
+}
+
+============ 28 Spring连接Hibernate transaction管理 ============
+
+transaction管理添加在哪里合适(事物边界如何设置):
+由于DAO层操作某个CRUD具体动作, 而一个transaction可能不只一个单独动作. 所以transaction添加在service层比较合适
+
+业务需求: 在用户表存了一个新用户后, 在日志表中相应添加一条记录
+step1, 建log表及对应实体类: Log.java; 在xml中添加对应的实体节点<value>com.bjsxt.model.Log</value>
+create table userlog (id int primary key auto_increment, msg varchar(200));
+
+@Entity @Table(name="userlog")		//数据库中table名和class名不一样时, 需手动指定
+public class Log {
+	private int id;
+	private String msg;
+	
+	@Id @GeneratedValue				//用@Id标注primary key
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	public String getMsg() {
+		return msg;
+	}
+	public void setMsg(String msg) {
+		this.msg = msg;
+	}
+}
+
+step2, 实现log对应的CRUD操作DAO, 这里依旧只实现save(). 本例transaction在DAO层
+public interface LogDAO {
+	public void save(Log log);
+}
+
+@Component("logDAO")			//UserDAOImpl.java的spring资源名是"u"
+public class LogDAOImpl implements LogDAO {
+	@Resource
+	private SessionFactory sessionFactory;
+
+	public void save(Log log) {
+		Session s = sessionFactory.getCurrentSession();
+		s.beginTransaction();		//完整写法应该用try...catch. 发现异常时候s.getTransaction().rollback(). finally中关闭一切
+		s.save(log);
+		s.getTransaction().commit();
+	}
+}
+
+step3, 实现service中业务逻辑的修改
+@Component("userService")
+public class UserService {
+	@Resource
+	private UserDAO userDAO;
+
+	@Resource
+	private LogDAO logDAO;
+
+	public void add(User user) {
+		userDAO.save(user);			//这里用了2个transaction, 发生异常时候不能完整rollback. 应该在这个service处形成事物边界
+		logDAO.save(new Log().setMsg("a user saved!"));
+	}
+}
+
+============ 28 Spring连接Hibernate 使用annotation的transaction @Transactional ============
+
+API: pdf page346 tx是transaction的简写
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop.xsd">
+		
+	<!-- this is the service object that we want to make transactional -->
+	<bean id="fooService" class="x.y.service.DefaultFooService"/>
+	
+	<!-- enable the configuration of transactional behavior based on annotations -->
+	<tx:annotation-driven transaction-manager="txManager"/><!-- a PlatformTransactionManager is still required -->
+	
+	<bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<!-- (this dependency is defined somewhere else) -->
+		<property name="dataSource" ref="dataSource"/>
+	</bean>
+	
+	<!-- other <bean/> definitions here -->
+</beans>
+
+
+step1, 配置xml文件
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-2.5.xsd
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop-2.5.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-2.5.xsd">
+		
+	<context:annotation-config />
+	<context:component-scan base-package="com.bjsxt" />
+
+	<bean id="dataSource" />			<!--这两行完整内容参考之前例-->
+	<bean id="sessionFactory" />
+
+	<bean id="txManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">		<!--hibernate的tx, 在spring-orm-4.1.6.RELEASE.jar包中-->
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+	
+	<tx:annotation-driven transaction-manager="txManager"/>
+</beans>
+
+mybatis直接使用jdbc的tx, 在spring-jdbc-4.1.6.RELEASE.jar包中, 参考https://mybatis.github.io/spring/transactions.html
+<bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+	<property name="dataSource" ref="dataSource" />
+</bean>
+<tx:annotation-driven transaction-manager="txManager"/>
+
+step2, 在UserService.java的业务逻辑处加上@Transaction annotation
+@Component("userService")
+public class UserService {
+	private UserDAO userDAO;
+	//getters(); @Resource setters();
+	
+	private LogDAO logDAO;
+	//getters(); @Resource setters();
+
+	@Transactional
+	public void add(User user) {
+		userDAO.save(user);
+		logDAO.save(new Log().setMsg("a user saved!"));
+	}
+}
+
+step3, 去除DAO实现中的transaction
+@Component("u") 
+public class UserDAOImpl implements UserDAO {
+	private SessionFactory sessionFactory;
+	//getters(); @Resource setters();
+
+	public void save(User user) {
+		Session s = sessionFactory.getCurrentSession();			//不再是openSession()
+		s.save(user);
+		//throw new RuntimeException("error!");					//用于测试rollback
+	}
+}
+只要关心业务逻辑. 其余异常处理, transaction处理都交给spring! 太好用了
+
+============ 29 Spring连接Hibernate @Transactional的参数  ============
+
+@Transactional(propagation=Propagation.REQUIRED)	//默认值. 如果已经有一个tx, 就作为其一部分加入. 如果没有tx, 就创建一个
+public void add(User user) {
+}
+在UserServiceTest.java中调用add(), 此时没有tx, 所以会创建一个新的tx.
+
+
+API: pdf page352
+查看Propagation所有的参数取值
+添加javadoc后, 选中Propagation, 按F1
+MANDATORY 必须已有tx
+Support a current transaction, throw an exception if none exists.
+ 
+NESTED 如已有tx, 暂停原tx, 开新tx, 完成后继续原tx, 如有异常, rollback到新tx的保存点. 如没有tx, 同REQUIRED
+Execute within a nested transaction if a current transaction exists, behave like PROPAGATION_REQUIRED else.
+ 
+NEVER 不用tx
+Execute non-transactionally, throw an exception if a transaction exists.
+ 
+NOT_SUPPORTED 如已有tx, 暂停原tx, 开新非tx, 完成后继续原tx.
+Execute non-transactionally, suspend the current transaction if one exists.
+ 
+REQUIRED 
+Support a current transaction, create a new one if none exists.
+ 
+REQUIRES_NEW 类似NESTED, 在完全新的tx中执行, 如有异常, rollback本tx
+Create a new transaction, and suspend the current transaction if one exists.
+ 
+SUPPORTS 有tx就用tx方式, 没有就用非tx方式
+Support a current transaction, execute non-transactionally if none exists. 
+
+
+查看@Transactional所有的参数取值
+添加javadoc后, 选中@Transactional, 按F1
+Isolation isolation	隔离级别的设置
+The transaction isolation level. 
+
+boolean readOnly	tx的只读权限设置
+true if the transaction is read-only. 
+
+int timeout	终止tx的时间设置
+The timeout for this transaction. 
+
+Class<? extends Throwable>[] rollbackFor	指定rollback的触发条件, 默认是runtime error
+Defines zero (0) or more exception classes, which must be a subclass of Throwable, indicating which exception types must cause a transaction rollback. 
+
+String[] noRollbackForClassName 		指定不rollback的条件
+Defines zero (0) or more exception names (for exceptions which must be a subclass of Throwable) indicating which exception types must not cause a transaction rollback. 
+
+============ 29 Spring连接Hibernate 使用xml schema-based的transaction  ============
+
+API: pdf page355
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+		http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/tx
+		http://www.springframework.org/schema/tx/spring-tx.xsd
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop.xsd">
+	
+	<!-- don't forget the DataSource -->
+	<bean id="dataSource" class="org.apache.commons.dbcp.BasicDataSource" destroy-method="close">
+		<property name="driverClassName" value="oracle.jdbc.driver.OracleDriver"/>
+		<property name="url" value="jdbc:oracle:thin:@rj-t42:1521:elvis"/>
+		<property name="username" value="scott"/>
+		<property name="password" value="tiger"/>
+	</bean>
+	
+	<!-- similarly, don't forget the PlatformTransactionManager 本例未使用hibernate的manager -->
+	<bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"/>
+	</bean>
+	<!-- 用annotation方法时, 只需再加一句:<tx:annotation-driven transaction-manager="txManager"/>就结束配置了 -->
+	
+	<!-- the transactional advice (what 'happens'; see the <aop:advisor/> bean below) -->
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<!-- the transactional semantics... -->
+		<tx:attributes>
+			<!-- all methods starting with 'get' are read-only -->
+			<tx:method name="get*" read-only="true"/>		<!--在* x.y.service.FooService.*(..)中以get开头的只读-->
+			<!-- other methods use the default transaction settings (see below) -->
+			<tx:method name="*"/>
+			<!-- 用annotation方法时, 在需要tx的方法前加上@Transactional -->
+		</tx:attributes>
+	</tx:advice>
+	<!-- 用annotation方法时,aop配置用: <aop:before method="before" pointcut-ref="servicePointcut" /> -->
+	
+	<!-- this is the service object that we want to make transactional -->
+	<bean id="fooService" class="x.y.service.DefaultFooService"/>
+	
+	<!-- ensure that the above transactional advice runs for any execution of an operation defined by the FooService interface -->
+	<aop:config>
+		<aop:pointcut id="fooServiceOperation" expression="execution(* x.y.service.FooService.*(..))"/>
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="fooServiceOperation"/>
+		<!--这里不再使用aop:aspect, 改用aop:advisor-->
+	</aop:config>	
+
+	<!-- other <bean/> definitions here -->	
+</beans>
+
+
+step1, 去除原来各种annotation
+
+step2, 使用xml配置
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-2.5.xsd
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop-2.5.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-2.5.xsd">
+	<context:annotation-config />
+	<context:component-scan base-package="com.bjsxt" />
+
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<value>classpath:jdbc.properties</value>
+		</property>
+	</bean>
+	<bean id="dataSource" destroy-method="close" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${jdbc.driverClassName}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="annotatedClasses">
+			<list>
+				<value>com.bjsxt.model.User</value>
+				<value>com.bjsxt.model.Log</value>
+			</list>
+		</property>
+
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">
+					org.hibernate.dialect.MySQLDialect
+				</prop>
+				<prop key="hibernate.show_sql">true</prop>
+			</props>
+		</property>
+	</bean>
+
+	<bean id="txManager" class="org.springframework.orm.hibernate3.HibernateTransactionManager">
+		<property name="sessionFactory" ref="sessionFactory" />
+	</bean>
+
+	<aop:config>
+		<aop:pointcut id="bussinessService" expression="execution(public * com.bjsxt.service..*.*(..))" />
+		<aop:advisor pointcut-ref="bussinessService" advice-ref="txAdvice" />
+	</aop:config>
+
+	<tx:advice id="txAdvice" transaction-manager="txManager">
+		<tx:attributes>
+			<tx:method name="get*" read-only="true" />
+			<tx:method name="add*"/>
+		</tx:attributes>
+	</tx:advice>
+</beans>
+
+============ 30 Spring连接Hibernate xml中自动扫描hibernate entity bean  ============
+
+<bean id="sessionFactory">
+	 <property name="packagesToScan">
+		<list>
+			<value>com.bjsxt.model</value>
+		</list>
+	</property>
+</bean>
+
+比较原来手动:
+<property name="annotatedClasses">
+	<list>
+		<value>com.bjsxt.model.User</value>
+		<value>com.bjsxt.model.Log</value>
+	</list>
+</property>
+
+============ 31 Spring连接Hibernate template ============
+
+原来UserDAOImpl.java中用openSession()的完整实现:
+public void save(User user){
+	Session s = null;
+	try{
+		s = sessionFactory.openSession();
+		s.getTransaction.begin();
+		s.save(user);
+		s.getTransaction().commit();
+	} catch(HibernateException e) {
+		s.getTransaction().rollback();
+	} finally {
+		if (s!=null){
+			s.close();
+			s=null;
+		}
+	}
+}
+其中只有s.save(user);一行是与正常业务有关, 需要用户指定的. 其余都可以封装在模板里.
+
+step1, 在xml配置中添加HibernateTemplate内容
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	   xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-2.5.xsd
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop-2.5.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-2.5.xsd">
+	<context:annotation-config />
+	<context:component-scan base-package="com.bjsxt" />
+
+	<bean id="dataSource" />
+	<bean id="sessionFactory" />
+	<bean id="txManager" />
+	<tx:advice id="txAdvice" />
+	<aop:config>
+		<aop:pointcut id="bussinessService" />
+		<aop:advisor pointcut-ref="bussinessService" advice-ref="txAdvice" />
+	</aop:config>		<!--以上行完整内容参考之前例-->
+
+	<bean id="hibernateTemplate" class="org.springframework.orm.hibernate3.HibernateTemplate">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+</beans>
+
+这个HibernateTemplate封装了需要用到的所有方法, 用户只要直接调用即可.
+
+step2, 在UserDAOImpl.java中, 用模板
+@Component("u") 
+public class UserDAOImpl implements UserDAO {
+	private HibernateTemplate hibernateTemplate;		//sessionFactory已经交由hibernateTemplate, 直接使用
+
+	public HibernateTemplate getHibernateTemplate() {
+		return hibernateTemplate;
+	}
+	@Resource											//要求spring注入
+	public void setHibernateTemplate(HibernateTemplate hibernateTemplate) {
+		this.hibernateTemplate = hibernateTemplate;
+	}
+
+	public void save(User user) {
+		hibernateTemplate.save(user);					//只用写业务相关内容即可
+	}
+}
+
+============ 31 模拟Hibernate template实现过程 ============
+
+step1, 准备hibernate template
+public class MyHibernateTemplate {
+	private Session getSession() {
+		// 从sessionFactory里取session. 这里只是示意
+		return null;
+	}
+
+	public void executeWithNativeSession(MyHibernateCallback callback) {		//用于模拟template包装实现过程
+		Session s = null;
+		try {										//被包装类前面执行的所有内容
+			s = getSession();
+			s.beginTransaction();
+
+			callback.doInHibernate(s);				//被包装类需要执行的内容
+			
+			s.getTransaction().commit();			//被包装类后面执行的所有内容
+		} catch (Exception e) {
+			s.getTransaction().rollback();
+		} finally {
+			//...
+		}
+	}
+}
+
+step2, 准备callback接口
+public interface MyHibernateCallback {
+	public void doInHibernate(Session s);
+}
+
+step3, 调用hibernate template
+public static void main(String[] args){
+	new MyHibernateTemplate.executeWithNativeSession(new MyHibernateCallback(){
+		public void doInHibernate(Session s){		//实现callback接口
+			s.save(args);
+		}
+	});
+}
+如果把main()改为save(), 相应参数类型进行调整, 就可以完成对save()的封装
+
+============ 32-33 HibernateDaoSupport ============
+
+step1, 使用HibernateDaoSupport
+public class LogDAOImpl extends HibernateDaoSupport implements LogDAO{
+	public void save(Log log) {
+		getHibernateTemplate.save(log);		//把HibernateTemplate也封装在里面了. 直接用
+	}
+}
+
+step2, 由于HibernateDaoSupport需要有一个sessionFactory或者HibernateTemplate属性. 直接用@annotation方法无法实现, 只有用xml配置
+<bean id="logDAO" class="com.bjsxt.dao.impl.LogDAOImpl">
+	<property name="sessionFactory" ref="sessionFactory"></property>
+</bean>
+
+
+如果有大量用 HibernateDaoSupport 的业务需要用到 sessionFactory, 逐个配置太复杂:
+
+------------ xml配置方式 ------------
+step1, 建立一个空接口, 用于xml配置注入 sessionFactory
+public class SuperDAO {
+	//空class, 就是用于注入sessionFactory(或者HibernateTemplate). 在有大量业务需求时不用重复配置
+}
+
+<bean id="superDAO" class="com.bjsxt.dao.impl.SuperDAO">
+	<property name="sessionFactory" ref="sessionFactory"></property>
+</bean>
+
+step2, 实现类通过继承SuperDAO, 后续调用方式相同
+@Component("logDAO")
+public class LogDAOImpl extends SuperDAO implements LogDAO{
+	public void save(Log log) {
+		getHibernateTemplate.save(log);
+	}
+}
+
+------------ @annotation方式 ------------
+step1, 建立一个接口, 注入sessionFactory
+@Component
+public class SuperDAO {
+	private HibernateTemplate hibernateTemplate;
+	//getters(); @Resource setters();
+}
+
+step2b, 实现类通过注入SuperDAO, 后续调用方式相同
+@Component("logDAO")
+public class LogDAOImpl implements LogDAO{
+	SuperDAO superDAO = new SuperDAO();
+	//getters(); @Resource setters();
+	
+	public void save(Log log) {
+		superDAO.getHibernateTemplate.save(log);
+	}
+}
+
+------------ 直接设置HibernateDaoSupport的参数方式 ------------
+@Component
+public class SuperDAO extends HibernateDaoSupport {
+
+	@Resource(name="sessionFactory")		//在xml配置中已经定义sessionFactory
+	public void setSuperSessionFactory(SessionFactory sessionFactory) {
+		super.setSessionFactory(sessionFactory);
+	}
+}
+后续调用直接使用getHibernateTemplate.save()
+
+============ 项目 ============
+
+2400:
+------------ 纯jsp时候, 无法使用bean ------------35
+create table user (id primary key auto_increment, username varchar(20), password varchar(20));
+
+2500:
+------------ 建立entity bean. 面向对象的第一步 ------------
+package com.bjsxt.registration.model;
+public class User {
+	private int id;
+	private String username;
+	private String password;
+	//getters(); setters();
+}	//与数据库对应
+
+------------ 建立service层, 对entity业务管理的封装 ------------
+package com.bjsxt.registration.service;
+public class UserManager {
+	public boolean exists(User u) throws Exception {		//业务1, 查询账号是否已经存在
+		Class.forName("com.mysql.jdbc.Driver");
+		Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/spring", "root", "bjsxt");
+
+		String sqlQuery = "select count(*) from user where username = ?";
+		PreparedStatement psQuery = conn.prepareStatement(sqlQuery);
+		psQuery.setString(1, u.getUsername());
+		ResultSet rs = psQuery.executeQuery();
+		
+		rs.next();
+		int count = rs.getInt(1);
+		psQuery.close();
+		conn.close();
+		
+		if(count > 0) {
+			return true;
+		}
+		return false;
+	}
+	
+	public void add(User u) throws Exception {		//业务2, 加Uer入db
+		Class.forName("com.mysql.jdbc.Driver");
+		Connection conn = DriverManager.getConnection("jdbc:mysql://localhost/spring", "root", "bjsxt");
+
+		String sql = "insert into user values (null, ?, ?)";
+		PreparedStatement ps = conn.prepareStatement(sql);
+		ps.setString(1, u.getUsername());
+		ps.setString(2, u.getPassword());
+		ps.executeUpdate();
+		
+		ps.close();
+		conn.close();
+	}
+}
+
+修改jsp, 业务功能在java中实现, 可以去除相关代码
+<%@ page language="java" import="java.util.*, java.sql.*" pageEncoding="UTF-8"%>
+<%@ page import="com.bjsxt.registration.service.*" %>
+<%@ page import="com.bjsxt.registration.model.*" %>
+<%
+	String path = request.getContextPath();
+	String basePath = request.getScheme()+"://"+request.getServerName()+":"+request.getServerPort()+path+"/";
+	String username = request.getParameter("username");
+	String password = request.getParameter("password");
+	String password2 = request.getParameter("password2");
+
+	User u = new User();
+	u.setUsername(username);
+	u.setPassword(password);
+
+	UserManager um = new UserManager();
+	boolean exist = um.exists(u);
+	if(exist) {
+		response.sendRedirect("registerFail.jsp");
+		return;
+	}
+
+	um.add(u);
+	response.sendRedirect("registerSuccess.jsp");
+%>
+
+------------ 修改存取数据库的方式, 用纯hibernate方法 ------------36
+step1, 服务器用的jar包复制到 WEB-INF\lib 下
+
+step2, 标注entity bean
+@Entity
+public class User {
+	private int id;
+	private String username;
+	private String password;
+	
+	@Id @GeneratedValue
+	public int getId() {
+		return id;
+	}
+	public void setId(int id) {
+		this.id = id;
+	}
+	//getters(); setters();
+}
+
+step3, 配置hibernate.cfg.xml(不由spring管理)
+<?xml version='1.0' encoding='utf-8'?>
+<!DOCTYPE hibernate-configuration PUBLIC
+        "-//Hibernate/Hibernate Configuration DTD 3.0//EN"
+        "http://hibernate.sourceforge.net/hibernate-configuration-3.0.dtd">
+
+<hibernate-configuration>
+	<session-factory>
+		<property name="connection.driver_class">com.mysql.jdbc.Driver</property>
+		<property name="connection.url">jdbc:mysql://localhost/spring</property>
+		<property name="connection.username">root</property>
+		<property name="connection.password">bjsxt</property>
+		<property name="dialect">org.hibernate.dialect.MySQLDialect</property>
+	<!--
+        <property name="connection.driver_class">oracle.jdbc.driver.OracleDriver</property>
+        <property name="connection.url">jdbc:oracle:thin:@localhost:1521:SXT</property>
+        <property name="connection.username">scott</property>
+        <property name="connection.password">tiger</property>
+      	<property name="dialect">org.hibernate.dialect.OracleDialect</property>
+	-->
+	
+	<!-- JDBC connection pool (use the built-in) -->
+		<property name="connection.pool_size">1</property>
+
+	<!-- Enable Hibernate's automatic session context management -->
+		<property name="current_session_context_class">thread</property>
+
+	<!-- Disable the second-level cache  -->
+		<property name="cache.provider_class">org.hibernate.cache.NoCacheProvider</property>
+
+	<!-- Echo all executed SQL to stdout -->
+		<property name="show_sql">true</property>
+		<property name="format_sql">true</property>
+
+	<!-- Drop and re-create the database schema on startup
+		<property name="hbm2ddl.auto">update</property>
+	-->
+		<mapping class="com.bjsxt.registration.model.User"/>	
+	</session-factory>
+</hibernate-configuration>
+
+step4, 建立单例模式的SessionFactory(之后再改用spring产生)
+package com.bjsxt.registration.util;
+public class HibernateUtil {
+	private static SessionFactory sf;		//这样就是单例了
+	static {
+		sf = new AnnotationConfiguration().configure().buildSessionFactory();
+	}
+	
+	public static SessionFactory getSessionFactory() {
+		return sf;
+	}
+}
+
+step5, 修改service中与数据库交互方式部分
+public class UserManager {
+	public boolean exists(User u) throws Exception {
+		SessionFactory sf = HibernateUtil.getSessionFactory();
+		Session s = sf.getCurrentSession();
+		s.beginTransaction();
+		
+		long count = (Long)s.createQuery("select count(*) from User u where u.username = :username")
+			.setString("username", u.getUsername())
+			.uniqueResult();		//hql语言
+			
+		s.getTransaction().commit();
+		
+		if(count > 0) return true;
+		return false;
+	}
+	
+	public void add(User u) throws Exception {
+		SessionFactory sf = HibernateUtil.getSessionFactory();
+		Session s = sf.getCurrentSession();
+		s.beginTransaction();
+		
+		s.save(u);
+		
+		s.getTransaction().commit();
+	}
+}
+
+step6, 用JUnit不启动servlet测试
+由于在web环境下不使用JUnit, 所以jar包只需要导入Build Path就可以了
+package com.bjsxt.registration.service;
+public class UserManagerTest {
+	@Test
+	public void testExists() throws Exception {
+		UserManager um = new UserManager();
+		
+		User u = new User();
+		u.setUsername("a");
+		
+		boolean exists = um.exists(u);
+		Assert.assertEquals(true, exists);	// public static void assertEquals(Object expected, Object actual)
+	}
+
+	@Test
+	public void testAdd() throws Exception {
+		UserManager um = new UserManager();
+		
+		User u = new User();
+		u.setUsername("b");
+		u.setPassword("b");
+		
+		boolean exists = um.exists(u);
+		if(!exists) {
+			um.add(u);
+			Assert.assertEquals(true, um.exists(u));		//用于验证添加成功
+		} else {
+			Assert.fail("not added");
+		}
+	}
+}
+
+2600:
+------------ 添加DAO层及DaoImpl层, 分离DB的CRUD操作. 不涉及其他业务逻辑 ------------
+
+step1, 建立抽象接口, 便于不同实现方法间的切换
+package com.bjsxt.registration.dao;
+public interface UserDao {			//注意命名的统一
+	public void save(User u);
+	public boolean checkUserExistsWithName(String username);  
+}
+
+step2, 实现接口中的方法
+package com.bjsxt.registration.dao.impl;
+public class UserDaoImpl implements UserDao {
+	public void save(User u) {			//save这个名字更适合DAO层, 对象是DB. 在service层面对业务时, add就显得更合适些
+		SessionFactory sf = HibernateUtil.getSessionFactory();
+		Session s = sf.getCurrentSession();
+		s.beginTransaction();
+		s.save(u);
+		s.getTransaction().commit();
+	}
+
+	public boolean checkUserExistsWithName(String username) {		//这个应该是service层的业务, loadUserByName()更好些
+		SessionFactory sf = HibernateUtil.getSessionFactory();
+		Session s = sf.getCurrentSession();
+		s.beginTransaction();
+		long count = (Long)s.createQuery("select count(*) from User u where u.username = :username")
+			.setString("username", username)
+			.uniqueResult();
+		s.getTransaction().commit();
+		if(count > 0) return true;
+		return false;
+	}
+}
+
+------------ 分离service层及ServiceImpl层 ------------ 37
+
+step1, service层同样采用接口方式
+package com.bjsxt.registration.service;
+public interface UserManager {
+	public abstract boolean exists(User u) throws Exception;
+	public abstract void add(User u) throws Exception;
+}
+
+step2, 实现接口中的方法
+package com.bjsxt.registration.service.impl;
+public class UserManagerImpl implements UserManager {
+	private UserDao userDao = new UserDaoImpl();
+	public UserDao getUserDao() {
+		return userDao;
+	}
+	public void setUserDao(UserDao userDao) {
+		this.userDao = userDao;
+	}
+
+	/* (non-Javadoc)
+	 * @see com.bjsxt.registration.service.impl.UserManager#exists(com.bjsxt.registration.model.User)
+	 */
+	public boolean exists(User u) throws Exception {
+		return userDao.checkUserExistsWithName(u.getUsername());
+		//可以添加其他业务, 比如logDao
+	}
+	
+	/* (non-Javadoc)
+	 * @see com.bjsxt.registration.service.impl.UserManager#add(com.bjsxt.registration.model.User)
+	 */
+	public void add(User u) throws Exception {
+		userDao.save(u);
+	}
+}
+
+step3, 主程序中(也就是正式时表现层的jsp文件或action)相应修改
+public class UserManagerTest {
+	@Test
+	public void testExists() throws Exception {
+		UserManager um = new UserManagerImpl();
+		User u = new User();
+		u.setUsername("a");
+		boolean exists = um.exists(u);
+		Assert.assertEquals(true, exists);
+	}
+
+	@Test
+	public void testAdd() throws Exception {
+		UserManager um = new UserManagerImpl();
+		User u = new User();
+		u.setUsername("b");
+		u.setPassword("b");
+		boolean exists = um.exists(u);
+		if(!exists) {
+			um.add(u);
+			Assert.assertEquals(true, um.exists(u));
+		} else {
+			Assert.fail("not added");
+		}
+	}
+}
+
+2700:
+------------  修改control的方式, 使用struts ------------ 38
+
+原来通过registerDeal.jsp接收客户端请求, 提交给servlet. 现在改用struts的filter, 用action调用之后业务逻辑UserManager
+
+step1, 服务器用的jar包复制到 WEB-INF\lib 下
+
+step2, 配置web.xml, 添加struts的filter
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+						http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+
+	<filter>
+		<filter-name>struts2</filter-name>
+		<filter-class>org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter</filter-class>
+	</filter>
+
+	<filter-mapping>
+		<filter-name>struts2</filter-name>
+		<url-pattern>/ *</url-pattern>
+	</filter-mapping>
+</web-app>
+
+step3, 配置struts.xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE struts PUBLIC
+	"-//Apache Software Foundation//DTD Struts Configuration 2.1//EN"
+	"http://struts.apache.org/dtds/struts-2.1.dtd">
+
+<struts>
+	<package name="registration" extends="struts-default">
+		<action name="user" class="com.bjsxt.registration.action.UserAction">
+			<result name="success">/registerSuccess.jsp</result>
+			<result name="fail">/registerFail.jsp</result>
+		</action>
+	</package>
+</struts>
+
+step4, 修改客户端的register.jsp的提交位置
+<body>
+	<form method="post" action="user">
+		用户名：<input type="text" name="username"><br>
+		密码：<input type="password" name="password"><br>
+		确认密码：<input type="password" name="password2"><br>
+		<input type="submit" value="提交"/>
+	</form>
+</body>
+
+step5, 建立相关action
+package com.bjsxt.registration.action;
+public class UserAction extends ActionSupport {
+//接收参数
+	private String username;
+	private String password;
+	private String password2;
+	//getters(); setters();		由struts注入接收参数
+
+//实例化UserManager
+	UserManager um = new UserManagerImpl();		//以后由spring来实例化
+
+//实现execute()	
+	@Override
+	public String execute() throws Exception {
+		User u = new User();
+		u.setUsername(username);
+		u.setPassword(password);
+		if(um.exists(u)) {			//这个应该是service层的业务, action应该只负责control部分
+			return "fail";
+		}
+		um.add(u);
+		return "success";
+	}
+}
+
+2800:
+------------  在struts2中使用spring DI ------------ 39
+
+将Action中用的UserManager和UserDao实例交给Spring来产生(DI)
+UserManager中方法可以加各种辅助功能(AOP)
+
+由于struts是主框架, 所以用struts的插件实现struts和spring结合. 文档:
+struts的API index.html >> Guides >> Plugin Developers Guide >> Spring plugin
+
+step1, 服务器用的jar包复制到 WEB-INF\lib 下
+
+step2, 建立beans.xml, 含db连接信息, 替代hibernate.cfg.xml. 如果用占位符dataSource配置, 同时复制jdbc.properties.
+<beans xmlns="http://www.springframework.org/schema/beans"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xmlns:context="http://www.springframework.org/schema/context"
+	   xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+		http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
+		http://www.springframework.org/schema/context
+		http://www.springframework.org/schema/context/spring-context-2.5.xsd
+		http://www.springframework.org/schema/aop
+		http://www.springframework.org/schema/aop/spring-aop-2.5.xsd
+		http://www.springframework.org/schema/tx 
+		http://www.springframework.org/schema/tx/spring-tx-2.5.xsd">
+	<context:annotation-config />
+	<context:component-scan base-package="com.bjsxt" />
+
+	<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+		<property name="locations">
+			<value>classpath:jdbc.properties</value>
+		</property>
+	</bean>
+	<bean id="dataSource" destroy-method="close" class="org.apache.commons.dbcp.BasicDataSource">
+		<property name="driverClassName" value="${jdbc.driverClassName}" />
+		<property name="url" value="${jdbc.url}" />
+		<property name="username" value="${jdbc.username}" />
+		<property name="password" value="${jdbc.password}" />
+	</bean>
+
+	<bean id="sessionFactory" class="org.springframework.orm.hibernate3.annotation.AnnotationSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		 <property name="packagesToScan">
+			<list>
+				<value>com.bjsxt.registration.model</value>
+			</list>
+		</property>
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">
+					org.hibernate.dialect.MySQLDialect
+				</prop>
+				<prop key="hibernate.show_sql">true</prop>
+			</props>
+		</property>
+	</bean>
+
+	<bean id="hibernateTemplate" class="org.springframework.orm.hibernate3.HibernateTemplate">
+		<property name="sessionFactory" ref="sessionFactory"></property>
+	</bean>
+</beans>
+
+step3, UserDAOImpl 中, 使用HibernateTemplate简化编码及异常处理
+@Component("userDao")
+public class UserDaoImpl implements UserDao {
+	private HibernateTemplate hibernateTemplate;		//这样每个Impl都要实例HibernateTemplate. 可以参考之前空接口中注入后再继承
+	//getters(); @Resource setters();
+	
+	public void save(User u) {
+		hibernateTemplate.save(u);
+	}
+
+	public boolean checkUserExistsWithName(String username) {
+		List<User> users = hibernateTemplate.find("from User u where u.username = '" + username + "'");		//?? hql语句 ??
+
+		if(users != null && users.size() > 0) {
+			return true;
+		}
+		return false;
+	}
+}
+
+step4, UserManagerImpl 中, 使用DI
+@Component("userManager")
+public class UserManagerImpl implements UserManager {
+	private UserDao userDao;
+	//getters(); @Resource setters();
+	
+	//exists(User u); add(User u) 与原来方法相同
+}
+
+step5, action现在还是由struts管理, 不能由spring注入UserManager, 所以用ClassPathXmlApplicationContext()初始化spring容器, 再读UserManager实例
+public class UserAction extends ActionSupport {
+	private UserManager um;
+	public UserAction() {
+		ApplicationContext ctx = new ClassPathXmlApplicationContext("beans.xml");
+		um = (UserManager)ctx.getBean("userManager");
+	}
+	
+	//其余与原来方法相同
+}
+
+step6, JUnit测试
+public class UserActionTest {
+	@Test
+	public void testExecute() throws Exception {
+		UserAction ua = new UserAction();
+		ua.setUsername("h");
+		ua.setPassword("h");
+		String ret = ua.execute();
+		assertEquals("success", ret);
+	}
+}
+
+2900:
+------------  在struts2中使用spring action中的DI ------------ 40-41
+
+在启动servlet时候, 自动启动spring容器. 需要配置web.xml文件
+file:///D:/SETUP/Windows/!PROGRAMMING/JAVA_WEB/plugins/struts2/struts-2.3.20.1/docs/docs/spring-plugin.html
+<listener>
+	<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+</listener>
+
+默认读取文件: /WEB-INF/applicationContext.xml. 修改默认spring配置文件位置
+<context-param>
+	<param-name>contextConfigLocation</param-name>
+	<param-value>/WEB-INF/applicationContext-*.xml,classpath*:applicationContext-*.xml</param-value>
+</context-param>
+
+
+step1, 配置web.xml, 在启动servlet时候, 自动启动spring容器
+<web-app version="2.5" xmlns="http://java.sun.com/xml/ns/javaee"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/javaee 
+	http://java.sun.com/xml/ns/javaee/web-app_2_5.xsd">
+
+	<listener>
+		<listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
+	</listener>
+	
+	<context-param>
+		<param-name>contextConfigLocation</param-name>
+		<param-value>classpath:beans.xml</param-value>
+	</context-param>
+
+	<filter>
+		<filter-name>struts2</filter-name>
+		<filter-class>org.apache.struts2.dispatcher.ng.filter.StrutsPrepareAndExecuteFilter</filter-class>
+	</filter>
+	<filter-mapping>
+		<filter-name>struts2</filter-name>
+		<url-pattern>/ *</url-pattern>
+	</filter-mapping>
+</web-app>
+
+step2, 复制jar包 struts2-spring-plugin-2.3.20.1.jar
+
+step3, 将action交给spring管理, 通过DI实例化UserManager
+@Component("user")			//这个名字和struts中action name值对应. class值还是要配
+@Scope("prototype")
+public class UserAction extends ActionSupport {
+	private UserManager um;
+	public UserManager getUm() {
+		return um;
+	}
+	@Resource(name="userManager")
+	public void setUm(UserManager um) {
+		this.um = um;
+	}
+	//同时原来的构造方法初始化spring容器部分去除
+	//其余与原来方法相同
+}
+
+struts读配置的顺序
+1.	struts-default.xml 
+2.	struts-plugin.xml
+3.	struts.xml
+4.	struts.properties
+5.	web.xml
+
+3000:
+------------  DTO/VO 中转数据容器, 不用于DB操作 ------------ 42
+DTO = Data Transfer Object
+VO  = Value Object
+db中不需要页面的校验码; db中读取的是分页数据, 需要整合成一个完整的数据组返回... 等情况适用
+一般一个form对应的封装成一个DTO
+相对应的, entity bean用于DB的操作, 一个entity bean对应于一个table
+
+step1, 建立DTO bean
+package com.bjsxt.registration.vo;
+public class UserRegisterInfo {
+	private String username;
+	private String password;
+	private String password2;
+	//getters(); setters();	
+}
+
+step2, 修改action中DTO部分, 使用了ModelDriven
+public class UserAction extends ActionSupport implements ModelDriven<UserRegisterInfo> {
+	
+	private UserRegisterInfo info = new UserRegisterInfo();
+	//getters(); setters();			由struts自动DI. 不是spring, 不用@Resource
+	
+	//@Override
+	public UserRegisterInfo getModel() {
+		return info;
+	}
+	
+	@Override
+	public String execute() throws Exception {
+		User u = new User();
+		u.setUsername(info.getUsername());
+		u.setPassword(info.getPassword());
+		
+		if(um.exists(u)) {
+			return "fail";
+		}
+		um.add(u);
+		return "success";
+	}
+}
+
+3100:
+------------  DB中读取find列表并展现 ------------ 43
+写每一层时候只考虑这层需要实现的接口. 从哪里开始的顺序随意
+
+step1, jsp层的展现. 假设value stack中已有一个List<User> users
+userlist.jsp
+<%@taglib prefix="s" uri="/struts-tags" %>
+<body>
+	<s:iterator value="users">
+		<s:property value="username"/>		<!--可以自己定义具体页面格式-->
+	</s:iterator>
+</body>
+
+step2, action中, 之前假设的users如何实现
+public class UserAction extends ActionSupport implements ModelDriven {
+	private List<User> users;
+	//getters(); setters() 供struts调用
+	
+	public String list() {
+		this.users = this.um.getUsers();		//假设UserManager有个方法getUsers()
+		return "list";
+	}
+}
+
+step3, 在struts.xml中配置list对应的展示页面
+<package name="registration" extends="struts-default">
+	<action name="user" class="com.bjsxt.registration.action.UserAction">
+		<result name="success">/registerSuccess.jsp</result>
+		<result name="fail">/registerFail.jsp</result>
+		<result name="list">/userlist.jsp</result>
+	</action>
+</package>
+这样调用list需要地址里: user!list.
+
+step4, UserManagerImpl中实现getUsers() 父类里需要有相应的接口
+public class UserManagerImpl implements UserManager {
+	public List<User> getUsers() {					//业务逻辑比较简单, 没有特别需要service层处理的内容
+		return this.userDao.getUsers();				//假设Dao层有个方法getUsers()
+	}
+
+step5, UserDaoImpl中实现getUsers()
+public List<User> getUsers() {
+	return (List<User>)this.hibernateTemplate.find("from User");		// hql 
+}
+
+3200:
+------------  DB中读取load一条记录并展现 ------------ 44-45
+
+step1, UserDaoImpl中实现loadById()
+public User loadById(int id) {
+	return (User)this.hibernateTemplate.load(User.class, id);
+	//开始service层tx的情况下, 用load会有no session错误. 这里是单个对象, 可换用get, 或参考下节扩大session范围
+}
+
+step2, UserManagerImpl中实现loadById()
+public User loadById(int id) {
+	return this.userDao.loadById(id);
+}
+
+step3, UserAction中实现load()
+@Component("u")
+/*
+	这里修改了value stack 中的name, 避免和Dto名冲突. 
+	实际上action都是由struts管理, 所以没有@Component也不影响(写了会在spring的value stack中产生bean, 但完全没用, 就如此处). 
+	action需要用到的实体由spring的容器提供
+*/
+public class UserAction extends ActionSupport implements ModelDriven {
+	private User user;
+	//getters(); setters();
+	
+	public String load() {
+		this.user = this.userManager.loadById(info.getId());		//假设UserRegisterInfo里有个id属性
+		return "load";
+	}
+}
+
+step4, 实现UserRegisterInfo的id属性
+public class UserRegisterInfo {
+	private int id;
+	//getters(); setters();
+}
+
+step5, struts.xml中对user!load 配置展现页面
+<action name="u" class="com.bjsxt.registration.action.UserAction">		<!--这里修改了action name, 避免和Dto冲突-->
+	<result name="load">/user.jsp</result>
+</action>
+
+step6, user.jsp层展现
+<body>
+	<s:property value="user.username"/>
+</body>
+
+------------ 扩大session范围, 直到jsp的view结束 ------------ 45-46
+
+web.xml中添加openSessionInView的filter, 让session保持到view结束(service层)
+<web-app>
+	<filter>	<!--这个filter必须在struts2的filter前面-->
+		<filter-name>openSessionInView</filter-name>
+		<filter-class>org.springframework.orm.hibernate3.support.OpenSessionInViewFilter</filter-class>
+		<!-- 当sessionFactory的bean的id不是默认值"sessionFactory"时, 需要在这里相应的修改
+		<init-param>
+			<param-name>sessionFactoryBeanName</param-name>
+			<param-value>sf</param-value>
+		</init-param>		
+		-->
+	</filter>
+	<filter-mapping>
+		<filter-name>openSessionInView</filter-name>
+		<url-pattern>/ *</url-pattern>
+	</filter-mapping>
+</web-app>
+
+同时, 需要在beans.xml中开启tx相应节点
+<bean id="txManager">
+<aop:config>
+	<aop:pointcut id="bussinessService">
+	<aop:advisor>
+</aop:config>
+<tx:advice id="txAdvice">
+
+如果没有开启tx, openSessionInView认为该事务(dao层)为只读, 不能执行写操作.
+
+------------ 乱码问题 ------------ 47
+
+在action中print接收到的中文, 发现已经是乱码了
+修复方法1: 参考struts video18
+Struts.xml中:
+<struts>
+    <constant name="struts.i18n.encoding" value="UTF-8" />	<!-- 这样就可以正确处理文字编码了 -->
+</struts>
+
+修复方法2: 用spring提供的filter
+web.xml中struts2 filter前:
+<filter>
+	<filter-name>encodingFilter</filter-name>
+	<filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+	<init-param>
+		<param-name>encoding</param-name>
+		<param-value>UTF-8</param-value>
+	</init-param>
+</filter>
+<filter-mapping>
+	<filter-name>encodingFilter</filter-name>
+	<url-pattern>/ *</url-pattern>
+</filter-mapping>
+
+------------ 由spring管理action ------------ 49
+
+step1, struts.xml中设置class指向
+<package name="registration" extends="struts-default">
+	<action name="u" class="u">		<!-- 不再指向具体的class, 指向spring的component -->
+		<result name="success">/registerSuccess.jsp</result>
+		<result name="fail">/registerFail.jsp</result>
+		<result name="list">/userlist.jsp</result>
+		<result name="load">/user.jsp</result>
+	</action>
+</package>
+
+step2, action中指定component名字
+@Component("u")
+@Scope("prototype")		//勿忘! 负责会变成单例模式, 导致多线程数据混乱
+public class UserAction extends ActionSupport implements ModelDriven {
+	private UserManager userManager;
+	//getters(); @Resource setters();
+	//其余field都是struts用于jsp和action的通讯, 不需要用spring的annotation
+}

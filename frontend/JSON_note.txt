@@ -1,0 +1,456 @@
+本教程使用了基础JavaScript, jsp, servlet进行演示
+
+================ 03A 简单jason对象的传递 ================
+
+# 传递如下结构数据:
+{ "name":"张三" , "age":22}
+
+
+# 建立前端jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Test JSON</title>
+</head>
+
+<body>
+<div style="text-align: center">
+	<div style="padding-bottom: 20px">
+		name: <input type="text" name="name" id="name"/>
+		age:  <input type="text" name="age" id="age"/>
+	</div>
+	<button onclick="loadInfo()">load info</button>
+</div>
+</body>
+
+<script type="text/javascript">
+// 简单json类型
+	function loadInfo(){
+		var xmlHttp = new XMLHttpRequest();
+		
+		// call back
+		xmlHttp.onreadystatechange=function(){
+			if(xmlHttp.readyState==4 && xmlHttp.status==200){
+				/* alert(xmlHttp.responseText); */
+				
+				var dataObj=eval("(" + xmlHttp.responseText + ")");		// <<---- 将string转换成json对象
+				document.getElementById("name").value = dataObj.name;
+				document.getElementById("age").value = dataObj.age;
+			}
+		}
+		
+		// send request
+		xmlHttp.open("get", "loadinfo", true);
+	    xmlHttp.send();
+	}
+</script>
+</html>
+
+
+# 设置web.xml中路径关系
+<web-app>
+  <servlet>
+  	<servlet-name>testJason</servlet-name>
+  	<servlet-class>com.dataorta.testjson.JasonServlet</servlet-class>
+  </servlet>
+  
+  <servlet-mapping>
+  	<servlet-name>testJason</servlet-name>
+  	<url-pattern>/loadinfo</url-pattern>
+  </servlet-mapping>
+</web-app>
+
+
+# 建立server端的反馈
+import net.sf.json.JSONObject;
+public class JasonServlet extends HttpServlet{
+	@Override
+	protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		doPost(req, resp);
+	}
+
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		resp.setContentType("text/html; Charset=utf-8");
+		PrintWriter writer = resp.getWriter();
+		
+		// 简单json对象可以直接书写, 不推荐
+		String str = "{'name':'john', 'age':22}";
+		//writer.println(str);
+		
+		// 使用JSONObject, 用面向对象的写法添加内容
+		JSONObject result = new JSONObject();
+		result.put("name", "john");
+		result.put("age", 23);
+		
+		writer.println(result);
+		writer.flush();
+		writer.close();
+	}
+}
+
+
+================ 03B 数组jason对象的传递 ================
+
+# 传递如下结构数据:
+{
+	"student": [
+		{ "name":"张三" , "age":22 },
+		{ "name":"李四" , "age":23 },
+		{ "name":"王五" , "age":24 }
+	]
+}
+
+
+# 修改server端的反馈
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+public class JasonServlet extends HttpServlet{
+
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		resp.setContentType("text/html; Charset=utf-8");
+		PrintWriter writer = resp.getWriter();
+		
+		JSONArray jsonArray = new JSONArray();
+		JSONObject student1 = new JSONObject(); student1.put("name", "john"); student1.put("age", 23); jsonArray.add(student1);
+		JSONObject student2 = new JSONObject(); student2.put("name", "jane"); student2.put("age", 24); jsonArray.add(student2);
+		JSONObject student3 = new JSONObject(); student3.put("name", "jack"); student3.put("age", 25); jsonArray.add(student3);
+		
+		JSONObject result = new JSONObject();
+		result.put("students", jsonArray);
+		//JSONArray jsonArray = JSONArray.fromObject(blogTypeList);
+		
+		writer.println(result);
+		writer.flush();
+		writer.close();
+	}
+}
+
+
+# 修改前端jsp, 用表格展现数组
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Test JSON Array</title>
+</head>
+
+<body>
+<div style="text-align: center">
+	<div style="padding-bottom: 20px">
+		<table style="margin: 0 auto">
+			<thead><tr><th>name</th><th>age</th></tr></thead>
+			<tbody id="student_tab">
+				<!-- insert rows here -->	
+			</tbody>
+		</table> 
+	</div>
+	<button onclick="loadInfo()">load table info</button>
+</div>
+</body>
+
+<script type="text/javascript">
+ 	function loadInfo(){
+		var xmlHttp = new XMLHttpRequest();
+		
+		// call back
+		xmlHttp.onreadystatechange=function(){
+			if(xmlHttp.readyState==4 && xmlHttp.status==200){
+				/* alert(xmlHttp.responseText); */
+				
+				var student_tab = document.getElementById("student_tab");
+				var dataObj=eval("(" + xmlHttp.responseText + ")");
+				
+				var newTr;
+				var newTd0;
+				var newTd1;
+				
+				for(var i=0; i<dataObj.students.length; i++){
+					// 创建一行表结构
+					newTr = student_tab.insertRow();
+					newTd0 = newTr.insertCell();
+					newTd1 = newTr.insertCell();
+					
+					// 给表结构赋值
+					var student = dataObj.students[i];		// 取出json array中的一个json对象	
+					newTd0.innerHTML = student.name;		// 用key取出该对象的value
+					newTd1.innerHTML = student.age;
+				}
+			}
+		}
+		
+		// send request
+		xmlHttp.open("get", "loadinfo", true);
+	    xmlHttp.send();
+	}
+</script>
+</html>
+
+================ 03B nested数组jason对象的传递 ================
+
+# 传递如下结构数据:
+{
+	"student": [
+		{ "name":"张三" , "age":22 ,"score":{"chinese":90,"math":100,"english":80} },
+		{ "name":"李四" , "age":23 ,"score":{"chinese":70,"math":90, "english":90} },
+		{ "name":"王五" , "age":24 ,"score":{"chinese":80,"math":60, "english":90} }
+	]
+}
+
+
+# 修改server端的反馈
+public class JasonServlet extends HttpServlet{
+
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		resp.setContentType("text/html; Charset=utf-8");
+		PrintWriter writer = resp.getWriter();
+		
+		JSONArray studentArray = new JSONArray();
+		
+		JSONObject student1 = new JSONObject(); 
+		JSONObject score1 = new JSONObject();
+		score1.put("chinese", 90); score1.put("math", 100); score1.put("english", 80); 
+		student1.put("score", score1);
+		student1.put("name", "john"); student1.put("age", 23);
+		studentArray.add(student1);
+		
+		JSONObject student2 = new JSONObject();
+		JSONObject score2 = new JSONObject();
+		score2.put("chinese", 70); score2.put("math", 90); score2.put("english", 90);
+		student2.put("score", score2);
+		student2.put("name", "jane"); student2.put("age", 24);
+		studentArray.add(student2);
+		
+		JSONObject result = new JSONObject();
+		result.put("students", studentArray);
+		
+		writer.println(result);
+		writer.flush();
+		writer.close();
+	}
+}
+
+
+# 修改前端jsp, 用表格展现数组
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Test JSON nested Array</title>
+</head>
+
+<body>
+<div style="text-align: center">
+	<div style="padding-bottom: 20px">
+		<table style="margin: 0 auto">
+			<thead><tr><th>name</th><th>age</th><th>score</th></tr></thead>
+			<tbody id="student_tab">
+				<!-- insert rows here -->			
+			</tbody>
+		</table> 
+	</div>
+	<button onclick="loadInfo()">load table info</button>
+</div>
+</body>
+
+<script type="text/javascript">
+ 	function loadInfo(){
+		var xmlHttp = new XMLHttpRequest();
+		
+		// call back
+		xmlHttp.onreadystatechange=function(){
+			if(xmlHttp.readyState==4 && xmlHttp.status==200){
+				
+ 				var student_tab = document.getElementById("student_tab");
+				var dataObj=eval("(" + xmlHttp.responseText + ")");
+				
+				var newTr;
+				var newTd_name;
+				var newTd_age;
+				var newTd_score;
+				
+				for(var i=0; i<dataObj.students.length; i++){
+					// 创建一行表结构
+					newTr = student_tab.insertRow();
+					newTd_name = newTr.insertCell();
+					newTd_age = newTr.insertCell();
+					newTd_score = newTr.insertCell();
+					
+					// 给表结构赋值
+					var student = dataObj.students[i];		
+					newTd_name.innerHTML = student.name;
+					newTd_age.innerHTML = student.age;
+					newTd_score.innerHTML = "chinese: " + student.score.chinese + ", math: " + student.score.math;	//不是json对象, 不用循环
+				}
+			}
+		}
+		
+		// send request
+		xmlHttp.open("get", "loadinfo", true);
+	    xmlHttp.send();
+	}
+</script>
+</html>
+
+
+================ 04A 检测用户名是否被占用实例 ================
+
+# 修改前端jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Test JSON username exist</title>
+</head>
+
+<body>
+<div style="text-align: center">
+	<span>username</span>	
+	<input type="text" id="username" onchange="loadInfo()"/>
+	<span id="status_span"><!-- append status here --></span>
+</div>
+</body>
+
+<script type="text/javascript">
+ 	function loadInfo(){
+		var xmlHttp = new XMLHttpRequest();
+		
+		// call back
+		xmlHttp.onreadystatechange=function(){
+			if(xmlHttp.readyState==4 && xmlHttp.status==200){
+ 				var status_span = document.getElementById("status_span");
+				var dataObj=eval("(" + xmlHttp.responseText + ")");
+				
+				if (dataObj.nametaken) status_span.innerHTML = "taken";
+				else status_span.innerHTML = "ok";
+			}
+		}
+		
+		// send request
+		var username = document.getElementById("username").value;
+		xmlHttp.open("get", "loadinfo?username="+username, true);
+	    xmlHttp.send();
+	}
+</script>
+</html>
+
+
+# 修改server端的反馈
+public class JasonServlet extends HttpServlet{
+
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		String username = req.getParameter("username");
+
+		resp.setContentType("text/html; Charset=utf-8");
+		PrintWriter writer = resp.getWriter();
+		JSONObject result = new JSONObject();
+		
+		if (username.equals("ricky")) {
+			result.put("nametaken", true);
+		} else {
+			result.put("nametaken", false);
+		}
+		
+		writer.println(result);
+		writer.flush();
+		writer.close();
+	}
+}
+
+================ 04B 联动列表实例 ================
+
+# 修改前端jsp
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<title>Test JSON linked select</title>
+</head>
+
+<body>
+<div style="text-align: center">
+	<span>Province:</span>
+	<select id="province" onchange="loadInfo()">
+		<option value="zj">zhejiang</option>
+		<option value="gd">guangdong</option>
+		<option value="hb">hubei</option>
+	</select>
+	<hr>
+	<span>City:</span>
+	<select id="city_select"><!-- append city list here --></select>
+</div>
+</body>
+
+<script type="text/javascript">
+ 	function loadInfo(){
+		var xmlHttp = new XMLHttpRequest();
+		
+		// send request
+		var province = document.getElementById("province").value;
+		xmlHttp.open("get", "loadinfo?province="+province, true);
+	    xmlHttp.send();
+		
+		// call back
+		xmlHttp.onreadystatechange=function(){
+			if(xmlHttp.readyState==4 && xmlHttp.status==200){
+				var city_select = document.getElementById("city_select");
+				city_select.options.length = 0;		// 清空列表
+				
+				var dataObj=eval("(" + xmlHttp.responseText + ")");
+				for(var i=0; i<dataObj.cities.length; i++){
+					var city = dataObj.cities[i];
+					city_select.options.add(new Option(city.text, city.id));
+				}
+			}
+		}
+	}
+</script>
+</html>
+
+
+# 修改server端的反馈
+public class JasonServlet extends HttpServlet{
+
+	@Override
+	protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+		String province = req.getParameter("province");
+
+		resp.setContentType("text/html; Charset=utf-8");
+		PrintWriter writer = resp.getWriter();
+		JSONObject result = new JSONObject();
+		JSONArray cities = cityService(province);
+		result.put("cities", cities);
+		
+		writer.println(result);
+		writer.flush();
+		writer.close();
+	}
+
+	private JSONArray cityService(String province) {
+		JSONArray array = new JSONArray();
+		JSONObject city;
+		if(province.equals("zj")){
+			city = new JSONObject(); city.put("id", "hz"); city.put("text", "hangzhou"); array.add(city);
+			city = new JSONObject(); city.put("id", "nb"); city.put("text", "ningbo"); array.add(city);
+			city = new JSONObject(); city.put("id", "wz"); city.put("text", "wenzhou"); array.add(city);
+		} else if(province.equals("gd")){
+			city = new JSONObject(); city.put("id", "gz"); city.put("text", "guangzhou"); array.add(city);
+			city = new JSONObject(); city.put("id", "sz"); city.put("text", "shengzhen"); array.add(city);
+			city = new JSONObject(); city.put("id", "zh"); city.put("text", "zhuhai"); array.add(city);
+		} else if(province.equals("hb")){
+			city = new JSONObject(); city.put("id", "wh"); city.put("text", "wuhan"); array.add(city);
+			city = new JSONObject(); city.put("id", "jz"); city.put("text", "jingzhou"); array.add(city);
+			city = new JSONObject(); city.put("id", "yc"); city.put("text", "yichang"); array.add(city);
+		} 
+		return array;
+	}
+}

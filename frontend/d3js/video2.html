@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <title>video2</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="d3.v3.min.js" charset="utf-8"></script>
+    </head>
+    
+    
+    <body>
+    	<p>Select and Append</p>
+    </body>
+    
+    
+    <script>
+		d3.select("p").text("content over-written by d3")
+		d3.select("body").append("p").append("b").text("content appended from d3")
+		console.log(d3)
+    </script>
+</html>
