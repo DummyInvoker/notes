@@ -1,0 +1,312 @@
+https://git-scm.com/book
+
+==================== 1.3 ====================
+Git stores everything in its database not by file name but by the hash value of its contents.
+
+Git has three main states that your files can reside in: modified, staged and committed. 
+Modified means that you have changed the file but have not committed it to your database yet. 
+Staged means that you have marked a modified file in its current version to go into your next commit snapshot.
+Committed means that the data is safely stored in your local database. 
+
+The Git directory is where Git stores the metadata and object database for your project.
+The working directory is a single checkout of one version of the project. These files are pulled out of the compressed database in the Git directory and placed on disk for you to use or modify.
+The staging area is a file, generally contained in your Git directory, that stores information about what will go into your next commit.
+
+==================== 1.5 - 1.6 ====================
+
+# install
+sudo apt install git-all
+http://windows.github.com
+
+# set your username and email address
+git config --global user.name "Your username"
+git config --global user.email Your@email.com
+If you want to override this with a different name or email address for specific projects, you can run the command without the --global option when you’re in that project
+
+# Check Your Settings
+git config --list
+
+==================== 2.1 ====================
+
+#  take an existing project or directory and imports it into Git
+go to the project’s directory
+create a Git repository skeleton:	git init
+begin tracking those files:			git add *
+do an initial commit:				git commit -m 'initial project version'
+
+# clones an existing Git repository from server
+git clone https://server_url_to_be_cloned your_optional_local_folder_name
+eg: git clone https://github.com/libgit2/libgit2 mylibgit
+
+==================== 2.2 ====================
+
+# Check the Status of Your Files
+git status
+
+# add this content to the next commit: Track New Files; Staging Modified Files
+git add your_new_content
+The git add command takes a path name for either a file or a directory; if it’s a directory, the command adds all the files in that directory recursively.
+
+# Ignoring Files
+you can create a file listing patterns to match them named .gitignore
+
+# rules for the patterns you can put in the .gitignore file:
+Blank lines or lines starting with # are ignored.
+Standard regular expression patterns work.
+You can start patterns with a forward slash (/) to avoid recursivity.
+You can end patterns with a forward slash (/) to specify a directory.
+You can negate a pattern by starting it with an exclamation point (!).
+
+list of good .gitignore file examples for dozens of projects and languages at https://github.com/github/gitignore
+
+
+# commit with inline message
+git commit -m "Story 182: Fix benchmarks for speed"
+
+# commit with text editor
+git commit
+
+# commit with automatically stage
+git commit -a -m 'added new benchmarks'
+be careful; sometimes this flag will cause you to include unwanted changes.
+
+# roll back to an earlier commit
+git reset --hard 56e05fced
+
+==================== 2.4 ====================
+
+# Amend last commit (both files and message) : git commit --amend
+	0. right after your last commit
+    1. do all the amendments work as you need, stage, unstage etc...
+    2. run commit with --amend directive. it will retrieve previous commit, merge new operations, and allow you to edit commit message.
+    3. after commiting with amend directive, there will only be one commit in history.
+	
+	
+# Unstaging a Staged File
+run "git status" to get reminders, follow it.
+git reset HEAD CONTRIBUTING.md
+
+
+# Unmodifying a Modified File  DANGER: IT IS NOT POSSIBLE TO REVERT BACK
+run "git status" to get reminders, follow it.
+git checkout -- CONTRIBUTING.md
+
+==================== 2.5 ====================
+
+# Adding Remote Repositories
+in a git project folder: git remote add <shortname> <url>
+git remote add origin https://github.com/paulboone/ticgit
+git remote
+
+# use the "git pull" to automatically fetch and then merge that remote branch into your current branch
+
+# Pushing to Your Remotes
+git push origin master
+If you and someone else clone at the same time and they push upstream and then you push upstream, your push will rightly be rejected. You’ll have to fetch their work first and incorporate it into yours before you’ll be allowed to push.
+
+# see more information about remote
+git remote show origin
+
+==================== 2.6 ====================
+
+# Listing Your Tags
+git tag
+
+# Creating A lightweight tag
+if you want a temporary tag or for some reason don’t want to keep the other information
+git tag v1.4-lw
+
+# Creating an annotated tag
+git tag -a v1.4 -m "my version 1.4"
+If you don’t specify a message for an annotated tag, Git launches your editor so you can type it in.
+
+# check tag and its corresponding commit infomation
+git show tag_name
+git show v1.4
+
+# tag a specific commit
+specify the commit checksum (or part of it) at the end of the command
+git tag -a v1.4 2c21340 -m "tag annotation added to a specific commit"
+
+# push tags to server
+By default, the git push command doesn’t transfer tags to remote servers. You will have to explicitly push tags to a shared server after you have created them.
+git push origin [tagname]
+git push origin v1.4
+
+# push all of your tags to the remote server
+git push origin --tags
+
+# delete local tag
+git tag -d YOUR_TAG_NAME
+
+# list remote tag		// from 3.5; TODO
+git ls-remote
+
+# delete remote tag
+git push --delete origin YOUR_TAG_NAME
+
+==================== 3.1 ====================
+
+# When you make a Stage
+	stores that version of the file in the Git repository (blobs) ... part1
+	checksums SHA-1 hash each of the files
+	adds that checksum to the staging area
+
+# When you make a commit, Git stores a commit object that contains: ... part3
+	Git checksums each subdirectory > tree objects ... part2
+	the author’s name and email
+	the message that you typed
+	pointers to its parent or parents
+
+
+# Creating a New Branch
+git branch testing
+
+# Switching Branches (change HEAD pointer)
+git checkout testing
+
+# Creating and switching to a New Branch
+git checkout -b testing
+It’s important to note that when you switch branches in Git, files in your working directory will change. 
+
+
+# HEAD
+this is a pointer to the local branch you’re currently on
+
+
+==================== 3.2 ====================
+
+# merge hotfix branch back into master branch
+git checkout master
+git merge hotfix
+
+# delete a branch
+git branch -d hotfix
+
+
+# merge with fast-forward
+when you try to merge commit1 with commit2, which commit2 can be reached by following commit1’s history, Git moves the pointer forward because there is no divergent work to merge together – this is called a "fast-forward"
+
+# merge with no conflict
+Git does a simple three-way merge, using the two snapshots pointed to by the branch tips and the common ancestor of the two.
+Instead of just moving the branch pointer forward as in ff, Git creates a new snapshot that results from this three-way merge and automatically creates a new commit that points to it. This is referred to as a merge commit, and is special in that it has more than one parent.
+
+# merge with conflict
+	Git adds standard conflict-resolution markers to the files that have conflicts
+	manually solve conflicts and remove the <<<<<<<, =======, and >>>>>>> lines
+	After you’ve resolved each of these sections in each conflicted file, run "git add" on each file to mark it as resolved.
+	you verify that everything that had conflicts has been staged, you can type "git commit" to finalize the merge commit
+
+
+==================== 3.3 ====================
+
+# listing of your current local branches
+git branch
+
+# filter branch list that you have merged into the current branch
+git branch --merged
+Branches on this list are generally fine to delete
+
+
+==================== 3.5 ====================
+
+“master” is the default name for a starting branch
+“origin” is the default name for a remote repository
+
+# Tracking Branches
+Tracking branches are local branches that have a direct relationship to a remote branch. If you’re on a tracking branch and type git pull, Git automatically knows which server to fetch from and branch to merge into.
+
+
+# Deleting Remote Branches
+git push origin --delete remote_branch_name
+
+==================== 3.6 ====================
+
+#rebase replay
+take the patch of the change that was introduced in C4 and reapply it on top of C3
+
+git checkout resource
+git rebase target
+
+git checkout target
+git merge resource
+
+It works by 
+	going to the common ancestor of the two branches(resource, target), 
+	getting commits of current branch(resource) you’re on, saving those diffs to temporary files, 
+	resetting the current branch(resource) to the same commit as the branch(target) you are rebasing onto, 
+	and finally applying each change in turn.
+
+There is no difference in the end product of the integration, but rebasing makes for a cleaner history. If you examine the log of a rebased branch, it looks like a linear history: it appears that all the work happened in series, even when it originally happened in parallel.
+
+
+==================== 5.1 ====================
+
+# Integration-Manager Workflow
+1. The project maintainer pushes to their public repository.
+2. A contributor clones that repository and makes changes.
+3. The contributor pushes to their own public copy.
+4. The contributor sends the maintainer an email asking them to pull changes.
+5. The maintainer adds the contributor’s repo as a remote and merges locally.
+6. The maintainer pushes merged changes to the main repository.
+
+
+==================== 5.2 ====================
+
+# Commit Guidelines
+1. don’t submit any whitespace errors
+2. make each commit a logically separate changeset
+3. commit message
+
+==================== 6.2 ====================
+
+# Forking Projects
+If you want to contribute to an existing project to which you don’t have push access, you can “fork” the project. What this means is that GitHub will make a copy of the project that is entirely yours; it lives in your user’s namespace, and you can push to it.
+
+Check # Integration-Manager Workflow
+
+
+
+==================== other ====================
+
+# gitk dot color
+red: changed
+green: staged
+yellow: committed | pushed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
