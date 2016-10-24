@@ -1,0 +1,123 @@
+var express = require('express');
+var app = express();
+
+var port = 3000;
+
+app.use(express.static('public'));
+app.use(express.static('src/views'));
+
+app.get('/', function(req, res){
+    res.redirect("/index.html");
+});
+app.get('/books', function(req, res){
+    res.send("hello books");
+});
+
+app.listen(port, function (err) {
+    console.log('running server on port '+ port);
+});
+
+
+==================== 3.4 gulp规范js代码及风格： jshint, jscs ====================
+
+
+# 安装gulp
+npm install gulp --save-dev
+--save-dev 会生成
+  "devDependencies": {
+    "gulp": "^3.9.1"
+  }
+节点, 而之前的--save 会生成
+  "dependencies": {
+    "express": "^4.14.0"
+  },
+节点. 在prod部署中, 不需要gulp, jshint, jscs这类开发包, 所以使用 --save-dev
+
+# 安装jshint, jscs等
+npm install --save-dev gulp-jshint gulp-jscs jshint-stylish
+安装完检查package.json可以发现依赖包节点
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-jscs": "^4.0.0",
+    "gulp-jshint": "^2.0.1",
+    "jshint-stylish": "^2.2.1"
+  }
+
+# 配置gulp任务
+项目根目录建立gulpfile.js文件
+var gulp = require('gulp');
+var jshint = require('gulp-jshint');
+
+
+var jsFiles = ['*.js', 'src/**/*.js'];
+
+gulp.task('style', function () {
+    gulp.src(jsFiles)
+        .pipe(jshint())
+        .pipe(jshint.reporter('jshint-stylish',{
+            verbose:true
+        }))
+})
+
+# 执行gulp任务
+gulp style
+查看terminal中显示
+
+# 添加jscs内容
+var gulp = require('gulp');
+var jshint = require('gulp-jshint');
+var jscs = require('gulp-jscs');
+
+var jsFiles = ['*.js', 'src/**/*.js'];
+
+gulp.task('style', function () {
+    return gulp.src(jsFiles)
+        .pipe(jshint())
+        .pipe(jshint.reporter('jshint-stylish',{
+            verbose:true
+        }))
+        .pipe(jscs());
+});
+
+
+==================== 3.5 ====================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
