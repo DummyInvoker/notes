@@ -1,28 +1,178 @@
+==================== 1-2 ====================
+
+# nodejs; express
+nodejs is runtime environment, a wrapper of JS
+express is web development framework for nodejs
+
+# 下载安装nodejs
+node --version
+如果没有找到node, 检查系统path变量
+
+# 所有node程序最终都是在执行一个js程序
+建立 myLibrary/app.js , 随便写个console.log()
+使用node来运行这个js程序: node app.js
+
+==================== 7-8 ====================
+
+# NPM
+npm is package management system for nodejs
+
+# 初始化项目
+npm init
+回答完一些问题后, 在项目的根目录下可以看到package.json文件, 内容为刚才问题的回答
+
+# 安装express
+npm install --save express
+--save的作用是添加该包到项目配置文件package.json中
+完成后可以发现package.json中多了express节点
+"dependencies": {
+"express": "^4.14.0"
+}
+
+# 版本升级规则
+^4.14.0 允许升级主版本: 4.x.x
+~4.14.0 允许升级小版本: 4.14.x
+4.14.0 不允许升级版本
+npm update
+
+==================== 11-12 first app: npm start ====================
+
 var express = require('express');
 var app = express();
 
-var port = 3000;
+var port = 5000;
 
-app.use(express.static('public'));
-app.use(express.static('src/views'));
+app.listen(port, function (err) {
+    if (err) console.log(err);
+    else console.log('running server on port '+ port);
+});
+
+# node app.js
+
+# 使用npm方式启动项目
+app.js作为项目入口过于随意, 使用标准的npm方式启动便于其他人找到项目启动方式
+修改package.json
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+命令行使用npm启动
+npm start
+
+==================== 13 first app: routing ====================
+
+var express = require('express');
+var app = express();
+
+var port = 5000;
 
 app.get('/', function(req, res){
-    res.redirect("/index.html");
+    res.send('hello world');
 });
 app.get('/books', function(req, res){
-    res.send("hello books");
+    res.send('hello books');
 });
 
 app.listen(port, function (err) {
-    console.log('running server on port '+ port);
+    if (err) console.log(err);
+    else console.log('running server on port '+ port);
 });
 
+==================== 14-15 first app: bootstrap template ====================
 
-==================== 3.4 gulp规范js代码及风格： jshint, jscs ====================
+# 下载bootstrap模板
+	www.bootstrapzero.com
+	下载: storystrap
+	将css,js目录解压到项目根目录下的public目录
+	将html文件解压到根目录下的src/views目录
+	
+# 在app.js中配置加载静态文件
+当url请求例如/css/styles.css, node首先去public目录里寻找同路径下的文件. 没有找打文件时开始使用后面的routing
 
+var express = require('express');
+var app = express();
+
+var port = 5000;
+
+app.use(express.static('public'));
+app.use(express.static('src/views'));	// 暂时把view文件作为静态文件对待
+
+app.get('/', function(req, res){
+    res.send('hello world');
+});
+app.get('/books', function(req, res){
+    res.send('hello books');
+});
+
+app.listen(port, function (err) {
+    if (err) console.log(err);
+    else console.log('running server on port '+ port);
+});
+
+# 访问 localhost:5000/index.html 可以看到页面效果
+	在html文件中, css导入使用'css/bootstrap.min.css', 也就是访问'localhost:5000/css/bootstrap.min.css', 被静态文件过滤出来处理, 从而会查找'public/css/bootstrap.min.css'文件是否存在
+
+
+==================== 16 bower ====================	
+	
+# bower
+package manager for frontend: angular, bootstrap, font-awesome, jquery
+while NPM is for backend
+
+# 安装bower
+npm install -g bower
+不是项目依赖包, 所以不能使用--save
+
+# 初始化项目
+bower init
+回答完一些问题后, 在项目的根目录下可以看到bower.json文件, 内容为刚才问题的回答
+
+# 安装bootstrap包
+bower install --save bootstrap
+完成后可以在项目根目录下看到bower_components目录
+在bower.json文件中可以看到bootstrap的节点
+"dependencies": {
+"bootstrap": "^3.3.7"
+}
+
+注意bower_components目录中还有jquery, 这是因为bootstrap的bower.json文件中指出了其依赖于jquery. bower自动下载了其依赖包
+
+# 指定bower下载目录
+根目录下建立文件 .bowerrc
+{
+  "directory": "public/lib"
+}
+
+# 清除之前的bower_components目录, 重新下载bootstrap, font-awesome包
+bower install --save bootstrap font-awesome
+现在在public/lib目录下有bootstrap及其依赖包, font-awesome包
+修改html中的配置, 例如:
+<link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="lib/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+<script src="lib/jquery/dist/jquery.min.js"></script>
+<script src="lib/bootstrap/dist/js/bootstrap.min.js"></script>
+
+==================== 19-20 gulp ====================
+
+# gulp
+task manager
+
+# jshint
+code quality enforcement: detect potential errors; enforces coding conventions
+
+# jscs
+code style enforcement: enforces style conventions
+
+# 下载jshint, jscs示例配置文件
+https://github.com/jonathanfmills/CodingStandards
+将配置文件复制到项目的根目录
+
+==================== 21 gulp规范js代码及风格： jshint, jscs ====================
 
 # 安装gulp
+npm install -g gulp
 npm install gulp --save-dev
+
 --save-dev 会生成
   "devDependencies": {
     "gulp": "^3.9.1"
@@ -48,7 +198,6 @@ npm install --save-dev gulp-jshint gulp-jscs jshint-stylish
 var gulp = require('gulp');
 var jshint = require('gulp-jshint');
 
-
 var jsFiles = ['*.js', 'src/**/*.js'];
 
 gulp.task('style', function () {
@@ -56,12 +205,12 @@ gulp.task('style', function () {
         .pipe(jshint())
         .pipe(jshint.reporter('jshint-stylish',{
             verbose:true
-        }))
-})
+        }));
+});
 
 # 执行gulp任务
 gulp style
-查看terminal中显示
+查看terminal中提示的信息
 
 # 添加jscs内容
 var gulp = require('gulp');
@@ -78,9 +227,9 @@ gulp.task('style', function () {
         }))
         .pipe(jscs());
 });
+注意: 这里的代码需要配置"gulp-jscs": "^2.0.0", 旧版本才会有效
 
-
-==================== 3.5 ====================
+==================== 22 ====================
 
 
 
