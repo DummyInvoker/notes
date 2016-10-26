@@ -1,27 +1,178 @@
+==================== 1-2 ====================
+
+# nodejs; express
+nodejs is runtime environment, a wrapper of JS
+express is web development framework for nodejs
+
+# 下载安装nodejs
+node --version
+如果没有找到node, 检查系统path变量
+
+# 所有node程序最终都是在执行一个js程序
+建立 myLibrary/app.js , 随便写个console.log()
+使用node来运行这个js程序: node app.js
+
+==================== 7-8 ====================
+
+# NPM
+npm is package management system for nodejs
+
+# 初始化项目
+npm init
+回答完一些问题后, 在项目的根目录下可以看到package.json文件, 内容为刚才问题的回答
+
+# 安装express
+npm install --save express
+--save的作用是添加该包到项目配置文件package.json中
+完成后可以发现package.json中多了express节点
+"dependencies": {
+"express": "^4.14.0"
+}
+
+# 版本升级规则
+^4.14.0 允许升级主版本: 4.x.x
+~4.14.0 允许升级小版本: 4.14.x
+4.14.0 不允许升级版本
+npm update
+
+==================== 11-12 first app: npm start ====================
+
 var express = require('express');
 var app = express();
 
-var port = 3000;
+var port = 5000;
 
-app.use(express.static('public'));
-app.use(express.static('src/views'));
+app.listen(port, function (err) {
+    if (err) console.log(err);
+    else console.log('running server on port '+ port);
+});
+
+# node app.js
+
+# 使用npm方式启动项目
+app.js作为项目入口过于随意, 使用标准的npm方式启动便于其他人找到项目启动方式
+修改package.json
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+命令行使用npm启动
+npm start
+
+==================== 13 first app: routing ====================
+
+var express = require('express');
+var app = express();
+
+var port = 5000;
 
 app.get('/', function(req, res){
-    res.redirect("/index.html");
+    res.send('hello world');
 });
 app.get('/books', function(req, res){
-    res.send("hello books");
+    res.send('hello books');
 });
 
 app.listen(port, function (err) {
-    console.log('running server on port '+ port);
+    if (err) console.log(err);
+    else console.log('running server on port '+ port);
 });
 
+==================== 14-15 first app: bootstrap template ====================
 
-==================== 3.4 gulp规范js代码及风格： jshint, jscs ====================
+# 下载bootstrap模板
+	www.bootstrapzero.com
+	下载: storystrap
+	将css,js目录解压到项目根目录下的public目录
+	将html文件解压到根目录下的src/views目录
+	
+# 在app.js中配置加载静态文件
+当url请求例如/css/styles.css, node首先去public目录里寻找同路径下的文件. 没有找打文件时开始使用后面的routing
+
+var express = require('express');
+var app = express();
+
+var port = 5000;
+
+app.use(express.static('public'));
+app.use(express.static('src/views'));	// 暂时把view文件作为静态文件对待
+
+app.get('/', function(req, res){
+    res.send('hello world');
+});
+app.get('/books', function(req, res){
+    res.send('hello books');
+});
+
+app.listen(port, function (err) {
+    if (err) console.log(err);
+    else console.log('running server on port '+ port);
+});
+
+# 访问 localhost:5000/index.html 可以看到页面效果
+	在html文件中, css导入使用'css/bootstrap.min.css', 也就是访问'localhost:5000/css/bootstrap.min.css', 被静态文件过滤出来处理, 从而会查找'public/css/bootstrap.min.css'文件是否存在
+
+
+==================== 16 bower ====================	
+	
+# bower
+package manager for frontend: angular, bootstrap, font-awesome, jquery
+while NPM is for backend
+
+# 安装bower
+npm install -g bower
+不是项目依赖包, 所以不能使用--save
+
+# 初始化项目
+bower init
+回答完一些问题后, 在项目的根目录下可以看到bower.json文件, 内容为刚才问题的回答
+
+# 安装bootstrap包
+bower install --save bootstrap
+完成后可以在项目根目录下看到bower_components目录
+在bower.json文件中可以看到bootstrap的节点
+"dependencies": {
+"bootstrap": "^3.3.7"
+}
+
+注意bower_components目录中还有jquery, 这是因为bootstrap的bower.json文件中指出了其依赖于jquery. bower自动下载了其依赖包
+
+# 指定bower下载目录
+根目录下建立文件 .bowerrc
+{
+  "directory": "public/lib"
+}
+
+# 清除之前的bower_components目录, 重新下载bootstrap, font-awesome包
+bower install --save bootstrap font-awesome
+现在在public/lib目录下有bootstrap及其依赖包, font-awesome包
+修改html中的配置, 例如:
+<link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="lib/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+<script src="lib/jquery/dist/jquery.min.js"></script>
+<script src="lib/bootstrap/dist/js/bootstrap.min.js"></script>
+
+==================== 19-20 gulp ====================
+
+# gulp
+task manager
+
+# jshint
+code quality enforcement: detect potential errors; enforces coding conventions
+
+# jscs
+code style enforcement: enforces style conventions
+
+# 下载jshint, jscs示例配置文件
+https://github.com/jonathanfmills/CodingStandards
+将配置文件复制到项目的根目录
+
+==================== 21 gulp规范js代码及风格： jshint, jscs ====================
 
 # 安装gulp
+npm install -g gulp
 npm install gulp --save-dev
+
 --save-dev 会生成
   "devDependencies": {
     "gulp": "^3.9.1"
@@ -54,12 +205,12 @@ gulp.task('style', function () {
         .pipe(jshint())
         .pipe(jshint.reporter('jshint-stylish',{
             verbose:true
-        }))；
-})；
+        }));
+});
 
 # 执行gulp任务
 gulp style
-查看terminal中显示
+查看terminal中提示的信息
 
 # 添加jscs内容
 var gulp = require('gulp');
@@ -76,8 +227,9 @@ gulp.task('style', function () {
         }))
         .pipe(jscs());
 });
+注意: 这里的代码需要配置"gulp-jscs": "^2.0.0", 旧版本才会有效
 
-==================== 3.5 gulp向页面注入前端包： wiredep 1:js ====================
+==================== 22 gulp向页面注入bower管理的前端包： wiredep:js ====================
 
 # 安装wiredep
 npm install --save-dev wiredep
@@ -86,7 +238,7 @@ npm install --save-dev wiredep
 gulp.task('inject', function () {
     var wiredep = require('wiredep').stream;
     var options = {
-        bowerJson: require('./bower.json'),     // get frontend packages from bower setting
+        bowerJson: require('./bower.json'),     // 从bower配置中取得前端包信息, 注意添加了require, value是个对象
         directory: './public/lib'           	// 以后更加新的wiredep会自动查用.bowerrc文件
     };
 
@@ -107,14 +259,419 @@ gulp inject
 <script src="../../public/lib/bootstrap/dist/js/bootstrap.js"></script>
 <!--endbower-->
 
-
-==================== 3.6 gulp向页面注入前端包： wiredep 2:css ====================
+==================== 23 gulp向页面注入bower管理的前端包： wiredep:css ====================
 
 # html页面中添加css的注入:
 <!--bower:css-->
 <!--endbower-->
 
+# 在项目的bower.json中, 重写bootstrap, font-awesome的配置文件的main方法
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "font-awesome": "^4.6.3"
+  },
+  "overrides": {
+    "bootstrap": {
+      "main": [
+        "dist/js/bootstrap.js",
+        "dist/css/bootstrap.min.css",
+        "less/bootstrap.less"
+      ]
+    },
+    "font-awesome": {
+      "main":[
+        "less/font-awesome.less",
+        "css/font-awesome.min.css",
+        "scss/font-awesome.scss"
+      ]
+    }
+  }
+
 # 执行gulp任务
+gulp inject
+可以发现在上面两行注释之间, 注入了css文件.
+<link rel="stylesheet" href="../../public/lib/bootstrap/dist/css/bootstrap.min.css" />
+<link rel="stylesheet" href="../../public/lib/font-awesome/css/font-awesome.min.css" />
+
+# 修改路径, 去除不需要的'../../public/'字段
+修改gulpfile.js
+gulp.task('inject', function () {
+    var wiredep = require('wiredep').stream;
+    var options = {
+        bowerJson: require('./bower.json'),
+        directory: './public/lib',
+        ignorePath: '../../public/'
+    };
+
+    return gulp.src('./src/views/*.html')
+        .pipe(wiredep(options))
+        .pipe(gulp.dest('./src/views'));
+});
+
+==================== 24 gulp向页面注入个人前端包: gulp-inject ====================
+
+# 安装gulp-inject
+npm install --save-dev gulp-inject
+
+# 配置gulp任务
+gulp.task('inject', function () {
+    var wiredep = require('wiredep').stream;
+    var inject = require('gulp-inject');
+
+    var wiredepOptions = {
+        bowerJson: require('./bower.json'),     // get frontend packages from bower setting
+        directory: './public/lib',              // 以后更加新的wiredep会自动查用.bowerrc文件
+        ignorePath: '../../public'
+    };
+
+    var injectSrc = gulp.src(
+        ['./public/css/*.css', './public/js/*.js'],
+        {read:false}                            // 不要扫描文件内容, 只需要读取文件名即可
+    );
+    var injectOptions = {
+        ignorePath: '/public'
+    }
+
+    return gulp.src('./src/views/*.html')
+        .pipe(wiredep(wiredepOptions))
+        .pipe(inject(injectSrc, injectOptions))
+        .pipe(gulp.dest('./src/views'));
+});
+
+# html页面中添加css的注入:
+<!--inject:css-->
+<!--endinject-->
+<!--inject:js-->
+<!--endinject-->
+
+# 执行gulp任务
+gulp inject
+可以发现在上面两行注释之间, 分别注入了css, js文件.
+<!--inject:css-->
+<link rel="stylesheet" href="/css/styles.css">
+<!--endinject-->
+<!--inject:js-->
+<script src="/js/myJs.js"></script>
+<!--endinject-->
+
+==================== 25 gulp : gulp-nodemon ====================
+
+# 安装gulp-nodemon
+npm install --save-dev gulp-nodemon
+
+# 配置gulp任务
+var nodemon = require("gulp-nodemon");
+
+gulp.task('serve', ['style', 'inject'], function(){ //执行'gulp serve'时, 首先执行'style'和'inject'
+    var options = {
+        script: 'app.js',       // 启动时运行哪个程序
+        delayTime: 1,           // 秒
+        env:{'PORT':5500},
+        watch: jsFiles          // 监控对象, 触发重起的条件
+    }
+
+    return nodemon(options)
+        .on('restart', function(ev){
+            console.log('Restarting...');
+        })
+})
+
+# 执行gulp任务
+gulp serve
+每次在jsFiles对象中任意一个文件进行修改时, 都会触发'style', 'inject' 和项目重起
+
+# 修改app.js, 添加PORT变量
+var port = process.env.PORT || 5000;
+重起服务器, 现在访问 localhost:5500 也能触发请求
+
+==================== 28-29 templating engine: jade ====================
+
+# jade
+a node template engine, runs through jade compiler
+
+# 安装jade
+npm install --save jade
+
+# 在app.js中, 配置jade视图所在的目录; view engine
+app.use(express.static('public'));
+app.set('views', './src/views');
+app.set('view engine', 'jade');
+
+app.get('/', function(req, res){
+    res.render('index', {			// 不是send
+		title: 'Hello from Handlebars in router',
+		list: ['4', '5', '6']
+	});
+});
+
+# 在views对应的src/views目录中, 建立index.jade
+- var list2 = ['1', '2', '3'];	// js代码以'-'开头
+html
+    head
+        title MyApp
+    body(class='myClass')
+        h1(id='myId') My App
+        h3.myClass1#myId2 sub heading
+        ul
+            each val in list
+                li= val 		/* jade使用等号导入model, 等号必须紧贴dom元素 */
+
+# 向view传参
+app.js中向指定view注入对象
+app.get('/', function(req, res){
+    res.render('index', {list: ['4', '5', '6']});
+});
+index.jade中修改变量定义
+重起后访问, 可以发现model被渲染
+
+# 注入wiredep, gulp-inject到jade
+给html添加wiredep, gulp-inject注入标记
+    head
+        //- bower:css
+        //- endbower
+
+        //- bower:js
+        //- endbower
+
+        //- inject:css
+        //- endinject
+
+        //- inject:js
+        //- endinject
+
+		title MyApp
+		
+修改gulpfile.js中inject source的设置(html -> jade)
+    return gulp.src('./src/views/*.jade')
+        .pipe(wiredep(wiredepOptions))
+        .pipe(inject(injectSrc, injectOptions))
+        .pipe(gulp.dest('./src/views'));
+
+# 运行 gulp inject
+完成后发现jade文件里注入成功：
+    head
+        //- bower:css
+        link(rel='stylesheet', href='lib/bootstrap/dist/css/bootstrap.min.css')
+        link(rel='stylesheet', href='lib/font-awesome/css/font-awesome.min.css')
+        //- endbower
+
+        //- bower:js
+        script(src='lib/jquery/dist/jquery.js')
+        script(src='lib/bootstrap/dist/js/bootstrap.js')
+        //- endbower
+
+        //- inject:css
+        link(rel="stylesheet", href="/css/styles.css")
+        //- endinject
+
+        //- inject:js
+        //- endinject
+
+        title MyApp
+
+==================== 30 templating engine: handlebars ====================
+
+# 安装handlebars
+npm install --save express-handlebars
+
+# 在app.js中, 配置handlebars视图所在的目录; view engine
+app.use(express.static('public'));
+app.set('views', './src/views');
+
+var handlebars = require("express-handlebars");
+app.engine('.hbs', handlebars({extname:'.hbs'}));
+app.set('view engine', '.hbs');
+
+app.get('/', function(req, res){
+    res.render('index', {
+		title: 'Hello from Handlebars in router',
+		list: ['4', '5', '6']
+	});
+});
+
+# 在views对应的src/views目录中, 建立index.hbs
+<html>
+    <body>
+        <h1>Hello from Handlebars in hds file</h1>
+		<h1>{{title}}</h1>				<!--handlebars使用和angular一样的符号导入model, 有潜在冲突-->
+		<ul>
+		   {{#each list}}
+			   <li>{{this}}</li>
+		   {{/each}}
+		</ul>
+    </body>
+</html>
+
+==================== 31 templating engine: EJS ====================
+
+# 安装ejs
+npm install --save ejs
+
+# 在app.js中, 配置ejs视图所在的目录; view engine
+app.use(express.static('public'));
+app.set('views', './src/views');
+app.set('view engine', 'ejs');
+
+app.get('/', function(req, res){
+    res.render('index', {
+		title: 'Hello from EJS in router',
+		list: ['4', '5', '6']
+	});
+});
+
+# 在views对应的src/views目录中, 建立index.ejs
+<html>
+<body>
+    <h1>Hello from EJS in ejs file</h1>
+    <h1><%=title%></h1>
+    <ul>
+        <% for (var i=0; i<list.length; i++) { %>
+            <li><%=list[i]%></li>
+        <% } %>
+    </ul>
+</body>
+</html>
+
+# 试着转化之前 bootstrap template 到 EJS
+    <nav class="collapse navbar-collapse" role="navigation">
+      <ul class="nav navbar-nav">
+        <% for (var i=0; i<list.length; i++) { %>
+          <li>
+            <a href="#"><%=list[i]%></a>
+          </li>
+        <% } %>
+      </ul>
+     <ul class="nav navbar-right navbar-nav">...</ul>
+    </nav>
+
+==================== 34 ====================
+
+# 在app.js中, 手动定义nav内容
+app.get('/', function(req, res){
+    res.render('index', {
+        title: 'Hello from EJS in router',
+        nav: [
+            {Link:'/books', Text:'Books'},
+            {Link:'/authors', Text:'Authors'}
+        ]
+    });
+});
+
+# 在index.ejs中, 相应修改
+    <nav class="collapse navbar-collapse" role="navigation">
+      <ul class="nav navbar-nav">
+        <% for (var i=0; i<nav.length; i++) { %>
+          <li>
+            <a href="<%=nav[i].Link%>"><%=nav[i].Text%></a>
+          </li>
+        <% } %>
+      </ul>
+     <ul class="nav navbar-right navbar-nav">...</ul>
+    </nav>
+
+==================== 35 express.Router() ====================
+
+var express = require('express');
+var app = express();
+
+var port = process.env.PORT || 5000;
+
+app.use(express.static('public'));
+app.set('views', './src/views');
+app.set('view engine', 'ejs');
+
+var bookRouter = express.Router();
+app.use('/', bookRouter);
+
+bookRouter.route('/list')		// url: http://localhost:5500/list , 相对bookRouter的'/'地址
+    .get(function (req, res) {
+        res.send('you got all book list');
+    })
+bookRouter.route('/single')
+    .get(function (req, res) {
+        res.send('you got one single book');
+    })
+	
+app.listen(port, function (err) {
+    console.log('running server on port '+ port);
+});
+
+==================== 36 send(); render() ====================
+
+var express = require('express');
+var app = express();
+
+var port = process.env.PORT || 5000;
+
+app.use(express.static('public'));
+app.set('views', './src/views');
+app.set('view engine', 'ejs');
+
+var bookRouter = express.Router();
+app.use('/', bookRouter);
+
+// variable values to be retrieved from DAO
+var nav = [
+    {Link:'/books', Text:'Books'},
+    {Link:'/authors', Text:'Authors'}
+]
+
+var books = [
+    {title: 'War and Peace',genre: 'Historical Fiction',author: 'Lev Nikolayevich Tolstoy',read: false},
+    {title: 'Les Miserables',genre: 'Historical Fiction',author: 'Victor Hugo',read: false},
+    {title: 'The Time Machine',genre: 'Science Fiction',author: 'H. G. Wells',read: false}
+]
+
+
+bookRouter.route('/list')
+    .get(function (req, res) {
+        res.render('books', {
+            title: 'Book List',
+            nav: nav,
+            books: books
+        });
+    })
+bookRouter.route('/single')
+    .get(function (req, res) {
+        res.send('you got one single book');
+    })
+
+
+app.listen(port, function (err) {
+    console.log('running server on port '+ port);
+});
+
+# 修改view文件, 展现model内容
+<div class="panel-body">
+
+	<!--/stories-->
+	<% for (var i=0; i<books.length; i++) { %>
+		<div class="row">
+			<br>
+			<div class="col-md-2 col-sm-3 text-center">
+				<a class="story-title" href="#"><img alt="" src="http://api.randomuser.me/portraits/thumb/men/58.jpg" style="width:100px;height:100px" class="img-circle"></a>
+			</div>
+			<div class="col-md-10 col-sm-9">
+				<h3><%=books[i].title%></h3>
+				<div class="row">
+					<div class="col-xs-9">
+						<h4><span class="label label-default"><%=books[i].author%></span></h4>
+						<h4><small style="font-family:courier,'new courier';" class="text-muted"><a href="<%=i%>" class="text-muted">Read More</a></small></h4>
+					</div>
+					<div class="col-xs-3"></div>
+				</div>
+				<br><br>
+			</div>
+		</div>
+		<hr>
+	<% } %>
+	<!--/stories-->
+	
+	<a href="/" class="btn btn-primary pull-right btnNext">More <i class="glyphicon glyphicon-chevron-right"></i></a>
+</div>
+
+==================== 37 separate functions ====================
+
 
 
 
