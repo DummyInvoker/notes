@@ -360,7 +360,7 @@ gulp.task('serve', ['style', 'inject'], function(){ //执行'gulp serve'时, 首
     var options = {
         script: 'app.js',       // 启动时运行哪个程序
         delayTime: 1,           // 秒
-        env:{'PORT':5500},
+        env:{'PORT':3000},
         watch: jsFiles          // 监控对象, 触发重起的条件
     }
 
@@ -376,7 +376,7 @@ gulp serve
 
 # 修改app.js, 添加PORT变量
 var port = process.env.PORT || 5000;
-使用gulp serve启动服务器, 访问 localhost:5500 触发请求
+使用gulp serve启动服务器, 访问 localhost:3000 触发请求
 
 ==================== 28-29 templating engine: jade ====================
 
@@ -575,7 +575,7 @@ app.set('view engine', 'ejs');
 var bookRouter = express.Router();
 app.use('/books', bookRouter);
 
-bookRouter.route('/')		// url: http://localhost:5500/books/ , 相对bookRouter的'/books'地址
+bookRouter.route('/')		// url: http://localhost:3000/books/ , 相对bookRouter的'/books'地址
     .get(function (req, res) {
         res.send('you got all book list');
     })
@@ -608,9 +608,14 @@ var nav = [
     {Link:'/authors', Text:'Authors'}
 ]
 var books = [
-    {title: 'War and Peace',genre: 'Historical Fiction',author: 'Lev Nikolayevich Tolstoy',read: false},
+    {title: 'War And Peace',genre: 'Historical Fiction',author: 'Lev Nikolayevich Tolstoy',read: false},
     {title: 'Les Miserables',genre: 'Historical Fiction',author: 'Victor Hugo',read: false},
-    {title: 'The Time Machine',genre: 'Science Fiction',author: 'H. G. Wells',read: false}
+    {title: 'The Time Machine',genre: 'Science Fiction',author: 'H. G. Wells',read: false},
+	{title: 'A Journey Into The Center Of The Earth',genre: 'Science Fiction',author: 'Jules Verne',read: false},
+	{title: 'The Dark World',genre: 'Fantasy',author: 'Henry Kuttner',read: false},
+	{title: 'The Wind In The Willows',genre: 'Fantasy',author: 'Kenneth Grahame',read: false},
+	{title: 'Life On The Mississippi',genre: 'History',author: 'Mark Twain',read: false},
+	{title: 'Childhood',genre: 'Biography',author: 'Lev Nikolayevich Tolstoy',read: false}
 ]
 
 
@@ -688,12 +693,7 @@ var nav = [
     {Link:'/books', Text:'Books'},
     {Link:'/authors', Text:'Authors'}
 ]
-var books = [
-    {title: 'War and Peace',genre: 'Historical Fiction',author: 'Lev Nikolayevich Tolstoy',read: false},
-    {title: 'Les Miserables',genre: 'Historical Fiction',author: 'Victor Hugo',read: false},
-    {title: 'The Time Machine',genre: 'Science Fiction',author: 'H. G. Wells',read: false}
-]
-
+var books = [...]
 
 bookRouter.route('/')
     .get(function (req, res) {
@@ -821,21 +821,25 @@ INSERT INTO `books` (`id`, `title`, `author`) VALUES
 	(1, 'War and Peace', 'Lev Nikolayevich Tolstoy'),
 	(2, 'Les Miserables', 'Victor Hugo'),
 	(3, 'The Time Machine', 'H. G. Wells'),
-	(4, 'test_title', 'test_author');
+	(4, 'A Journey Into The Center Of The Earth', 'Jules Verne'),
+	(5, 'The Dark World', 'Henry Kuttner'),
+	(6, 'The Wind In The Willows', 'Kenneth Grahame'),
+	(7, 'Life On The Mississippi', 'Mark Twain'),
+	(8, 'Childhood', 'Lev Nikolayevich Tolstoy');
 
 # 安装mysql驱动
 npm install --save mysql
 
 # 在app.js中, 初始化db连接配置, 并传递给子包
 var mysql = require('mysql');
-var connection = mysql.createConnection({
+var mysql_conn = mysql.createConnection({
     host     : 'localhost',
     user     : 'root',
     password : 'root',
     database : 'books'
 });
 
-var bookRouter = require('./src/routes/bookRoutes')(nav, connection);
+var bookRouter = require('./src/routes/bookRoutes')(nav, mysql_conn);
 
 # 在bookRoutes.js中, 使用查询语句
 var router = function(nav, connection){
@@ -859,6 +863,8 @@ module.exports = router;
 到: <%=books[i].id%>
 
 # 在bookRoutes.js中, 使用prepared statement查询语句
+var mysql = require('mysql');
+
 bookRouter.route('/:id').get(function (req, res) {
 	var id = req.params.id;
 
@@ -904,7 +910,127 @@ bookRouter.route('/:id')
 		});
 	})
 
-==================== 46 MongoDB ====================
+==================== 46 MongoDB数据库安装及启动 ====================
+
+# 启动mongodb daemon及客户端
+手动建立 c:\data\db 目录
+C:\Program Files\MongoDB\Server\3.2\bin\mongod
+C:\Program Files\MongoDB\Server\3.2\bin\mongo
+
+==================== 47 添加adminRouter ====================
+
+# 在app.js中, 添加adminRouter部分
+var adminRouter = require('./src/routes/adminRoutes')(nav);
+app.use('/admin', adminRouter);
+
+# 建立adminRouters.js
+var express = require('express');
+var adminRouter = express.Router();
+
+var router = function(nav){
+  adminRouter.route('/addBooks').get(function (req, res) {
+      res.send('inserting books');
+  })
+  return adminRouter;
+};
+
+module.exports = router;
+
+==================== 48-49 直接连接MongoDB: insertMany() ====================
+
+# 安装 The official MongoDB driver for Node.js
+npm install --save mongodb
+
+# 在adminRouters.js中, 实现mongodb的操作
+var express = require('express');
+var adminRouter = express.Router();
+var mongodb = require('mongodb').MongoClient;
+
+var books = [
+    {title: 'War And Peace',genre: 'Historical Fiction',author: 'Lev Nikolayevich Tolstoy',read: false},
+    {title: 'Les Miserables',genre: 'Historical Fiction',author: 'Victor Hugo',read: false},
+    {title: 'The Time Machine',genre: 'Science Fiction',author: 'H. G. Wells',read: false},
+    {title: 'A Journey Into The Center Of The Earth',genre: 'Science Fiction',author: 'Jules Verne',read: false},
+    {title: 'The Dark World',genre: 'Fantasy',author: 'Henry Kuttner',read: false},
+    {title: 'The Wind In The Willows',genre: 'Fantasy',author: 'Kenneth Grahame',read: false},
+    {title: 'Life On The Mississippi',genre: 'History',author: 'Mark Twain',read: false},
+    {title: 'Childhood',genre: 'Biography',author: 'Lev Nikolayevich Tolstoy',read: false}
+]
+
+var router = function(nav){
+  adminRouter.route('/addBooks').get(function (req, res) {
+    var url = 'mongodb://localhost:27017/libraryApp';
+    mongodb.connect(url, function (err, db) {
+        if(err) throw err;
+        var collection = db.collection('books');
+        collection.insertMany(books, function (err, results) {
+            res.send(results);
+            db.close();     // 注意需要放在callback内部, 否则会在耗时查询任务未结束前, 关闭连接
+        });
+    })
+  })
+    
+  return adminRouter;
+};
+
+module.exports = router;
+
+# 浏览器访问 http://localhost:3000/admin/addbooks
+可以看到返回的results对象. 可以安装chrome插件:JSONView
+
+# 在terminal中查看数据库. 也可以使用 MongoDB Compass GUI
+> show dbs
+> use libraryApp
+> show collections
+> db.books.find().pretty()
+
+==================== 50 直接连接MongoDB: find().toArray() ====================
+
+# 修改bookRouters.js中, bookRouter.route('/')取得数据的方法
+var mongodb = require('mongodb').MongoClient;
+
+var router = function(nav, connection){
+    bookRouter.route('/').get(function (req, res) {
+        var url = 'mongodb://localhost:27017/libraryApp';
+        mongodb.connect(url, function (err, db) {
+            var collection = db.collection('books');
+            collection.find({}).toArray(function (err, results) {   // ?? find()不需要使用callback?
+                res.render('bookListView', {
+                    title: 'Book List',
+                    nav: nav,
+                    books: results
+                });
+            });
+        });
+    });
+
+	// bookRouter.route('/:id')...
+
+    return bookRouter;
+}
+module.exports = router;
+
+==================== 51 直接连接MongoDB: find().toArray() ====================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
