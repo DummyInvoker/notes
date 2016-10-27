@@ -797,8 +797,134 @@ app.use('/books', bookRouter);
 var router = function(nav, express){
     var bookRouter = express.Router();
 	...
+}
+实际使用中, 不需要使用参数传递. node自动单例
 
-==================== 42 ====================
+==================== 43-44 直接连接mysql ====================
+
+# 通过关键字找需要的npm包, 用以参考
+www.npmjs.com
+大家对mysql评价不错, 一直都有维护记录, 决定使用
+
+# mysql 数据库结构
+CREATE DATABASE IF NOT EXISTS `books`;
+USE `books`;
+
+CREATE TABLE IF NOT EXISTS `books` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(50) DEFAULT NULL,
+  `author` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) 
+
+INSERT INTO `books` (`id`, `title`, `author`) VALUES
+	(1, 'War and Peace', 'Lev Nikolayevich Tolstoy'),
+	(2, 'Les Miserables', 'Victor Hugo'),
+	(3, 'The Time Machine', 'H. G. Wells'),
+	(4, 'test_title', 'test_author');
+
+# 安装mysql驱动
+npm install --save mysql
+
+# 在app.js中, 初始化db连接配置, 并传递给子包
+var mysql = require('mysql');
+var connection = mysql.createConnection({
+    host     : 'localhost',
+    user     : 'root',
+    password : 'root',
+    database : 'books'
+});
+
+var bookRouter = require('./src/routes/bookRoutes')(nav, connection);
+
+# 在bookRoutes.js中, 使用查询语句
+var router = function(nav, connection){
+    bookRouter.route('/').get(function (req, res) {
+        connection.query('select * from books', function (err, rows, fields) {
+            if (err) throw err;
+            res.render('bookListView', {
+                title: 'Book List',
+                nav: nav,
+                books: rows    // mysql的resultset直接是json格式: [{id:1, title:'myBook1', author:'author1'}]
+            });
+        });
+    })
+	bookRouter.route('/:id').get(function (req, res) {...});
+    return bookRouter;
+}
+module.exports = router;
+
+# 修改bookListView.ejs中'Read More'链接地址：
+改: <%=i%>
+到: <%=books[i].id%>
+
+# 在bookRoutes.js中, 使用prepared statement查询语句
+bookRouter.route('/:id').get(function (req, res) {
+	var id = req.params.id;
+
+	var ps = "SELECT * FROM ?? WHERE ?? = ?";
+	var inserts = ['books', 'id', id];
+	ps = mysql.format(ps, inserts);		// SELECT * FROM `books` WHERE `id` = '4'
+	
+	connection.query(ps, function (err, rows, fields) {
+		if (err) throw err;
+		res.render('bookView', {
+			title: 'Book',
+			nav: nav,
+			book: rows[0]
+		});
+	});
+})
+
+==================== 45 all()连接mysql ====================
+
+# 分离数据库部分的逻辑到单独的方法中: all()
+bookRouter.route('/:id')
+	.all(function(req, res, next){
+		var id = req.params.id;
+
+		var ps = "SELECT * FROM ?? WHERE ?? = ?";
+		var inserts = ['books', 'id', id];
+		ps = mysql.format(ps, inserts);
+
+		connection.query(ps, function (err, rows, fields) {
+			if (err) throw err;
+			if(rows.length === 0) res.status(404).send('No book found!');   // 也可以在这里设置redirect
+			else{
+				req.book = rows[0];
+				next();             // call next function: get()
+			}
+		});
+	})
+	.get(function (req, res) {
+		res.render('bookView', {
+			title: 'Book',
+			nav: nav,
+			book: req.book
+		});
+	})
+
+==================== 46 MongoDB ====================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
