@@ -9,7 +9,7 @@ node --version
 如果没有找到node, 检查系统path变量
 
 # 所有node程序最终都是在执行一个js程序
-建立 myLibrary/app.js , 随便写个console.log()
+建立 myLibrary/app.js , 随便写个console.log("hello world")
 使用node来运行这个js程序: node app.js
 
 ==================== 7-8 ====================
@@ -97,20 +97,13 @@ var port = 5000;
 app.use(express.static('public'));
 app.use(express.static('src/views'));	// 暂时把view文件作为静态文件对待
 
-app.get('/', function(req, res){
-    res.send('hello world');
-});
-app.get('/books', function(req, res){
-    res.send('hello books');
-});
-
 app.listen(port, function (err) {
     if (err) console.log(err);
     else console.log('running server on port '+ port);
 });
 
 # 访问 localhost:5000/index.html 可以看到页面效果
-	在html文件中, css导入使用'css/bootstrap.min.css', 也就是访问'localhost:5000/css/bootstrap.min.css', 被静态文件过滤出来处理, 从而会查找'public/css/bootstrap.min.css'文件是否存在
+	在html文件中, css导入使用'/css/bootstrap.min.css', 也就是访问'localhost:5000/css/bootstrap.min.css', 被静态文件过滤出来处理, 从而会查找'public/css/bootstrap.min.css'文件是否存在
 
 
 ==================== 16 bower ====================	
@@ -147,10 +140,11 @@ bower install --save bootstrap
 bower install --save bootstrap font-awesome
 现在在public/lib目录下有bootstrap及其依赖包, font-awesome包
 修改html中的配置, 例如:
-<link href="lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
-<link href="lib/font-awesome/css/font-awesome.min.css" rel="stylesheet">
-<script src="lib/jquery/dist/jquery.min.js"></script>
-<script src="lib/bootstrap/dist/js/bootstrap.min.js"></script>
+<link href="/lib/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="/lib/font-awesome/css/font-awesome.min.css" rel="stylesheet">
+<script src="/lib/jquery/dist/jquery.min.js"></script>
+<script src="/lib/bootstrap/dist/js/bootstrap.min.js"></script>
+注意相对路径和绝对路径
 
 ==================== 19-20 gulp ====================
 
@@ -227,7 +221,7 @@ gulp.task('style', function () {
         }))
         .pipe(jscs());
 });
-注意: 这里的代码需要配置"gulp-jscs": "^2.0.0", 旧版本才会有效
+注意: 这里的代码需要配置"gulp-jscs": "2.0.0", 旧版本才会有效
 
 ==================== 22 gulp向页面注入bower管理的前端包： wiredep:js ====================
 
@@ -237,13 +231,13 @@ npm install --save-dev wiredep
 # 配置gulp任务
 gulp.task('inject', function () {
     var wiredep = require('wiredep').stream;
-    var options = {
+    var wiredepOptions = {
         bowerJson: require('./bower.json'),     // 从bower配置中取得前端包信息, 注意添加了require, value是个对象
         directory: './public/lib'           	// 以后更加新的wiredep会自动查用.bowerrc文件
     };
 
     return gulp.src('./src/views/*.html')
-        .pipe(wiredep(options))
+        .pipe(wiredep(wiredepOptions))
         .pipe(gulp.dest('./src/views'));
 });
 
@@ -293,18 +287,18 @@ gulp inject
 <link rel="stylesheet" href="../../public/lib/bootstrap/dist/css/bootstrap.min.css" />
 <link rel="stylesheet" href="../../public/lib/font-awesome/css/font-awesome.min.css" />
 
-# 修改路径, 去除不需要的'../../public/'字段
+# 修改路径, 去除不需要的'../../public'字段
 修改gulpfile.js
 gulp.task('inject', function () {
     var wiredep = require('wiredep').stream;
-    var options = {
+    var wiredepOptions = {
         bowerJson: require('./bower.json'),
         directory: './public/lib',
-        ignorePath: '../../public/'
+        ignorePath: '../../public'
     };
 
     return gulp.src('./src/views/*.html')
-        .pipe(wiredep(options))
+        .pipe(wiredep(wiredepOptions))
         .pipe(gulp.dest('./src/views'));
 });
 
@@ -354,7 +348,7 @@ gulp inject
 <script src="/js/myJs.js"></script>
 <!--endinject-->
 
-==================== 25 gulp : gulp-nodemon ====================
+==================== 25 gulp监控文件修改: gulp-nodemon ====================
 
 # 安装gulp-nodemon
 npm install --save-dev gulp-nodemon
@@ -382,7 +376,7 @@ gulp serve
 
 # 修改app.js, 添加PORT变量
 var port = process.env.PORT || 5000;
-重起服务器, 现在访问 localhost:5500 也能触发请求
+使用gulp serve启动服务器, 访问 localhost:5500 触发请求
 
 ==================== 28-29 templating engine: jade ====================
 
@@ -416,12 +410,10 @@ html
             each val in list
                 li= val 		/* jade使用等号导入model, 等号必须紧贴dom元素 */
 
-# 向view传参
-app.js中向指定view注入对象
+# app.js中向指定view传model
 app.get('/', function(req, res){
     res.render('index', {list: ['4', '5', '6']});
 });
-index.jade中修改变量定义
 重起后访问, 可以发现model被渲染
 
 # 注入wiredep, gulp-inject到jade
@@ -451,13 +443,13 @@ index.jade中修改变量定义
 完成后发现jade文件里注入成功：
     head
         //- bower:css
-        link(rel='stylesheet', href='lib/bootstrap/dist/css/bootstrap.min.css')
-        link(rel='stylesheet', href='lib/font-awesome/css/font-awesome.min.css')
+        link(rel='stylesheet', href='/lib/bootstrap/dist/css/bootstrap.min.css')
+        link(rel='stylesheet', href='/lib/font-awesome/css/font-awesome.min.css')
         //- endbower
 
         //- bower:js
-        script(src='lib/jquery/dist/jquery.js')
-        script(src='lib/bootstrap/dist/js/bootstrap.js')
+        script(src='/lib/jquery/dist/jquery.js')
+        script(src='/lib/bootstrap/dist/js/bootstrap.js')
         //- endbower
 
         //- inject:css
@@ -532,7 +524,7 @@ app.get('/', function(req, res){
 </body>
 </html>
 
-# 试着转化之前 bootstrap template 到 EJS
+# 转化之前 bootstrap template 到 EJS: bookListView.ejs
     <nav class="collapse navbar-collapse" role="navigation">
       <ul class="nav navbar-nav">
         <% for (var i=0; i<list.length; i++) { %>
@@ -546,7 +538,7 @@ app.get('/', function(req, res){
 
 ==================== 34 ====================
 
-# 在app.js中, 手动定义nav内容
+# 在app.js中, 手动定义nav对象内容
 app.get('/', function(req, res){
     res.render('index', {
         title: 'Hello from EJS in router',
@@ -581,9 +573,9 @@ app.set('views', './src/views');
 app.set('view engine', 'ejs');
 
 var bookRouter = express.Router();
-app.use('/', bookRouter);
+app.use('/books', bookRouter);
 
-bookRouter.route('/list')		// url: http://localhost:5500/list , 相对bookRouter的'/'地址
+bookRouter.route('/')		// url: http://localhost:5500/books/ , 相对bookRouter的'/books'地址
     .get(function (req, res) {
         res.send('you got all book list');
     })
@@ -608,14 +600,13 @@ app.set('views', './src/views');
 app.set('view engine', 'ejs');
 
 var bookRouter = express.Router();
-app.use('/', bookRouter);
+app.use('/books', bookRouter);
 
 // variable values to be retrieved from DAO
 var nav = [
     {Link:'/books', Text:'Books'},
     {Link:'/authors', Text:'Authors'}
 ]
-
 var books = [
     {title: 'War and Peace',genre: 'Historical Fiction',author: 'Lev Nikolayevich Tolstoy',read: false},
     {title: 'Les Miserables',genre: 'Historical Fiction',author: 'Victor Hugo',read: false},
@@ -623,9 +614,9 @@ var books = [
 ]
 
 
-bookRouter.route('/list')
+bookRouter.route('/')
     .get(function (req, res) {
-        res.render('books', {
+        res.render('bookListView', {
             title: 'Book List',
             nav: nav,
             books: books
@@ -636,12 +627,11 @@ bookRouter.route('/single')
         res.send('you got one single book');
     })
 
-
 app.listen(port, function (err) {
     console.log('running server on port '+ port);
 });
 
-# 修改view文件, 展现model内容
+# 修改 bookListView 文件, 展现model内容
 <div class="panel-body">
 
 	<!--/stories-->
@@ -656,7 +646,7 @@ app.listen(port, function (err) {
 				<div class="row">
 					<div class="col-xs-9">
 						<h4><span class="label label-default"><%=books[i].author%></span></h4>
-						<h4><small style="font-family:courier,'new courier';" class="text-muted"><a href="<%=i%>" class="text-muted">Read More</a></small></h4>
+						<h4><small style="font-family:courier,'new courier';" class="text-muted"><a href="books/<%=i%>" class="text-muted">Read More</a></small></h4>
 					</div>
 					<div class="col-xs-3"></div>
 				</div>
@@ -670,34 +660,145 @@ app.listen(port, function (err) {
 	<a href="/" class="btn btn-primary pull-right btnNext">More <i class="glyphicon glyphicon-chevron-right"></i></a>
 </div>
 
-==================== 37 separate functions ====================
+==================== 37 separate routing functions ====================
+
+# 修改app.js
+var express = require('express');
+var app = express();
+
+var port = process.env.PORT || 5000;
+
+app.use(express.static('public'));
+app.set('views', './src/views');
+app.set('view engine', 'ejs');
+
+var bookRouter = require('./src/routes/bookRoutes');		// 将所有router相关内容单独出去
+app.use('/books', bookRouter);
+
+app.listen(port, function (err) {
+    console.log('running server on port '+ port);
+});
+
+# 建立src/routes/bookRoutes.js 管理对'/'及其子路径访问
+var express = require('express');
+var bookRouter = express.Router();
+
+// variable values to be retrieved from DAO
+var nav = [
+    {Link:'/books', Text:'Books'},
+    {Link:'/authors', Text:'Authors'}
+]
+var books = [
+    {title: 'War and Peace',genre: 'Historical Fiction',author: 'Lev Nikolayevich Tolstoy',read: false},
+    {title: 'Les Miserables',genre: 'Historical Fiction',author: 'Victor Hugo',read: false},
+    {title: 'The Time Machine',genre: 'Science Fiction',author: 'H. G. Wells',read: false}
+]
 
 
+bookRouter.route('/')
+    .get(function (req, res) {
+        res.render('bookListView', {
+            title: 'Book List',
+            nav: nav,
+            books: books
+        });
+    })
+bookRouter.route('/single')
+    .get(function (req, res) {
+        res.send('you got one single book');
+    })
 
+module.exports = bookRouter;		// 相当于return
 
+==================== 38-39 向router用REST风格传参 ====================
 
+# 修改app.js中'/single'的routing, 接受传参
+bookRouter.route('/:id')
+    .get(function (req, res) {
+        var id = req.params.id;
+        res.render('bookView', {
+            title: 'Book',
+            nav: nav,
+            book: books[id]
+        });
+    })
 
+# 建立views/bookView.ejs
+<!--/story-->
+<div class="row">
+	<br>
+	<div class="col-md-2 col-sm-3 text-center">
+		<a class="story-title" href="#"><img alt="" src="http://api.randomuser.me/portraits/thumb/men/58.jpg" style="width:100px;height:100px" class="img-circle"></a>
+	</div>
+	<div class="col-md-10 col-sm-9">
+		<h3><%=book.title%></h3>
+		<div class="row">
+			<div class="col-xs-9">
+				<h4><span class="label label-default"><%=book.author%></span></h4>
+			</div>
+			<div class="col-xs-3"></div>
+		</div>
+		<br><br>
+	</div>
+</div>
+<hr>
+<!--/story-->
 
+# 
+请求'/books', books对象列表显示
+点击某书的read more对应的链接, 访问'/books/2'
+请求被'/:id'地址模板解析, 将book模型数据在bookView视图中进行展示
 
+==================== 40 从app.js向require()的子包传递对象 ====================
 
+# 将bookRoutes.js中的nav对象剪切到app.js中, 通过传参方式传递该对象
+var nav = [
+    {Link:'/books', Text:'Books'},
+    {Link:'/authors', Text:'Authors'}
+]
+var bookRouter = require('./src/routes/bookRoutes')(nav);
+app.use('/books', bookRouter);
 
+# 将require()转换为一个function, 从而可以接受传参
+var express = require('express');
+var bookRouter = express.Router();
 
+var books = [...]
 
+var router = function(nav){
+    bookRouter.route('/')
+        .get(function (req, res) {
+            res.render('bookListView', {
+                title: 'Book List',
+                nav: nav,
+                books: books
+            });
+        })
+    bookRouter.route('/:id')
+        .get(function (req, res) {
+        var id = req.params.id;
+        res.render('bookView', {
+            title: 'Book',
+            nav: nav,
+            book: books[id]
+        });
+    })
 
+    return bookRouter;
+}
 
+module.exports = router;
 
+# 同时传递多个参数
+# 修改app.js中传参数量
+var bookRouter = require('./src/routes/bookRoutes')(nav, express);
+app.use('/books', bookRouter);
+# 在bookRoutes.js中, 去除自建express实例, 使用传入的实例
+var router = function(nav, express){
+    var bookRouter = express.Router();
+	...
 
-
-
-
-
-
-
-
-
-
-
-
+==================== 42 ====================
 
 
 
