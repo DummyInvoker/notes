@@ -651,7 +651,7 @@ app.listen(port, function (err) {
 				<div class="row">
 					<div class="col-xs-9">
 						<h4><span class="label label-default"><%=books[i].author%></span></h4>
-						<h4><small style="font-family:courier,'new courier';" class="text-muted"><a href="books/<%=i%>" class="text-muted">Read More</a></small></h4>
+						<h4><small style="font-family:courier,'new courier';" class="text-muted"><a href="/books/<%=i%>" class="text-muted">Read More</a></small></h4>
 					</div>
 					<div class="col-xs-3"></div>
 				</div>
@@ -760,6 +760,14 @@ var bookRouter = require('./src/routes/bookRoutes')(nav);
 app.use('/books', bookRouter);
 
 # 将require()转换为一个function, 从而可以接受传参
+# 基本结构
+var router = function(nav){
+	var bookRouter = express.Router();
+    return bookRouter;
+}
+module.exports = router;	
+
+# 完整例子	
 var express = require('express');
 var bookRouter = express.Router();
 
@@ -859,8 +867,8 @@ var router = function(nav, connection){
 module.exports = router;
 
 # 修改bookListView.ejs中'Read More'链接地址：
-改: <%=i%>
-到: <%=books[i].id%>
+改: <a href="/books/<%=i%>">Read More</a>
+到: <a href="/books/<%=books[i].id%>">Read More</a>
 
 # 在bookRoutes.js中, 使用prepared statement查询语句
 var mysql = require('mysql');
@@ -986,7 +994,7 @@ module.exports = router;
 
 ==================== 50 直接连接MongoDB: find().toArray() ====================
 
-# 修改bookRouters.js中, bookRouter.route('/')取得数据的方法
+# 修改bookRouters.js中, bookRouter.route('/')取得db数据的方法
 var mongodb = require('mongodb').MongoClient;
 
 var router = function(nav, connection){
@@ -1010,27 +1018,170 @@ var router = function(nav, connection){
 }
 module.exports = router;
 
-==================== 51 直接连接MongoDB: find().toArray() ====================
+# 修改bookListView.ejs中, <a>的链接地址: http://localhost:3000/books/58126352934f5345acf03d1d
+<a href="/books/<%=books[i]._id%>">Read More</a>
+
+==================== 51 直接连接MongoDB: findOne() ====================
+
+# 修改bookRouters.js中, bookRouter.route('/:id')取得db数据的方法
+var objectId = require('mongodb').ObjectID;
+
+	// bookRouter.route('/')...
+	
+    bookRouter.route('/:id') .get(function (req, res) {
+        var id = new objectId(req.params.id);		// 将id转化为mongo对象
+
+        var url = 'mongodb://localhost:27017/libraryApp';
+        mongodb.connect(url, function (err, db) {
+            var collection = db.collection('books');
+            collection.findOne({_id: id}, function (err, results) {
+                res.render('bookView', {
+                    title: 'Book',
+                    nav: nav,
+                    book: results
+                });
+            });
+        });
+    })	
+
+    return bookRouter;
+}
+module.exports = router;
+
+==================== 54-55 form传参: body-parser中间件 ====================
+
+# 修改index.ejs, 添加sign in/sign up的功能
+<!--/stories-->
+<div class="row">    
+<br>
+<div class="col-md-2 col-sm-3 text-center">
+  Sign In
+</div>
+<div class="col-md-10 col-sm-9">
+  Sign Up
+  <form name="singUpForm" action="/auth/signUp" method="post">
+	<input name="userName" type="text">
+	<input name="password" type="password">
+	<input type="submit" value="Sign Up">
+  </form>
+</div>
+</div>
+<!--/stories-->
+
+# 安装 body-parser, 用以解析form传参
+npm install --save body-parser
+
+# 在app.js中, 配置body-parser
+// body parser
+var bodyParser = require('body-parser');    //接收form传参, 转换为JSON格式, 存放在req.body中
+app.use(bodyParser.json());             	// 针对传入为post JSON格式
+app.use(bodyParser.urlencoded());	  	  // 针对传入为get 地址传参方式
+
+# 在app.js中, 建立对authRoutes.js的导入
+var authRouter = require('./src/routes/authRoutes')();
+app.use('/auth', authRouter);
+
+# 创建authRoutes.js
+var express = require('express');
+var authRouter = express.Router();
+
+var router = function(){
+    authRouter.route('/signUp')
+        .post(function (req, res) {
+            console.log(req.body);		// 取出body-parser处理好的数据
+        })
+
+    return authRouter;
+};
+
+module.exports = router;
+
+# 访问主页, 填入任意用户名密码信息. 点击提交后查看terminal中出现的JSON信息:
+{ userName: 'aaa', password: 'bbb' }
+
+==================== 56-57 passport, local.strategy ====================
+
+# 安装 passport 需要的中间件
+npm install --save cookie-parser passport express-session passport-local
+
+cookie-parser:
+express-session: 
+passport:
+passport-local: 本例采用的验证策略, 使用帐号密码方式
 
 
+# 在app.js中, 配置passport
+// passport
+var cookieParser = require('cookie-parser');
+var passport = require('passport');
+var session = require('express-session');
 
+app.use(cookieParser());
+app.use(session({secret: 'any_secret'}));   // 必须在passport前
+require('./src/config/passport')(app);      // 这个app实例有各种配置, 好用
 
+# 建立./src/config/passport.js
+var passport = require('passport');
 
+var router = function(app){
+    app.use(passport.initialize());
+    app.use(passport.session());
 
+    passport.serializeUser(function (user, cb) {    // 重写serializeUser()
+        cb(null, user);
+    })
 
+    passport.deserializeUser(function (user, cb) {
 
+        cb(null, user);
+    })
 
+    require('./strategies/local.strategy')();
+    
+};
+module.exports = router;
 
+# 建立./src/config/strategies/local.strategy.js
+var passport = require('passport');
+var LocalStrategy = require('passport-local').Strategy;
 
+var router = function(app){
+    passport.use(new LocalStrategy(
+        {
+            usernameField:'userName',   // 指定form中, 哪个用来做username. 将注入到下面function中的形参username
+            passwordField:'password'
+        },
+        function (username, password, cb) {
+            var user = {username: username,password: password};      // dummy, 假设这个值从db中取得
+            cb(null, user);
+        }
+    ));
+};
+module.exports = router;
 
+# 在 authRoutes.js
+var express = require('express');
+var authRouter = express.Router();
+var mongodb = require('mongodb').MongoClient;
 
+var router = function(){
+    authRouter.route('/signUp')
+        .post(function (req, res) {
+            console.log(req.body);
+            req.login(req.body, function () {
+                res.redirect('/auth/profile');
+            })
+        })
 
+    authRouter.route('/profile')
+        .get(function (req, res) {
+            res.json(req.user);
+        })
 
+    return authRouter;
+};
 
-
-
-
-
+module.exports = router;
 
 
 
