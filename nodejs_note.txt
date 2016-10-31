@@ -1050,15 +1050,13 @@ module.exports = router;
 
 ==================== 54-55 form传参: body-parser中间件 ====================
 
-# 修改index.ejs, 添加sign in/sign up的功能
+# 修改index.ejs, 添加sign up的输入
 <!--/stories-->
-<div class="row">    
-<br>
+<div class="row">
 <div class="col-md-2 col-sm-3 text-center">
-  Sign In
+  Sign Up
 </div>
 <div class="col-md-10 col-sm-9">
-  Sign Up
   <form name="singUpForm" action="/auth/signUp" method="post">
 	<input name="userName" type="text">
 	<input name="password" type="password">
@@ -1116,7 +1114,7 @@ var passport = require('passport');
 var session = require('express-session');
 
 app.use(cookieParser());
-app.use(session({secret: 'any_secret'}));   // 必须在passport所有组件前
+app.use(session({secret: 'any_secret'}));   // 必须在passport的所有组件前
 require('./src/config/passport')(app);      // 这个app实例带有各种配置
 
 # 建立./src/config/passport.js
@@ -1126,11 +1124,12 @@ module.exports = function(app){
     app.use(passport.initialize());		// 启动passport
     app.use(passport.session());		// 向session中添加删除用户权限信息		
 
-    passport.serializeUser(function (user, done) {    // ?? user对象哪里来的：　从strategy来 ??
+    passport.serializeUser(function (user, done) {    // user对象从strategy返回得到. 将用户key信息存入session
         done(null, user.id);
     })
 
     passport.deserializeUser(function (userId, done) {
+		// var user = mongo.findbyID(userId);		// 当session中存入的是用户key时候, 可以在这里读db取得完整用户
         done(null, user);
     })
 
@@ -1157,24 +1156,24 @@ var passport = require('passport');
 var LocalStrategy = require('passport-local').Strategy;
 
 module.exports = function(){
-    passport.use(new LocalStrategy(
+    passport.use(new LocalStrategy(		// 用new方法创建对象...
         {
             usernameField:'userName',  // 指定form中用来做username的变量名. 其值将注入到下面function中的形参username
             passwordField:'password'
         },
         function (username, password, done) {
-			//　以后在这里插入各种验证逻辑
+			//　以后在这里插入各种业务逻辑, 用验证后的数据创立user对象, 然后传回passport
             var user = {username: username,password: password};
             done(null, user);
         }
     ));
 };
 
-# 在authRoutes.js中, post方法访问'/signUp'时, 使用login()验证输入的信息
+# 在authRoutes.js中, post方法访问'/signUp'时, 不做任何处理(例如写db), 直接使用login()将输入信息写到session
 var router = function(){
     authRouter.route('/signUp')
         .post(function (req, res) {
-            req.login(req.body, function () {       // req.body就是之前body-parser处理好的form内容
+            req.login(req.body, function () {   // req.body就是之前body-parser处理好的JSON格式的form内容
                 res.redirect('/auth/profile');
             })
         })
@@ -1189,11 +1188,185 @@ var router = function(){
 module.exports = router;
 
 #　流程解释
-点击submit, authRoutes.js的post方法接收form
-调用login()
-passport内部调用serializeUser()和deserializeUser()将用户信息写入session中req.user
+点击Sign Up. authRoutes.js的post方法接收form, 调用login()
+passport调用strategy, 经过业务逻辑处理后, 返回用户对象
+passport调用serializeUser(), 将用户对象写入session中req.user
 
-==================== 58 ====================
+在需要使用用户对象, 进行各种认证时, 例如访问'/auth/profile'
+passport调用deserializeUser(), 从session中读取req.user, 然后交由业务逻辑处理
+
+==================== 58 添加保存用户到db中步骤 ====================
+
+# 业务逻辑: sign up新用户, 写入db. 写入成功后转入login(), 往session中存入用户login信息
+var express = require('express');
+var authRouter = express.Router();
+var mongodb = require('mongodb').MongoClient;
+
+var router = function(){
+    authRouter.route('/signUp')
+        .post(function (req, res) {
+            var url = 'mongodb://localhost:27017/libraryApp';
+            mongodb.connect(url, function (err, db) {
+                var collection = db.collection('users');
+
+                var user = {
+                    username: req.body.userName,
+                    password: req.body.password
+                }
+                collection.insert(user, function (err, results) {   // TODO: 需要检查重复user
+                    req.login(results, function () {				// 写入db成功后, 再开始login步骤!
+                        res.redirect('/auth/profile');
+                    });
+                });
+            });
+        });
+
+    authRouter.route('/profile')
+        .get(function (req, res) {
+            res.send(req.user);
+        });
+
+    return authRouter;
+};
+module.exports = router;
+
+==================== 59 已注册用户 sign in ====================
+
+# 修改index.ejs, 添加sign in的功能
+<!--stories-->
+<div class="row">
+<div class="col-md-2 col-sm-3 text-center">Sign In</div>
+<div class="col-md-10 col-sm-9">
+  <form name="singUpForm" action="/auth/signIn" method="post">
+	<input name="userName" type="text">
+	<input name="password" type="password">
+	<input type="submit" value="Sign In">
+  </form>
+</div>
+</div>
+<hr>
+<div class="row">
+<div class="col-md-2 col-sm-3 text-center">Sign Up</div>
+<div class="col-md-10 col-sm-9">
+  <form name="singUpForm" action="/auth/signUp" method="post">
+	<input name="userName" type="text">
+	<input name="password" type="password">
+	<input type="submit" value="Sign Up">
+  </form>
+</div>
+</div>
+<!--/stories-->
+
+# 在authRoutes.js中, 添加post方法访问'/signIn'时, 使用authenticate()验证输入的信息
+var router = function(){
+    authRouter.route('/signUp').post(...);
+    authRouter.route('/profile').get(...);
+	
+    authRouter.route('/signIn')
+        .post(
+            passport.authenticate(			// ?? authenticate()和login()区别; 不用指定req.body么;
+                'local',
+                {failureRedirect:'/'}
+            ),
+            function (req, res) {
+                res.redirect('/auth/profile');
+            }
+        );
+
+    return authRouter;
+};
+module.exports = router;
+
+注意到现在的local.strategy业务逻辑还是接受无论什么输入直接写session, 和db中内容无关
+
+==================== 60 sign in 时验证用户是否存在db中 ====================
+
+# 在local.strategy.js中, 添加检查用户是否存在的逻辑
+var passport = require('passport');
+var LocalStrategy = require('passport-local').Strategy;
+var mongodb = require('mongodb').MongoClient;
+
+module.exports = function(){
+    passport.use(new LocalStrategy(
+        {
+            usernameField:'userName',   // 指定form中, 哪个用来做username. 将注入到下面function中的形参username
+            passwordField:'password'
+        },
+        function (username, password, done) {
+            var url = 'mongodb://localhost:27017/libraryApp';
+            mongodb.connect(url, function (err, db) {
+                var collection = db.collection('users');
+                collection.findOne(
+                    {username: username},
+                    function (err, result) {
+                        if (result.password === password){
+                            var user = result;
+                            done(null, user);
+                        } else {
+                            //done('error info string', null);    // 直接返回'error info string'的方式
+                            done(null, false, {message:'error info string'});   // 检查是否找到用户名, false代表没有. 这样就使用authRoutes.jsfailureRedirect:'/'中规则
+                        }
+                    }
+                )
+            });
+        }
+    ))
+};
+
+==================== 61 手动阻止用户访问未授权地址 ====================
+
+# 修改authRoutes.js 添加未找到用户登录信息时的处理方法
+var router = function(){
+    authRouter.route('/signUp').post(...);
+    authRouter.route('/signIn')post(...);
+	
+    authRouter.route('/profile')
+        .all(function(req, res, next){
+          if (!req.user){       // session中没有用户登录信息
+              res.redirect('/');
+          }
+          next();
+        })
+        .get(function (req, res) {
+            res.send(req.user);
+        });
+
+    return authRouter;
+};
+module.exports = router;	
+
+==================== 62 半自动阻止用户访问未授权地址 ====================
+
+# 修改bookRoutes.js 添加未找到用户登录信息时的处理方法
+var router = function(nav){
+    bookRouter.use(function(req, res, next){
+        if (!req.user){       // session中没有用户登录信息
+            res.redirect('/');
+        }
+        next();
+    })
+
+    bookRouter.route('/').get(...);
+	bookRouter.route('/:id') .get(...);
+    return bookRouter;
+}
+
+module.exports = router;
+
+==================== 65 建立controller层 ====================
+
+# 建立./src/controllers/bookController.js
+
+
+
+
+
+
+
+
+
+
+
 
 
 
