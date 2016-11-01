@@ -1355,28 +1355,159 @@ module.exports = router;
 
 ==================== 65 建立controller层 ====================
 
-# 建立./src/controllers/bookController.js
+# 修改bookRouters.js
+var express = require('express');
+var bookRouter = express.Router();	// 部分library挪到controller中
 
+var router = function(nav){
+    var bookController = require('../controllers/bookController')(null, nav);	// 向controller注入service, 现在是null
 
+    bookRouter.use(bookController.middleware);		// 将原来这里的大段代码独立到controller文件, 使这里结构清晰
+    bookRouter.route('/').get(bookController.getIndex);
+    bookRouter.route('/:id') .get(bookController.getById);
+    return bookRouter;
+}
 
+module.exports = router;
 
+# 建立./src/controllers/bookController.js , 存放挪过来的代码. 注意这里可以实现public/private方法的独立
+var mongodb = require('mongodb').MongoClient;
+var objectId = require('mongodb').ObjectID;
 
+var bookController = function (bookService, nav) {
 
+    var middleware = function(req, res, next){
+        if (!req.user){       // session中没有用户登录信息
+			res.redirect('/');
+        }
+        next();
+    }
 
+    var getIndex = function (req, res) {
+        var url = 'mongodb://localhost:27017/libraryApp';
+        mongodb.connect(url, function (err, db) {
+            var collection = db.collection('books');
+            collection.find({}).toArray(function (err, results) {
+                res.render('bookListView', {
+                    title: 'Book List',
+                    nav: nav,
+                    books: results
+                });
+            });
+        });
+    }
 
+    var getById = function (req, res) {
+        var id = new objectId(req.params.id);
 
+        var url = 'mongodb://localhost:27017/libraryApp';
+        mongodb.connect(url, function (err, db) {
+            var collection = db.collection('books');
+            collection.findOne({_id: id}, function (err, results) {
+                res.render('bookView', {
+                    title: 'Book',
+                    nav: nav,
+                    book: results
+                });
+            });
+        });
+    }
 
+    return {            // 只返回public方法, 不返回的都是private方法
+        middleware: middleware,
+        getIndex: getIndex,
+        getById: getById
+    }
+}
 
+module.exports = bookController;    // 返回function, 而不是运行的结果
 
+==================== 67 建立service层 ====================
 
+# 在视图文件bookView.ejs中, 添加书的description部分
+<!--/story-->
+<div class="row">
+	<br>
+	<div class="col-md-2 col-sm-3 text-center">
+		<a class="story-title" href="#"><img alt="" src="http://api.randomuser.me/portraits/thumb/women/57.jpg" style="width:100px;height:100px" class="img-circle"></a>
+	</div>
+	<div class="col-md-10 col-sm-9">
+		<h3><%=book.title%></h3>
+		<div class="row">
+			<div class="col-xs-9">
+				<h4><span class="label label-default"><%=book.author%></span></h4>
+			</div>
+			<div class="col-xs-3"></div>
+		</div>
+		<br><%=book.apiBook.description%><br>
+	</div>
+</div>
+<hr>
+<!--/story-->
 
+# 修改bookController.js, 在model中添加description部分的内容
+var bookController = function (bookService, nav) {
+	var middleware = function(...)
+	var getIndex = function (...)
 
+	var getById = function (req, res) {
+		var id = new objectId(req.params.id);
 
+		var url = 'mongodb://localhost:27017/libraryApp';
+		mongodb.connect(url, function (err, db) {
+			var collection = db.collection('books');
+			collection.findOne(
+				{_id: id},
+				function (err, results) {       // 是的...先在本地mongodb上查一遍, 准备再去api上查一遍
+					bookService.getBookById(results.bookId, function (err, apiBook) {   // bookId是goodreads上的书id
+						results.apiBook = apiBook;
+						res.render('bookView', {
+							title: 'Book',
+							nav: nav,
+							book: results
+						});
+					})
+				}
+			);
+		});
+	}
+    return {...}
+}
+module.exports = bookController;
 
+# 在bookRoutes.js 中, 配置向bookController注入bookService
+var router = function(nav){
+    var bookService = require('../services/goodreadsService')();		// 注意这里第二个(), 需要是运行的实例了
+    var bookController = require('../controllers/bookController')(bookService, nav);
+	
+    return bookRouter;
+}
+module.exports = router;
 
+# 建立./src/services/goodreadsService.js
+var goodreadsService = function () {
+    
+    var getBookById = function (id, cb) {
+        cb(null, {description:"any description"});
+    }
 
+    return {
+        getBookById:getBookById
+    }
+}
 
+module.exports = goodreadsService;
 
+==================== 68 http ====================
+
+# goodreads.api
+key: DpzJoEgLnopZT7ZxMhGUlQ
+secret: tH8KiQErrHfCKxfGKdoL3PFrsBHNuZRZ0S3MEsdtCs
+scott
+scottxu64@gmail.com
+zu19831226
+
+# 
 
 
 
