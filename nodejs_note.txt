@@ -1498,7 +1498,7 @@ var goodreadsService = function () {
 
 module.exports = goodreadsService;
 
-==================== 68 http ====================
+==================== 68 service层: http连接API ====================
 
 # goodreads.api
 key: DpzJoEgLnopZT7ZxMhGUlQ
@@ -1507,15 +1507,84 @@ scott
 scottxu64@gmail.com
 zu19831226
 
-# 
+# 安装连接api需要的library
+npm install --save xml2js http
 
+# 实现连接API读取信息
+var http = require('http');
+var xml2js = require('xml2js');
+var parser = xml2js.Parser({explicitArray: false});
 
+var goodreadsService = function () {
 
+    var getBookById = function (id, cb) {
 
+        var options = {
+            host: 'www.goodreads.com',
+            path: '/book/show/656?format=xml&key=DpzJoEgLnopZT7ZxMhGUlQ'
+        }
 
+        var callback = function (response) {
+            var xmlStr = '';
+            response.on('data', function (data) {
+                xmlStr += data;		// TODO： ??直接等于, 使用toString(), ''+data 都会解析出错
+            });
+            response.on('end', function () {
+                parser.parseString(xmlStr, function (err, jsonStr) {
+                    cb(null, jsonStr.GoodreadsResponse.book);
+                })
+            })
+        }
 
+        http.request(options, callback).end();
+    }
 
+    return {
+        getBookById:getBookById
+    }
+}
+module.exports = goodreadsService;
 
+# 修改视图文件, 提供图片功能
+<!--/story-->
+<div class="row">
+	<br>
+	<div class="col-md-2 col-sm-3 text-center">
+		<a class="story-title" href="#"><img alt="" src="<%=book.apiBook.image_url%>" style="width:100px;height:100px" class="img-circle"></a>
+	</div>
+	<div class="col-md-10 col-sm-9">
+		<h3><%=book.title%></h3>
+		<div class="row">
+			<div class="col-xs-9">
+				<h4><span class="label label-default"><%=book.author%></span></h4>
+			</div>
+			<div class="col-xs-3"></div>
+		</div>
+		<br><%-book.apiBook.description%><br>	<!--用'='时不解析以string方式输出, 用'-'时, 以html方式解析-->
+	</div>
+</div>
+<hr>
+<!--/story-->
 
+==================== 68 service层: 传递id ====================
 
+# 清除mongodb所有数据
+db.books.remove({})
 
+# 修改adminRoutes.js中, books的值, 添加bookId, 然后运行一遍
+var books = [
+    {title: 'War And Peace',genre: 'Historical Fiction',author: 'Lev Nikolayevich Tolstoy',read: false, bookId:656},
+    {title: 'Les Miserables',genre: 'Historical Fiction',author: 'Victor Hugo',read: false, bookId:24280},
+    {title: 'The Time Machine',genre: 'Science Fiction',author: 'H. G. Wells',read: false},
+    {title: 'A Journey Into The Center Of The Earth',genre: 'Science Fiction',author: 'Jules Verne',read: false},
+    {title: 'The Dark World',genre: 'Fantasy',author: 'Henry Kuttner',read: false},
+    {title: 'The Wind In The Willows',genre: 'Fantasy',author: 'Kenneth Grahame',read: false},
+    {title: 'Life On The Mississippi',genre: 'History',author: 'Mark Twain',read: false},
+    {title: 'Childhood',genre: 'Biography',author: 'Lev Nikolayevich Tolstoy',read: false}
+]
+
+# 修改之前service中写死的id
+var options = {
+	host: 'www.goodreads.com',
+	path: '/book/show/'+id+'?format=xml&key=DpzJoEgLnopZT7ZxMhGUlQ'
+}
