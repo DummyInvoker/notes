@@ -1,2 +1,52 @@
-==================== 1 ====================
+==================== 3 ====================
 
+# 使用种子项目搭建项目框架, 项目名: socialAggregator
+npm install -g express-generator
+express socialAggregator
+
+按提示粘贴命令, 启动项目
+cd socialAggregator && npm install
+SET DEBUG=socialaggregator:* & npm start
+
+# 修改view engine为ejs; 安装ejs; 修改view模板
+// view engine setup
+app.set('views', path.join(__dirname, 'views'));
+app.set('view engine', 'ejs');
+
+npm install --save ejs
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+</head>
+<body>
+  <%=title%>
+</body>
+</html>
+
+==================== 6 ====================
+
+# 安装passport. cookie等部分已经在项目种子里包含了
+npm install --save passport express-session
+
+# 修改app.js, 添加passport
+// passport
+var passport = require('passport');
+var session = require('express-session');
+
+app.use(session({secret: 'any_secret'}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+passport.serializeUser(function (user, done) {
+  done(null, user);
+})
+
+passport.deserializeUser(function (user, done) {
+  done(null, user);
+})
+
+==================== 7 ====================
