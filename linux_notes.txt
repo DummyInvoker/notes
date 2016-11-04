@@ -1,0 +1,859 @@
+﻿视频使用red hat为例, 大多数指令直接在centos上通用.
+
+===========03===========
+#命令行转图形界面：
+startx
+
+#转换路径
+cd /
+cd dev
+
+#显示当前路径
+pwd
+
+#显示当前用户
+whoami
+
+#列出当前目录内容
+ls
+
+#竖排目录及权限等信息
+ls -l
+ll
+
+#设备命名
+sd：scsi硬盘，hd：pata硬盘
+sda：插在了第一个硬盘接口
+sda2：前四个分区（主分区或扩展分区）从1到4，逻辑分区从5开始
+/dev/sdb6:第二个scsi硬盘上的第二个逻辑分区
+
+#删除目录
+rmdir cdrom
+#建目录
+mkdir cdrom
+
+------------- 
+#查看当前磁盘挂载情况
+df -h
+
+给新硬盘分区:
+fdisk /dev/sdb
+依次: n p 1
+然后提示符下wq退出完成修改
+
+#查看硬盘分区:
+fdisk -l
+可以看到 /dev/sdb1
+
+#格式化新分区:
+mkfs.ext4 /dev/sdb1
+
+#挂载
+挂载点必须是一个目录. 这个目录可以不为空, 但挂载后这个目录下以前的内容将不可用
+mount sdb1 /mnt/sdb
+
+#确认挂载成功
+df -h
+
+#卸载
+umount -l /mnt/sdb
+umount -f /mnt/sdb
+-------------
+
+#将cdrom光驱挂载到cdrom目录（挂载点）下
+mount /dev/cdrom /mnt/cdrom
+之后可以cd cdrom
+
+#取消挂载
+umount /dev/cdrom
+或者 umount /mnt/cdrom
+
+#回到上层路径
+cd ..
+
+===========06===========
+
+#启动层次
+每一个启动层次的脚本文件放在rc0.d-rc6.d目录里
+
+#自动启动文件
+修改/etc/rc?.d/rc.local文件
+
+#退出界面，关机，重启
+exit
+shutdown
+reboot
+
+#退出连续界面
+q
+ctrl+c
+ctrl+d
+
+#详细指令介绍manual
+man
+例如 man shutdown
+或者看帮助shotdown --help
+
+===========07===========
+
+#删除非空目录 
+rm -r bjsxt
+remove recursive 每一个都询问一下是否要删除
+rm -rf bjsxt
+remove recursive force 一次删除
+
+#创建文件
+touch 1
+linux下后缀名仅代表提示用，常规约定可执行脚本sh
+
+===========08=========== editor
+
+#复制文件
+cp file1 file2
+
+#复制目录及其内容
+cp -r folder1 folder2
+
+#移动文件
+mv file1 /folder
+
+#编辑器
+vi 3.txt //如有3.txt直接编辑，如没有则创建一个3.txt
+
+vi共有3个模式:
+#命令模式切换至输入模式
+i	//insert
+a	//append
+
+#输入模式切换至命令模式：
+按esc
+
+命令模式下部分指令:
+dd 剪切一行
+dw 剪切一个单词
+x 删除当前字符
+2x 删除当前起2个字符
+2dd 剪切当前起2行
+
+o 下方插入一行
+O 上方插入一行
+
+yy 复制一行
+yw 复制一个单词
+y$ 复制当前位置到行尾
+y^ 复制当前位置到行首内容
+2yy 复制当前起2行
+
+p 黏贴
+
+u 取消一个操作 (相当于windows的crtl+Z)
+U 取消所有操作
+crtl+R 恢复操作 (相当于windows的crtl+Y)
+
+/ 查询关键字
+n 下一个
+N 上一个
+
+#命令模式下输入'：'切换至末行模式
+w: 存盘
+q: 退出
+q! 不存盘退出
+wq: 存盘退出
+
+===========09===========
+
+#列出文件内容
+more 3.txt
+cat 3.txt //正序列出全文
+tac 3.txt
+head -2 3.txt //列出最前面2行内容
+tail -2 3.txt
+
+#
+if语句的结束fi
+case语句的结束esac
+
+#清理屏幕
+clear
+
+#查找文件
+find /etc -name *local
+从指定的/etc目录开始，按文件名找，文件名以local结尾
+
+#查找执行文件所在位置
+whereis ls
+
+#查看环境变量
+echo $PATH
+DOS下： echo %path%
+
+#创建硬链接
+ln 3.txt 4.txt
+改3和改4都一样起效，相当于复制了一份文件，同时保持两个文件的同步
+
+#创建软链接
+ln -sf 3.txt 5
+相当于windows的快捷方式
+
+===========10=========== user
+
+#添加新用户(需要有root权限)
+useradd testuser
+
+#ubuntu下第一次使用root账号
+当前用户时: sudo passwd
+提示Enter new UNIX password:时, 输入root账户的密码
+显示password updated successfully时, su root
+
+#指定密码
+passwd testuser
+
+#使用c-shell
+csh
+
+#使用b-again-shell
+bash
+
+#使用最基础的shell
+sh
+
+#账户信息
+cd /etc
+more passwd
+
+#账户组信息
+more group
+添加一个用户时没有指定组，则自动建立一个与用户名同名的组并放在这个组中
+
+#添加新组
+groupadd testgroup
+useradd testuser2 -g testgroup
+usermod -g testgroup testuser2 
+
+#删除用户
+userdel
+其数据依然存在，需单独删除
+
+#切换用户
+su testuser2
+ 
+===========11=========== file attribute
+
+#文件权限
+当ls -l时，文件属性列一共10位
+
+第1位：
+- 文件
+l 链接
+d 目录
+
+第2-10位：
+r 可读
+w 可写
+- 没有任何权限
+x 执行
+
+第2-4位：
+文件所有者的权限
+
+第5-7位：
+文件所有者同组其他人的权限
+
+第8-10位：
+其他人的权限
+
+#修改文件权限
+chmod +x filename //增加执行权限
+chmod -x filename
+chmod u+x filename //当前user增加权限
+chmod g+x filename //同组user增加权限
+chmod o+x filename //其他user增加权限
+
+#修改文件所有者
+chown toBeUserName filename
+例如chown root 3.txt，这里新的用户名"root"需要已存在
+
+#修改文件所有组
+chgrp root 3.txt
+
+#查看用户列表; 组列表:
+cat /etc/passwd 
+
+
+===========12-13===========
+
+#统计文件的行数，字数，字符数 word count
+wc 3.txt
+
+#查字符串所在的行的内容
+grep HELLO 3.txt
+
+#管道
+将一个命令的输出，传送给另外一个命令作为输入
+ls -rl /etc | more
+dmesg | grep eth0 查第一块网卡的启动信息
+man bash | col -b > bash.txt 查找bash文件的说明，用col参数去除各种控制符产生的乱码，结果存为bash.txt
+ls -l | grep "^d" 列出d开头的项目，也就是只列出目录。这里^d需要参考正则表达式
+ls -l | grep "^-" | wc -l 列出所有非目录非链接的文件，数有几行
+
+===========14===========
+
+#通知所有的terminal窗口 warning all
+wall date 所有窗口都收到(string)的 date
+
+#命令替换
+wall `date` 所有窗口都收到date指令的结果，这里'`'是大键盘1左边那个键
+
+#重定向输出
+ls > cmd.txt 将ls命令的结果存到cmd.txt中, 覆盖已有内容
+ls >> cmd.txt 将ls命令的结果存到cmd.txt中, 添加在已有内容后面
+lsErrorCmd 2> cmd.txt 即使之前指令错误, 也将错误结果存到cmd.txt中
+
+#重定向输入
+wall < cmd.txt 将cmd.txt中的内容通过wall广播, ctrl + c 退出
+
+===========15=========== FTP (见后笔记)
+
+#ubuntu安装vsftpd
+sudo apt-get update
+sudo apt-get install vsftpd
+
+#启停服务
+开启FTP服务 sudo service vsftpd start
+停止FTP服务 sudo service vsftpd stop
+重启FTP服务 sudo service vsftpd restart
+
+# linux查本机ip地址 ifconfig
+# Windows查本机ip地址 ipconfig
+
+# 建指定账号及其FTP目录(系统已有ftp账号用于匿名登陆)
+sudo mkdir /home/uftp 建目录
+sudo useradd -d /home/uftp -s /bin/bash uftp	指定账号所针对的目录
+sudo passwd uftp	指定账户密码
+
+# 配置/etc/vsftpd.conf
+sudo vim /etc/vsftpd.conf
+添加:
+#关闭黑名单(按需)
+userlist_deny=NO
+#开启白名单(按需)
+userlist_enable=YES
+#指定白名单文件位置
+userlist_file=/etc/allowed_users
+#避免530问题
+seccomp_sandbox=NO
+修改:
+local_enable=YES
+#开启匿名登陆
+anonymous_enable=YES
+
+# 编辑白名单
+sudo gedit /etc/allowed_users
+添加想要开通FTP的用户名:
+uftp
+root
+
+# 编辑黑名单
+sudo gedit /etc/ftpusers
+修改(这个文件中列出的是禁止使用的用户名):
+#root
+
+# 更换匿名登陆目录
+1.删除ftp账户
+sudo userdel -r ftp
+2.添加该账户
+sudo useradd -d /home/ricky/Downloads/ -s /bin/bash ftp
+3.修改该目录权限
+chmod og-w /home/ricky/Downloads/
+chown -R root.root /home/ricky/Downloads/
+
+===========16===========
+
+#登陆FTP
+ftp 192.168.1.105
+用ubuntu登陆账号和密码, 则进入home\用户 的目录
+
+#退出FTP服务 bye
+
+#关闭防火墙 service iptables stop
+
+#ubuntu14关闭防火墙
+sudo service ufw stop
+sudo ufw disable
+
+
+===========17===========
+
+#FTP随系统自动启动(ubuntu自动实现)
+sudo gedit /etc/rc.local
+里面加入
+/usr/local/bin/vsftpd&
+
+#chkconfig法设置自动启动(ubuntu里不能用)
+
+===========18=========== SSH
+
+#SSH启动
+安装
+sudo apt-get install openssh-server
+
+配置(root权限):
+vim /etc/ssh/sshd_config
+设置需要的端口
+按需修改:PermitRootLogin yes
+
+sudo service sshd restart
+
+#SSH登陆
+ssh 目标ip -p 端口号
+ssh moca.binghamton.edu -p 21
+
+===========19,24=========== jdk
+
+# 约定俗成的目录使用习俗
+/etc	系统管理和配置文件
+/etc/rc或/etc/rc.d或/etc/rc?.d	启动、或改变运行级时运行的脚本或脚本的目录
+/etc/profile	为所有用户建立全局缺省环境
+/home	用户主目录的基点
+/opt	存放可选的测试程序, 安装到/opt目录下的程序，它所有的数据、库文件等等都是放在同个目录下面, 不影响系统其他任何设置
+/root	系统管理员的主目录
+/tmp	公用的临时文件存储点, 重启清空
+/usr	存放应用程序和文件
+/usr/local	本地安装的程序一般放在这里
+/var	为了保持/usr目录的相对稳定, 把那些需要经常改变的目录放到/var中
+
+# 安装bin格式jdk
+1.使用绝对路径安装
+2.chmod加执行权限: chmod 755 ...filename...
+安装完成后可在 /usr/java/jdk1.6.0-03中找到相应文件
+
+# 安装tar.gz格式文件包
+1.解压文件包
+tar -zxvf jdk-8u25-linux-x64.tar.gz
+2.移动文件, 修改文件名
+mv jdk-8u25-linux-x64 /usr/local/jdk
+3.配置系统环境变量
+sudo vim /etc/profile
+添加:
+export JAVA_HOME=/usr/local/jdk
+export PATH=.:$JAVA_HOME/bin:$PATH
+4.使配置生效
+. /etc/profile
+
+===========20-21=========== tomcat
+
+#安装tomcat
+1.解压tar.gz格式文件包
+tar -zxvf apache-tomcat-8.0.15.tar.gz
+2.移动文件, 修改文件名
+mv apache-tomcat-8.0.15 /usr/local/tomcat8/
+3.启停tomcat
+. /bin/startup.sh
+. /bin/shutdown.sh
+
+# 列出当前所有process, 看tomcat进程有没有启动
+ps -ef | grep tomcat
+
+# 杀进程
+kill -9 2724
+此处2724是某进程的编号,需要根据实际情况进行变换
+
+===========22-23===========
+
+#检查tomcat的配置
+在tomcat目录下 sudo vim ./conf/server.xml
+
+#本地命令行上网
+wget http://127.0.0.1:8080
+
+# RPM安装 redhat package management (ubuntu不能用rpm格式, 只能用deb格式)
+# 查询之前安装过哪些东西
+rpm -qa |grep jdk
+rpm -qa |grep MySQL	注意区分大小写
+
+# 安装程序
+rpm -ivh rpmFileName (安装时候需要用安装文件的名字)
+rpm -ivh jdk-6u3-linux-i586.rpm
+
+# 卸载程序
+rpm -e packageName (卸载时候需要填写package的名字)
+rpm -e jdk-1.6.0_03-fcs
+
+===========25=========== mysql
+
+# 安装mysql
+本地电脑可以使用software center
+远程可用deb包安装, 注意安装server前, 可能需要先安装前提包common. 所有文件都在下载的包里.
+
+# 启动mysql
+mysql
+默认使用root账号, 不需要密码, 直接使用, 例如: show databases;
+
+# 退出mysql
+exit
+
+
+
+===========ubuntu 本地装机后软件安装===========
+
+# 升级系统
+sudo apt-get update
+sudo apt-get upgrade
+
+# 安装搜狗输入法
+下载图形安装完软件后，
+system setting>>language support>>keyboard input method system: fcitx 然后重启
+输入法键盘图标处下拉>配置当前输入法>点+号>去除only show current language >添加新的输入法拉到最下面，选中搜狗输入法
+
+# 安装SSH
+sudo apt-get install openssh-server
+
+#安装vsftpd
+sudo apt-get install vsftpd
+
+#设置ftp权限(需root权限)
+sudo vim /etc/vsftpd.conf
+修改write_enable=YES, (去掉前面的#号)
+
+#启停ftp服务
+开启FTP服务 sudo service vsftpd start
+停止FTP服务 sudo service vsftpd stop
+重启FTP服务 sudo service vsftpd restart
+
+#修改root默认密码
+sudo passwd，终端会提示输入现账号的密码, 然后输入新的UNIX密码2次，此时的密码就是root新密码。
+
+# unlock keyring
+http://ubuntuhandbook.org/index.php/2013/07/disable-unlock-login-keyring-ubuntu-13-04/
+open passwords and keys utility from unity dash
+if no sidebar shown, go view>by keyring
+right click login and choose change password
+input original password
+leave the new password empty
+
+# 装mysql
+http://www.cnblogs.com/zhuyp1015/p/3561470.html
+sudo apt-get install mysql-server-5.6
+登陆mysql数据库可以通过如下命令：
+mysql -u root -p
+然后根据提示输入密码(即系统root账号密码）
+
+# 设置mysql编码格式为UTF8
+step1:
+sudo vim /etc/mysql/my.cnf
+
+step2: 添加如下内容:
+[client]
+default-character-set=utf8
+
+[mysqld]
+collation-server = utf8_unicode_ci
+init-connect='SET NAMES utf8'
+character-set-server = utf8
+
+[mysql]
+default-character-set=utf8
+
+step3: 顺便允许远程登录sql
+bind-address = 127.0.0.1
+注释掉这句
+添加用户示例:
+grant all on *.* to ricky@'%' identified by '0577';
+grant select, insert, delete, update on *.* to reader@'%' identified by 'reader';
+flush privileges;
+
+step4:
+sudo /etc/init.d/mysql restart
+
+# 还原数据库(已登入mysql)
+原数据库的导出可以用HeidiSQL辅助导出脚本
+source /home/ricky/Desktop/health.sql
+
+# 更改mysql密码
+http://dev.mysql.com/doc/refman/5.0/en/resetting-permissions.html
+在mysql中:
+UPDATE mysql.user SET Password=PASSWORD('root') WHERE User='root';
+FLUSH PRIVILEGES;
+
+# 更改mysql存储位置
+step1: 停止mysql
+sudo /etc/init.d/mysql stop
+
+step2: 移动mysql文件
+mv -R -p /var/lib/mysql /home/ricky/mysql
+
+step3: 修改配置文件:
+vim /etc/mysql/my.cnf
+查改:datadir         = /home/ricky/mysql
+
+step4: 修改apparmor配置文件:
+vim /etc/apparmor.d/tunables/alias
+alias /var/lib/mysql/ -> /home/ricky/mysql/,
+
+step5: 启动mysql服务
+/etc/init.d/apparmor restart
+restart mysql
+
+
+# 装java和tomcat8
+下载,解压文件, 修改为合适的文件名
+用root账号移至合适目录: 
+mv jdk1.8 /usr/local/jdk
+mv tomcat8 /usr/
+
+配置系统环境变量: sudo gedit /etc/profile
+添加: 
+export JAVA_HOME=/usr/local/jdk
+export PATH=.:$JAVA_HOME/bin:$PATH
+
+使配置生效: source /etc/profile
+
+# 修改tomcat8端口
+sudo vim /usr/tomcat8/conf/server.xml
+修改
+<Connector port="8080" protocol="HTTP/1.1"
+connectionTimeout="20000"
+redirectPort="8443" />
+中8080为你需要的端口号, 需要重启tomcat生效
+
+
+# tomcat8自启动
+复制以下内容为tomcat8文件, 一些路径需按实际修改
+mv tomcat8.sh /etc/init.d/
+#########################################################################
+#!/bin/bash
+
+### BEGIN INIT INFO
+# Provides:        tomcat8
+# Required-Start:  $network
+# Required-Stop:   $network
+# Default-Start:   2 3 4 5
+# Default-Stop:    0 1 6
+# Short-Description: Start/Stop Tomcat server
+### END INIT INFO
+
+export JAVA_HOME=/usr/jdk1.8
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+start() {
+ sh /usr/tomcat8/bin/startup.sh
+}
+
+stop() {
+ sh /usr/tomcat8/bin/shutdown.sh
+}
+
+case $1 in
+  start|stop) $1;;
+  restart) stop; start;;
+  *) echo "Run as $0 <start|stop|restart>"; exit 1;;
+esac
+#########################################################################
+更改文件权限 +x
+sudo chmod 755 /etc/init.d/tomcat8.sh
+试开服务, 如果这时可以启动, 之后自动启动也没问题
+sudo /etc/init.d/tomcat8.sh start
+挂载到系统启动中
+sudo update-rc.d tomcat8.sh defaults
+取消自动启动
+sudo update-rc.d tomcat8.sh disable
+卸载:
+cd /etc/init.d
+sudo update-rc.d -f tomcat8 remove
+
+# 手动设置ip
+网络连接图标下拉, 选connection information, 查看基本信息
+网络连接图标下拉, 选edit connections
+选中Wi-Fi下准备设置ip的网络, 点edit
+ipv4 settings里method下拉单中选manual
+点add, 填入合适的ip
+DNS可以写上一级路由地址, 有时速度慢或无效时, 可以参考之前connection information中提供的dns地址
+
+# 建立网络共享(wlan共享给lan)
+网络连接图标下拉, 选edit connections
+选中Ethernet下准备用于提供共享的网络, 点edit
+ipv4 settings里method下拉单中选shared to other computers, 默认用于共享的ip是10.42.0.1
+
+
+#ubuntu下查看电脑配置
+lshw -short
+
+#网上邻居samba
+图形界面直接右键开启
+#修改samba在linux中使用nobody账号:
+sudo service smbd stop
+
+vim /etc/samba/smb.conf
+在[global]下添加以下内容:
+force user = ricky
+force group = ricky
+create mask = 0664
+directory mask = 0775
+
+usershare owner only = false
+
+
+sudo service smbd restart
+
+# ----------建立vpn服务器(ubuntu)----------
+
+step1, 安装pptpd
+sudo apt-get install pptpd
+
+step2, 用root账号修改配置
+vim /etc/pptpd.conf
+localip是接收stream的隧道ip
+remoteip是给客户端的ip范围
+去除最后两行或倒数5,6行的注释标识即可
+
+step3, 设置dns
+vim /etc/ppp/pptpd-options
+去除ms-dns前的注释标识, 修改成合适的dns地址例如如下:
+ms-dns 209.18.47.61
+ms-dns 209.18.47.62
+
+step4, 设置用户名, 密码, 用一个tab键分隔. server就写pptpd
+vim /etc/ppp/chap-secrets
+例如:
+# client	server	secret	IP addresses
+ricky	pptpd	0577	*
+
+step5, 完成后重启pptpd使配置生效
+sudo /etc/init.d/pptpd restart
+到此已可以在客户端试着连接vpn服务器了, 成功了会显示"您已经连接"
+
+step6, 开始ipv4 forward
+vim /etc/sysctl.conf
+去除以下行前的标注:
+net.ipv4.ip_forward=1
+
+step7, 重启sysctl
+sudo sysctl -p
+
+# 建立vpn用户(windows7)
+control pannel >> network and sharing center >> set up a new connection or network >> connect to a workplace >> next >> use my internet connection(VPN) >>
+internet address: 写vpn服务器ip; destination name: 随便起, 用于标识这个连接
+填入用户名, 密码; 域名留空
+
+# 建立vpn用户(ubuntu)
+edit connections >> add >> 下拉菜单中选vpn下的 PPTP
+gateway: 写vpn服务器ip; destination name: 随便起, 用于标识这个连接
+填入用户名, 密码; 域名留空
+
+#---------- 网页transmission ----------
+
+#安装
+sudo apt-get install transmission(系统已自带)
+sudo apt-get install transmission-daemon transmission-cli
+sudo service transmission-daemon stop
+
+#配置软件
+vim /etc/transmission-daemon/settings.json
+修改:
+"download-dir": "/var/lib/transmission-daemon/downloads",
+到合适位置, 比如:
+"download-dir": "/home/ricky/Downloads",
+"rpc-authentication-required": false,
+"rpc-whitelist-enabled": false,
+
+#设置linux账号相关(同时Download目录也要是同一账号)
+vim /etc/init/transmission-daemon.conf
+setuid ricky
+setgid ricky
+
+chown ricky:ricky /etc/transmission-daemon/settings.json
+chown -R ricky /var/lib/transmission-daemon
+
+#启动及测试
+sudo service transmission-daemon start
+sudo service transmission-daemon status
+
+浏览器: http://10.0.0.20:9091/
+拥有utorrent的所有功能
+
+#---------- 摄像头直播 ----------
+
+1. (可跳过)确定已安装必要的软件: cheese, vlc. ubuntu自带
+
+2. 检查摄像头的名字及是否可用. 名字一般默认为video0
+ls /dev/video*
+vlc v4l2:///dev/video0
+
+3. 在图形界面下, Ctrl+S进入stream设置菜单
+video device name 后下拉菜单中选/dev/video0
+audio device name 暂时不选, 等视频测试成功后可以试验一下, 1830TZ上没有成功过, 可能是硬件问题
+
+4. (可跳过)点击 Show more options
+复制MRL和Edit Options后的string内容
+
+5. 在New destiny后下拉菜单中, 选择HTTP, 然后点击旁边Add按钮
+指定端口和路径名, 例如:
+Port: 8083
+Path: /stream.wmv
+
+6. 设置编码格式: Transcoding options 后下拉菜单中选:
+Video-WMV+WMA(ASF)
+
+7. (可跳过)复制Generated stream output string下的内容
+
+8. 开始stream服务(图形化的vlc中没有内容, 标题框中提示streaming)
+
+9. 准备ssh启动stream service指令(不可为root账号):
+将之前复制的信息合并成指令:(1830TZ上为例:)
+vim startvideo.sh
+cvlc v4l2:///dev/video0 :v4l2-standard= :live-caching=300 :sout="#transcode{vcodec=WMV2,vb=800,acodec=wma2,ab=128,channels=2,samplerate=44100}:http{dst=:8083/stream.wmv}"
+
+chmod u+x startvideo.sh
+
+每次开始: . startvideo.sh
+结束使用: Ctrl+C
+
+10. 在任意客户端视频播放软件上输入地址:
+http://10.0.0.20:8083/stream.wmv
+会有几秒延时
+
+#----------ubuntu改ip----------
+vim /etc/network/interfaces
+
+# The primary network interface  
+auto eth0  
+iface eth0 inet static  
+address 192.168.2.1  
+gateway 192.168.2.254  
+netmask 255.255.255.0  
+#network 192.168.2.0  
+#broadcast 192.168.2.255 
+
+sudo /etc/init.d/networking restart
+
+#----------去除ubuntu开机就提示错误----------
+root账号下:
+临时去除: 
+sudo rm -rf /var/crash
+
+永久去除: 
+vim /etc/default/apport
+# set this to 0 to disable apport, or to 1 to enable it
+# you can temporarily override this with
+# sudo service apport start force_start=1
+enabled=0
+
+#----------去除ssh登陆时升级包提示----------
+sudo apt-get update
+sudo apt-get upgrade
+
+
+#----------取得脚本参数----------
+$0 取得脚本本身名字
+$1 取得后面第一个参数
+
+
+
+
+# ubuntu14 支持exFAT
+sudo apt-get install exfat-utils
+
+# 查看网络流量, 温度
+sudo apt-get install nload
+sudo apt install lm-sensors
